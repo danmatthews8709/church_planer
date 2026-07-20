@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Church Planner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#201A3D;
+    --ink-soft:#6B6580;
+    --paper:#F1F0F6;
+    --paper-raised:#FFFFFF;
+    --line:#E2E0EA;
+    --navy:#241B57;
+    --navy-deep:#160F3D;
+    --gold:#C99A3B;
+    --gold-soft:#F6ECD3;
+    --good:#1E7145;
+    --good-soft:#E3F1E8;
+    --warn:#C99A3B;
+    --warn-soft:#F6ECD3;
+    --bad:#B0392F;
+    --bad-soft:#F7DFDB;
+    --spring:#7A9B76;
+    --spring-soft:#E4EBE1;
+    --summer:#C9932E;
+    --summer-soft:#F3E7CC;
+    --autumn:#B85C38;
+    --autumn-soft:#F1DDCF;
+    --winter:#4A6C8C;
+    --winter-soft:#DEE6ED;
+    --radius:10px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  ::selection{background:var(--summer-soft);}
+
+  .app{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
+
+  /* ---------- Header ---------- */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:center;
+    margin:-28px -20px 0;padding:18px 24px;
+    background:var(--navy);color:#fff;
+    border-bottom:4px solid var(--gold);
+    flex-wrap:wrap;gap:12px;
+  }
+  .masthead h1{
+    font-family:'Fraunces',serif;font-weight:700;font-size:26px;letter-spacing:-0.01em;
+    margin:0;color:#fff;
+  }
+  .masthead .sub{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.6);
+    text-transform:uppercase;letter-spacing:0.08em;
+  }
+  .who{
+    display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.85);
+  }
+  .who button{
+    font-family:'Inter',sans-serif;font-size:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.35);
+    border-radius:6px;padding:5px 10px;cursor:pointer;color:#fff;
+  }
+  .who button:hover{background:rgba(255,255,255,.2);}
+
+  /* ---------- Term ribbon (signature element) ---------- */
+  .ribbon{
+    display:flex;gap:6px;margin:18px 0 22px;
+  }
+  .tab{
+    flex:1;position:relative;
+    padding:10px 14px 12px;
+    border:1px solid var(--line);border-bottom:none;
+    border-radius:8px 8px 0 0;
+    background:var(--paper-raised);
+    cursor:pointer;
+    font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.09em;
+    color:var(--ink-soft);
+    transition:transform .15s ease;
+  }
+  .tab .label{display:block;font-family:'Fraunces',serif;font-size:17px;text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px;}
+  .tab .months{opacity:.7;}
+  .tab.active{transform:translateY(-4px);box-shadow:0 -3px 0 0 var(--tab-color) inset, 0 2px 6px rgba(0,0,0,0.08);}
+  .tab.current::after{
+    content:'today';position:absolute;top:-9px;right:10px;
+    background:var(--tab-color);color:#fff;font-size:9px;padding:2px 7px;border-radius:20px;
+    font-family:'Inter',sans-serif;letter-spacing:0.03em;
+  }
+  .tab[data-term="spring"]{--tab-color:var(--spring);}
+  .tab[data-term="summer"]{--tab-color:var(--summer);}
+  .tab[data-term="autumn"]{--tab-color:var(--autumn);}
+  .tab[data-term="winter"]{--tab-color:var(--winter);}
+  .tab.active[data-term="spring"]{background:var(--spring-soft);}
+  .tab.active[data-term="summer"]{background:var(--summer-soft);}
+  .tab.active[data-term="autumn"]{background:var(--autumn-soft);}
+  .tab.active[data-term="winter"]{background:var(--winter-soft);}
+  .ribbon-bar{height:3px;background:var(--navy);margin-top:-1px;margin-bottom:20px;}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+    margin-bottom:18px;
+  }
+  .view-toggle{display:flex;border:1px solid var(--navy);border-radius:8px;overflow:hidden;}
+  .view-toggle button{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+    background:var(--paper-raised);border:none;padding:8px 16px;cursor:pointer;color:var(--ink-soft);
+  }
+  .view-toggle button.active{background:var(--navy);color:#fff;}
+  .nav-group{display:flex;align-items:center;gap:10px;}
+  .nav-group button{
+    background:none;border:1px solid var(--line);border-radius:6px;width:32px;height:32px;
+    cursor:pointer;font-size:15px;color:var(--ink);
+  }
+  .nav-group button:hover{background:var(--paper-raised);}
+  .month-label{font-family:'Fraunces',serif;font-size:20px;min-width:170px;text-align:center;}
+  .add-btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+    background:var(--navy);color:#fff;border:none;border-radius:8px;
+    padding:9px 16px;cursor:pointer;
+  }
+  .add-btn:hover{opacity:.88;}
+
+  .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .chip{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.03em;
+    padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:var(--paper-raised);
+    cursor:pointer;color:var(--ink-soft);
+  }
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  /* ---------- Calendar ---------- */
+  .cal-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--paper-raised);
+  }
+  .cal-dow{
+    padding:8px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;
+    text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);
+    border-bottom:1px solid var(--line);background:var(--paper);
+  }
+  .cal-cell{
+    min-height:98px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:6px;position:relative;
+  }
+  .cal-cell:nth-child(7n){border-right:none;}
+  .cal-cell.other-month{opacity:.35;}
+  .cal-cell.today{background:var(--gold-soft);}
+  .cal-cell.busy{box-shadow:inset 0 0 0 2px var(--warn);}
+  .cal-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .cal-events{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
+  .ev-pill{
+    font-size:10.5px;padding:2px 6px;border-radius:5px;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;
+  }
+  .ev-pill.small-group{background:var(--spring);}
+  .ev-pill.prayer{background:var(--winter);}
+  .ev-pill.service{background:var(--navy);}
+  .ev-pill.event{background:var(--autumn);}
+  .ev-pill.aud-whole{background:var(--good);}
+  .ev-pill.aud-chapter{background:var(--winter);}
+  .ev-pill.aud-leadership{background:var(--autumn);}
+  .ev-pill.aud-ministry{background:var(--gold);color:var(--ink);}
+  .busy-flag{
+    display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:9.5px;font-weight:700;
+    padding:1px 6px;border-radius:20px;margin-left:5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;
+  }
+
+  /* ---------- List view ---------- */
+  .list-month{margin-bottom:26px;}
+  .list-month h3{
+    font-family:'Fraunces',serif;font-size:19px;margin:0 0 10px;
+    border-bottom:1px solid var(--line);padding-bottom:6px;
+  }
+  .list-row{
+    display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;
+    cursor:pointer;
+  }
+  .list-row:hover{background:var(--paper-raised);}
+  .list-date{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-soft);min-width:76px;
+  }
+  .list-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .list-dot.small-group{background:var(--spring);}
+  .list-dot.prayer{background:var(--winter);}
+  .list-dot.service{background:var(--navy);}
+  .list-dot.event{background:var(--autumn);}
+  .list-dot.aud-whole{background:var(--good);}
+  .list-dot.aud-chapter{background:var(--winter);}
+  .list-dot.aud-leadership{background:var(--autumn);}
+  .list-dot.aud-ministry{background:var(--gold);}
+  .list-title{font-weight:600;font-size:14px;flex:1;}
+  .list-meta{font-size:11.5px;color:var(--ink-soft);}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--ink-soft);font-family:'Fraunces',serif;font-size:17px;
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(43,42,40,0.45);display:flex;align-items:center;justify-content:center;
+    z-index:50;padding:20px;
+  }
+  .modal{
+    background:var(--paper-raised);border-radius:12px;padding:26px;max-width:420px;width:100%;
+    box-shadow:0 12px 32px rgba(0,0,0,0.2);
+    max-height:90vh;overflow-y:auto;
+  }
+  .modal h2{font-family:'Fraunces',serif;font-size:22px;margin:0 0 16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;font-weight:600;}
+  .field input,.field select,.field textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;
+    font-family:'Inter',sans-serif;font-size:14px;background:#fff;color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .cat-picker{display:flex;gap:6px;flex-wrap:wrap;}
+  .cat-opt{
+    padding:7px 12px;border-radius:20px;border:1px solid var(--line);cursor:pointer;font-size:12.5px;
+    background:#fff;
+  }
+  .cat-opt.on{color:#fff;border-color:transparent;}
+  .cat-opt[data-cat="small-group"].on{background:var(--spring);}
+  .cat-opt[data-cat="prayer"].on{background:var(--winter);}
+  .cat-opt[data-cat="service"].on{background:var(--summer);color:var(--ink);}
+  .cat-opt[data-cat="event"].on{background:var(--autumn);}
+  .modal-actions{display:flex;justify-content:space-between;margin-top:20px;gap:10px;}
+  .btn{padding:9px 16px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;}
+  .btn.primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn.danger{color:var(--autumn);border-color:var(--autumn);}
+  .pin-dots{display:flex;gap:8px;justify-content:center;margin:14px 0;}
+  .pin-dots span{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);}
+  .pin-dots span.filled{background:var(--navy);}
+  .user-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .user-chip{
+    padding:8px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px;background:#fff;
+  }
+  .user-chip:hover{background:var(--paper-raised);}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .keypad button{
+    padding:14px 0;font-size:17px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;
+  }
+  .keypad button:hover{background:var(--paper-raised);}
+  .error-text{color:var(--autumn);font-size:12px;margin-top:6px;}
+  .notice{font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.4;}
+
+  /* ---------- Dashboard (rhythm timeline) ---------- */
+  .app.wide{max-width:1240px;}
+  .weeks-timeline{display:flex;flex-direction:column;gap:12px;}
+  .week-card{
+    background:var(--paper-raised);border:1px solid var(--line);border-left:5px solid var(--term-color,var(--ink));
+    border-radius:10px;padding:16px 18px;display:flex;gap:22px;flex-wrap:wrap;
+  }
+  .week-card.editing{border-left-style:dashed;background:#fff;}
+  .wc-left{min-width:96px;flex-shrink:0;}
+  .wc-week{font-family:'JetBrains Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-soft);}
+  .wc-date{font-family:'Fraunces',serif;font-size:21px;line-height:1.15;margin-top:3px;}
+  .wc-occasion{margin-top:9px;display:inline-block;background:var(--summer-soft);color:var(--ink);font-size:10.5px;
+    padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:0.02em;}
+  .wc-main{flex:1;min-width:240px;}
+  .wc-series{font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;}
+  .wc-series.empty{color:var(--ink-soft);font-style:italic;font-size:15px;}
+  .wc-post{font-size:12.5px;color:var(--ink-soft);white-space:pre-line;margin-bottom:9px;line-height:1.5;}
+  .wc-mid{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .wc-rhythm-pill{font-size:11px;font-weight:600;padding:3px 11px;border-radius:20px;color:#fff;}
+  .mw-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .mw-row{display:flex;gap:6px;align-items:center;}
+  .mw-row select{flex:1.1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
+  .mw-row input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
+  .mw-row button{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:2px 4px;}
+  .mw-add{border:1px dashed var(--line);background:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--ink-soft);font-family:'Inter',sans-serif;font-weight:600;}
+  .mw-add:hover{background:var(--paper);color:var(--ink);}
+  .settings-btn{background:rgba(255,255,255,.08)!important;}
+  .settings-section{margin-bottom:18px;}
+  .settings-section h4{font-family:'Fraunces',serif;font-size:15px;margin:0 0 10px;}
+  .tag-row{display:flex;gap:6px;align-items:center;margin-bottom:7px;}
+  .tag-row input[type="text"]{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
+  .tag-row select{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
+  .tag-row button{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;}
+  .aud-swatch{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .wc-commencing{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .wc-happening{font-size:12.5px;white-space:pre-line;line-height:1.5;}
+  .wc-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+  .wc-actions button{
+    border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;color:var(--ink-soft);
+  }
+  .wc-actions button:hover{background:var(--paper);color:var(--ink);}
+  .wc-actions button.danger{color:var(--autumn);border-color:var(--autumn);}
+  .wc-edit-grid{flex:1;min-width:260px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .wc-edit-grid .full{grid-column:1/3;}
+  .wc-edit-grid label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .wc-edit-grid input,.wc-edit-grid textarea{
+    width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-family:'Inter',sans-serif;font-size:13px;background:#fff;color:var(--ink);
+  }
+  .wc-edit-grid textarea{resize:vertical;min-height:44px;}
+  .dash-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .dash-toolbar .term-label{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-soft);letter-spacing:.06em;}
+
+  @media (max-width:640px){
+    .masthead h1{font-size:26px;}
+    .tab .label{font-size:14px;}
+    .cal-cell{min-height:64px;}
+    .cal-dow{font-size:8.5px;}
+    .week-card{flex-direction:column;}
+    .wc-actions{flex-direction:row;}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">Loading…</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+const CATS = {
+  'small-group':{label:'Small Group'},
+  'prayer':{label:'Prayer Service'},
+  'service':{label:'Service'},
+  'event':{label:'Event'}
+};
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const DEFAULT_AUDIENCES = ['Whole Church','Chapter','Leadership','Alpha Team','Cleaning Team','Connections','Foodbank Team','Host','Kids','Locking Up Team','Production','Toddlers/Little Treasures Team','Worship','Youth'];
+const DEFAULT_TAGS = [
+  {id:'tag-small-group', name:'Small Group', audience:'Whole Church'},
+  {id:'tag-prayer', name:'Prayer', audience:'Whole Church'},
+  {id:'tag-chapter', name:'Chapter Meeting', audience:'Chapter'},
+  {id:'tag-lead-night', name:'Lead Night', audience:'Leadership'},
+  {id:'tag-margin', name:'Margin Week', audience:'Whole Church'},
+  {id:'tag-team-dev', name:'Team Development', audience:'Leadership'},
+  {id:'tag-meetings', name:'Meetings Week', audience:'Whole Church'},
+];
+
+function audienceClass(audience){
+  if(audience==='Whole Church') return 'aud-whole';
+  if(audience==='Chapter') return 'aud-chapter';
+  if(audience==='Leadership') return 'aud-leadership';
+  return 'aud-ministry';
+}
+function audienceColorVar(audience){
+  if(audience==='Whole Church') return 'var(--good)';
+  if(audience==='Chapter') return 'var(--winter)';
+  if(audience==='Leadership') return 'var(--autumn)';
+  return 'var(--gold)';
+}
+function tagById(id){ return state.tags.find(t=>t.id===id); }
+
+// Merge recurring rhythm templates (minus this week's exclusions) with this week's own one-off midweek items.
+function effectiveMidweek(wk){
+  const items = [];
+  const wkDate = wk.weekCommencing ? parseISO(wk.weekCommencing) : (wk.sundayDate ? parseISO(wk.sundayDate) : null);
+  const excluded = wk.excludedRecurring || [];
+  if(wkDate){
+    state.recurringRhythms.forEach(r=>{
+      const start = parseISO(r.startDate);
+      const end = r.endDate ? parseISO(r.endDate) : null;
+      if(wkDate >= start && (!end || wkDate <= end) && !excluded.includes(r.id)){
+        items.push({id:'rec-'+r.id+'-'+wk.id, tagId:r.tagId, note:r.note||'', recurringId:r.id});
+      }
+    });
+  }
+  (wk.midweek||[]).forEach(m=> items.push({...m}));
+  return items;
+}
+
+// Date range for a given term key, anchored to a reference date (handles winter spanning year-end).
+function termDateRange(termKey, refDate){
+  function rangeForYear(y){
+    if(termKey==='winter') return [new Date(y,11,1), new Date(y+1,1,28)];
+    const bounds = {spring:[2,4], summer:[5,7], autumn:[8,10]}[termKey];
+    return [new Date(y,bounds[0],1), new Date(y,bounds[1]+1,0)];
+  }
+  const y = refDate.getFullYear();
+  let [s,e] = rangeForYear(y);
+  if(e < refDate) [s,e] = rangeForYear(y+1); // this year's instance already finished — use next year's
+  return [s,e];
+}
+
+function allSundaysInRange(start, end){
+  const out = [];
+  let d = new Date(start);
+  const offsetToSun = (7 - d.getDay()) % 7;
+  d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (d.getDay()===0?0:offsetToSun));
+  while(d <= end){
+    out.push(new Date(d));
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate()+7);
+  }
+  return out;
+}
+
+let state = {
+  users: [],
+  events: [],
+  weeks: [],
+  tags: [],
+  audiences: [],
+  recurringRhythms: [],
+  currentUser: null,
+  view: 'dashboard',
+  cursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  termFilter: null,
+  catFilters: new Set(),
+  loginStep: 'pick', // pick | pin | add
+  pendingUser: null,
+  pinBuffer: '',
+  pinError: '',
+  editingEvent: null,
+  editingWeekId: null,
+  editingMidweekRows: null,
+  editingOriginalRecurringIds: null,
+  showSettings: false,
+  loaded: false
+};
+
+function termOf(date){
+  const m = date.getMonth(); // 0-11
+  if([2,3,4].includes(m)) return 'spring';
+  if([5,6,7].includes(m)) return 'summer';
+  if([8,9,10].includes(m)) return 'autumn';
+  return 'winter';
+}
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  // fallback for very old browsers — still a valid v4-shaped UUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+function isoDate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
+
+// ---------- Field mapping helpers (DB is snake_case, JS state stays camelCase) ----------
+function weekFromRow(row, midweekRows, excludedRows){
+  return {
+    id: row.id,
+    occasion: row.occasion || '',
+    sundayDate: row.sunday_date,
+    sundaySeries: row.sunday_series || '',
+    postService: row.post_service || '',
+    weekCommencing: row.week_commencing,
+    happening: row.happening || '',
+    midweek: midweekRows.filter(m=>m.week_id===row.id).map(m=>({id:m.id, tagId:m.tag_id, note:m.note||''})),
+    excludedRecurring: excludedRows.filter(e=>e.week_id===row.id).map(e=>e.recurring_id)
+  };
+}
+function weekToRow(wk){
+  return {
+    id: wk.id, occasion: wk.occasion||'', sunday_date: wk.sundayDate,
+    sunday_series: wk.sundaySeries||'', post_service: wk.postService||'',
+    week_commencing: wk.weekCommencing||null, happening: wk.happening||''
+  };
+}
+function tagFromRow(r){ return {id:r.id, name:r.name, audience:r.audience}; }
+function tagToRow(t){ return {id:t.id, name:t.name, audience:t.audience}; }
+function recurringFromRow(r){ return {id:r.id, tagId:r.tag_id, note:r.note||'', startDate:r.start_date, endDate:r.end_date}; }
+function recurringToRow(r){ return {id:r.id, tag_id:r.tagId, note:r.note||'', start_date:r.startDate, end_date:r.endDate||null}; }
+function eventFromRow(r){ return {id:r.id, title:r.title, category:r.category, date:r.event_date, recurrence:r.recurrence, recurrenceEnd:r.recurrence_end, notes:r.notes||'', createdBy:r.created_by}; }
+function eventToRow(e){ return {id:e.id, title:e.title, category:e.category, event_date:e.date, recurrence:e.recurrence, recurrence_end:e.recurrenceEnd||null, notes:e.notes||'', created_by:e.createdBy||null}; }
+
+async function loadData(){
+  const [usersRes, tagsRes, audRes, rrRes, weeksRes, mwRes, exRes, evRes] = await Promise.all([
+    sb.from('users').select('*').order('created_at'),
+    sb.from('tags').select('*'),
+    sb.from('audiences').select('*'),
+    sb.from('recurring_rhythms').select('*'),
+    sb.from('weeks').select('*'),
+    sb.from('week_midweek_items').select('*'),
+    sb.from('week_excluded_recurring').select('*'),
+    sb.from('events').select('*'),
+  ]);
+  [usersRes, tagsRes, audRes, rrRes, weeksRes, mwRes, exRes, evRes].forEach(r=>{
+    if(r.error) console.error('Supabase load error:', r.error.message);
+  });
+
+  state.users = (usersRes.data||[]).map(u=>({id:u.id, name:u.name, pin:u.pin}));
+  state.tags = (tagsRes.data||[]).map(tagFromRow);
+  state.audiences = (audRes.data||[]).map(a=>a.name);
+  state.recurringRhythms = (rrRes.data||[]).map(recurringFromRow);
+  const midweekRows = mwRes.data||[];
+  const excludedRows = exRes.data||[];
+  state.weeks = (weeksRes.data||[]).map(row=>weekFromRow(row, midweekRows, excludedRows));
+  state.events = (evRes.data||[]).map(eventFromRow);
+
+  if(!state.tags.length){ state.tags = DEFAULT_TAGS.slice(); await saveTags(); }
+  if(!state.audiences.length){ state.audiences = DEFAULT_AUDIENCES.slice(); await saveAudiences(); }
+
+  state.weeks.sort((a,b)=> a.sundayDate < b.sundayDate ? -1 : 1);
+  state.loaded = true;
+}
+
+async function saveUsers(){
+  const { error } = await sb.from('users').upsert(state.users.map(u=>({id:u.id, name:u.name, pin:u.pin})));
+  if(error) console.error('save users failed', error.message);
+}
+async function saveEvents(){
+  const { error } = await sb.from('events').upsert(state.events.map(eventToRow));
+  if(error) console.error('save events failed', error.message);
+}
+// Upserts the given weeks (default: all local weeks) and resyncs ONLY their own
+// midweek/exclusion child rows. Deliberately scoped and additive-only — it never
+// diffs against "everything currently in the DB" and deletes what's missing, because
+// with multiple people editing at once, another user's week added a second ago might
+// not be in *this* browser's local state yet, and a full diff-delete would wipe it out.
+async function saveWeeks(scopeIds){
+  state.weeks.sort((a,b)=> a.sundayDate < b.sundayDate ? -1 : 1);
+  const targets = scopeIds ? state.weeks.filter(w=>scopeIds.includes(w.id)) : state.weeks;
+  if(!targets.length) return;
+  try{
+    const { error } = await sb.from('weeks').upsert(targets.map(weekToRow));
+    if(error) throw error;
+    const ids = targets.map(w=>w.id);
+    await sb.from('week_midweek_items').delete().in('week_id', ids);
+    await sb.from('week_excluded_recurring').delete().in('week_id', ids);
+    const mwRows = [], exRows = [];
+    targets.forEach(w=>{
+      (w.midweek||[]).forEach(m=> mwRows.push({id:m.id, week_id:w.id, tag_id:m.tagId, note:m.note||''}));
+      (w.excludedRecurring||[]).forEach(rid=> exRows.push({week_id:w.id, recurring_id:rid}));
+    });
+    if(mwRows.length){ const { error:e2 } = await sb.from('week_midweek_items').insert(mwRows); if(e2) throw e2; }
+    if(exRows.length){ const { error:e3 } = await sb.from('week_excluded_recurring').insert(exRows); if(e3) throw e3; }
+  }catch(e){ console.error('save weeks failed', e.message||e); }
+}
+// Explicit, single-row delete — child rows cascade via the FK constraints in the schema.
+async function deleteWeekRemote(id){
+  const { error } = await sb.from('weeks').delete().eq('id', id);
+  if(error) console.error('delete week failed', error.message);
+}
+async function saveTags(){
+  const { error } = await sb.from('tags').upsert(state.tags.map(tagToRow));
+  if(error) console.error('save tags failed', error.message);
+}
+async function saveAudiences(){
+  const { error } = await sb.from('audiences').upsert(state.audiences.map(name=>({name})));
+  if(error) console.error('save audiences failed', error.message);
+}
+async function saveRecurring(){
+  const { error } = await sb.from('recurring_rhythms').upsert(state.recurringRhythms.map(recurringToRow));
+  if(error) console.error('save recurring failed', error.message);
+}
+
+// ---------- Live sync: any change from any user/tab triggers a reload ----------
+function subscribeRealtime(){
+  sb.channel('church-planner-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'weeks'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'week_midweek_items'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'week_excluded_recurring'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'tags'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'audiences'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'recurring_rhythms'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'events'}, refreshFromRemote)
+    .on('postgres_changes', {event:'*', schema:'public', table:'users'}, refreshFromRemote)
+    .subscribe();
+}
+let refreshTimer = null;
+function refreshFromRemote(){
+  // debounce — several child-row changes often land within the same save
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(async ()=>{
+    // don't stomp on whatever the person is actively typing/editing right now
+    if(state.showModal || state.editingWeekId || state.showSettings) return;
+    await loadData();
+    render();
+  }, 400);
+}
+
+
+// ---------- Occurrence expansion for recurring items ----------
+function occurrencesInRange(ev, rangeStart, rangeEnd){
+  const out = [];
+  const start = parseISO(ev.date);
+  if(ev.recurrence === 'none'){
+    if(start >= rangeStart && start <= rangeEnd) out.push(new Date(start));
+    return out;
+  }
+  const end = ev.recurrenceEnd ? parseISO(ev.recurrenceEnd) : new Date(rangeEnd.getFullYear()+2,0,1);
+  let cur = new Date(start);
+  let guard = 0;
+  while(cur <= rangeEnd && cur <= end && guard < 400){
+    if(cur >= rangeStart && cur >= start) out.push(new Date(cur));
+    if(ev.recurrence === 'weekly') cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+7);
+    else if(ev.recurrence === 'monthly') cur = new Date(cur.getFullYear(), cur.getMonth()+1, cur.getDate());
+    else break;
+    guard++;
+  }
+  return out;
+}
+
+function eventsForRange(rangeStart, rangeEnd){
+  const items = [];
+  state.events.forEach(ev=>{
+    const occ = occurrencesInRange(ev, rangeStart, rangeEnd);
+    occ.forEach(d=>{
+      if(state.termFilter && termOf(d) !== state.termFilter) return;
+      if(state.catFilters.size && !state.catFilters.has(ev.category)) return;
+      items.push({ev, date:d});
+    });
+  });
+  state.weeks.forEach(wk=>{
+    if(wk.sundayDate){
+      const d = parseISO(wk.sundayDate);
+      if(d >= rangeStart && d <= rangeEnd && (!state.termFilter || termOf(d)===state.termFilter)){
+        const cat = 'service';
+        if(!state.catFilters.size || state.catFilters.has(cat)){
+          items.push({ev:{id:'wk-sun-'+wk.id, title:(wk.occasion||wk.sundaySeries||'Sunday'), category:cat, recurrence:'none', synthetic:true, weekId:wk.id}, date:d});
+        }
+      }
+    }
+    if(wk.weekCommencing){
+      const d2 = parseISO(wk.weekCommencing);
+      const mw = effectiveMidweek(wk);
+      if(mw.length && d2 >= rangeStart && d2 <= rangeEnd && (!state.termFilter || termOf(d2)===state.termFilter)){
+        const busy = mw.length > 1;
+        mw.forEach(m=>{
+          const tag = tagById(m.tagId);
+          if(!tag) return;
+          items.push({ev:{
+            id:'wk-mid-'+wk.id+'-'+m.id, title:tag.name+(m.note?' — '+m.note:''),
+            category:audienceClass(tag.audience), audience:tag.audience, recurrence:'none',
+            synthetic:true, weekId:wk.id, busyMidweek:busy
+          }, date:d2});
+        });
+      }
+    }
+  });
+  items.sort((a,b)=> a.date - b.date);
+  return items;
+}
+
+// ---------- Rendering ----------
+function render(){
+  const app = document.getElementById('app');
+  if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
+  if(!state.currentUser){ app.className='app'; app.innerHTML = loginHTML(); attachLoginHandlers(); return; }
+  app.className = state.view==='dashboard' ? 'app wide' : 'app';
+  app.innerHTML = mainHTML();
+  attachMainHandlers();
+}
+
+function loginHTML(){
+  if(state.users.length === 0 || state.loginStep === 'add'){
+    return `
+    <div class="masthead">
+      <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
+    </div>
+    <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
+      <div class="modal" style="max-width:380px;">
+        <h2>${state.users.length===0 ? "Set up your planning team" : "Add a team member"}</h2>
+        <div class="field"><label>Name</label><input id="new-name" placeholder="e.g. Sarah"></div>
+        <div class="field"><label>4-digit PIN</label><input id="new-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+        <div id="add-error" class="error-text"></div>
+        <div class="modal-actions">
+          ${state.users.length? '<button class="btn" id="cancel-add">Back</button>':'<span></span>'}
+          <button class="btn primary" id="save-user">Add me</button>
+        </div>
+        <div class="notice">Anyone with this planner can see the team list and events — the PIN just tags who added what, it isn't a security lock.</div>
+      </div>
+    </div>`;
+  }
+  if(state.loginStep === 'pin' && state.pendingUser){
+    const dots = [0,1,2,3].map(i=>`<span class="${i<state.pinBuffer.length?'filled':''}"></span>`).join('');
+    return `
+    <div class="masthead">
+      <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
+    </div>
+    <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
+      <div class="modal" style="max-width:340px;text-align:center;">
+        <h2>Hi ${state.pendingUser.name}</h2>
+        <div class="pin-dots">${dots}</div>
+        ${state.pinError?`<div class="error-text">${state.pinError}</div>`:''}
+        <div class="keypad">
+          ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" data-n="${n}">${n}</button>`).join('')}
+          <button id="pin-back">⌫</button>
+          <button class="pin-key" data-n="0">0</button>
+          <span></span>
+        </div>
+        <div class="modal-actions"><button class="btn" id="not-you">Not ${state.pendingUser.name}?</button></div>
+      </div>
+    </div>`;
+  }
+  return `
+  <div class="masthead">
+    <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
+  </div>
+  <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
+    <div class="modal" style="max-width:400px;">
+      <h2>Who's planning today?</h2>
+      <div class="user-list">
+        ${state.users.map(u=>`<div class="user-chip" data-id="${u.id}">${u.name}</div>`).join('')}
+      </div>
+      <button class="btn" id="add-new-user">+ Add someone new</button>
+    </div>
+  </div>`;
+}
+
+function attachLoginHandlers(){
+  const saveBtn = document.getElementById('save-user');
+  if(saveBtn){
+    saveBtn.onclick = async ()=>{
+      const name = document.getElementById('new-name').value.trim();
+      const pin = document.getElementById('new-pin').value.trim();
+      const err = document.getElementById('add-error');
+      if(!name){ err.textContent='Enter a name.'; return; }
+      if(!/^\d{4}$/.test(pin)){ err.textContent='PIN must be 4 digits.'; return; }
+      const user = {id:uid(), name, pin};
+      state.users.push(user);
+      await saveUsers();
+      state.currentUser = user;
+      state.loginStep = 'pick';
+      render();
+    };
+  }
+  const cancelAdd = document.getElementById('cancel-add');
+  if(cancelAdd) cancelAdd.onclick = ()=>{ state.loginStep='pick'; render(); };
+
+  const addNew = document.getElementById('add-new-user');
+  if(addNew) addNew.onclick = ()=>{ state.loginStep='add'; render(); };
+
+  document.querySelectorAll('.user-chip').forEach(el=>{
+    el.onclick = ()=>{
+      state.pendingUser = state.users.find(u=>u.id===el.dataset.id);
+      state.loginStep = 'pin'; state.pinBuffer=''; state.pinError='';
+      render();
+    };
+  });
+
+  document.querySelectorAll('.pin-key').forEach(el=>{
+    el.onclick = ()=>{
+      if(state.pinBuffer.length>=4) return;
+      state.pinBuffer += el.dataset.n;
+      if(state.pinBuffer.length===4){
+        if(state.pinBuffer === state.pendingUser.pin){
+          state.currentUser = state.pendingUser;
+          state.pendingUser=null; state.loginStep='pick'; state.pinBuffer='';
+          render();
+        } else {
+          state.pinError = 'Wrong PIN, try again.';
+          state.pinBuffer='';
+          render();
+        }
+      } else render();
+    };
+  });
+  const back = document.getElementById('pin-back');
+  if(back) back.onclick = ()=>{ state.pinBuffer = state.pinBuffer.slice(0,-1); render(); };
+  const notYou = document.getElementById('not-you');
+  if(notYou) notYou.onclick = ()=>{ state.pendingUser=null; state.loginStep='pick'; state.pinError=''; render(); };
+}
+
+function ribbonHTML(){
+  const seasons = [
+    {key:'spring', label:'Spring', months:'Mar–May'},
+    {key:'summer', label:'Summer', months:'Jun–Aug'},
+    {key:'autumn', label:'Autumn', months:'Sep–Nov'},
+    {key:'winter', label:'Winter', months:'Dec–Feb'},
+  ];
+  const nowTerm = termOf(new Date());
+  return `<div class="ribbon">
+    ${seasons.map(s=>`
+      <div class="tab ${state.termFilter===s.key?'active':''} ${nowTerm===s.key?'current':''}" data-term="${s.key}">
+        <span>${s.months}</span>
+        <span class="label">${s.label}</span>
+      </div>`).join('')}
+  </div><div class="ribbon-bar"></div>`;
+}
+
+function calendarHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const first = new Date(y,m,1);
+  const startOffset = (first.getDay()+6)%7; // Mon=0
+  const gridStart = new Date(y,m,1-startOffset);
+  const cells = [];
+  for(let i=0;i<42;i++){ cells.push(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i)); }
+  const rangeStart = cells[0], rangeEnd = cells[41];
+  const occ = eventsForRange(rangeStart, rangeEnd);
+  const byDay = {};
+  occ.forEach(o=>{ const k=isoDate(o.date); (byDay[k]=byDay[k]||[]).push(o); });
+  const today = isoDate(new Date());
+
+  let html = `<div class="cal-grid">`;
+  DOW.forEach(d=> html += `<div class="cal-dow">${d}</div>`);
+  cells.forEach(d=>{
+    const k = isoDate(d);
+    const inMonth = d.getMonth()===m;
+    const dayEvents = byDay[k]||[];
+    const isBusy = dayEvents.some(o=>o.ev.busyMidweek);
+    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''} ${isBusy?'busy':''}">
+      <div class="cal-date">${d.getDate()}</div>
+      <div class="cal-events">
+        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.category}" data-id="${o.ev.id}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
+        ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function listHTML(){
+  const rangeStart = new Date(state.cursor.getFullYear(), state.cursor.getMonth(), 1);
+  const rangeEnd = new Date(state.cursor.getFullYear(), state.cursor.getMonth()+6, 0);
+  const occ = eventsForRange(rangeStart, rangeEnd);
+  if(occ.length===0) return `<div class="empty">No dates on the sheet yet.<br>Tap "Add to planner" to pin your first one.</div>`;
+  const byMonth = {};
+  occ.forEach(o=>{
+    const key = `${o.date.getFullYear()}-${o.date.getMonth()}`;
+    (byMonth[key]=byMonth[key]||[]).push(o);
+  });
+  return Object.entries(byMonth).map(([key, items])=>{
+    const [y,m] = key.split('-').map(Number);
+    return `<div class="list-month">
+      <h3>${MONTHS[m]} ${y}</h3>
+      ${items.map(o=>`
+        <div class="list-row" data-id="${o.ev.id}">
+          <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
+          <div class="list-dot ${o.ev.category}"></div>
+          <div class="list-title">${o.ev.title}${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}</div>
+          <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+const RHYTHM_SUGGESTIONS = ['Small Group','Prayer','Margin Week','Team Development','Meetings Week','Alpha'];
+
+function visibleWeeks(){
+  let ws = state.weeks.slice().sort((a,b)=> a.sundayDate < b.sundayDate ? -1 : 1);
+  if(state.termFilter) ws = ws.filter(w=> w.sundayDate && termOf(parseISO(w.sundayDate))===state.termFilter);
+  return ws;
+}
+
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = parseISO(iso);
+  return `${DOW[(d.getDay()+6)%7]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`;
+}
+
+function weekCardHTML(wk, idx){
+  const editing = state.editingWeekId === wk.id;
+  const term = wk.sundayDate ? termOf(parseISO(wk.sundayDate)) : null;
+  const termVar = term ? `var(--${term})` : 'var(--navy)';
+  const midweek = effectiveMidweek(wk);
+  const busy = midweek.length > 1;
+
+  if(editing){
+    const rows = state.editingMidweekRows || [];
+    return `
+    <div class="week-card editing" style="--term-color:${termVar};" data-id="${wk.id}">
+      <div class="wc-left">
+        <div class="wc-week">Week ${idx+1}</div>
+      </div>
+      <div class="wc-edit-grid">
+        <div><label>Occasion</label><input data-field="occasion" value="${(wk.occasion||'').replace(/"/g,'&quot;')}" placeholder="e.g. Baptism Sunday"></div>
+        <div><label>Sunday date</label><input type="date" data-field="sundayDate" value="${wk.sundayDate||''}"></div>
+        <div class="full"><label>Sunday series</label><input data-field="sundaySeries" value="${(wk.sundaySeries||'').replace(/"/g,'&quot;')}" placeholder="Sermon series title"></div>
+        <div class="full"><label>Sunday post service</label><textarea data-field="postService" placeholder="e.g. i) All Group Leaders Lunch">${wk.postService||''}</textarea></div>
+        <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${wk.weekCommencing||''}"></div>
+        <div class="full">
+          <label>Midweek activity ${rows.length>1?'<span class="busy-flag">Busy midweek</span>':''}</label>
+          <div class="mw-rows">
+            ${rows.map(r=>`
+              <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}">
+                <select class="mw-tag" data-mwid="${r.id}" ${r.recurringId?'disabled':''}>
+                  <option value="">Choose a tag…</option>
+                  ${state.tags.map(t=>`<option value="${t.id}" ${r.tagId===t.id?'selected':''}>${t.name} — ${t.audience}</option>`).join('')}
+                </select>
+                <input class="mw-note" data-mwid="${r.id}" placeholder="Note (optional)" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
+                ${r.recurringId
+                  ? `<span class="busy-flag" style="background:var(--good-soft);color:var(--good);">Recurring</span>`
+                  : `<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-soft);white-space:nowrap;"><input type="checkbox" class="mw-repeat" data-mwid="${r.id}"> Repeats weekly</label>`}
+                <button class="mw-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
+              </div>`).join('')}
+          </div>
+          <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
+          <div class="notice" style="margin-top:6px;">Recurring items (shown with a green "Recurring" badge) are managed from Settings — removing one here only skips it for this week. New items get a "Repeats weekly" tick if you want them to carry forward automatically.</div>
+        </div>
+        <div class="full"><label>Happening this week</label><textarea data-field="happening" placeholder="e.g. 1) Team Development, ran by departments">${wk.happening||''}</textarea></div>
+      </div>
+      <div class="wc-actions">
+        <button class="save-week" data-id="${wk.id}">Save</button>
+        <button class="cancel-week" data-id="${wk.id}">Cancel</button>
+        <button class="danger delete-week" data-id="${wk.id}">Delete</button>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="week-card" style="--term-color:${termVar};" data-id="${wk.id}">
+      <div class="wc-left">
+        <div class="wc-week">Week ${idx+1}</div>
+        <div class="wc-date">${fmtDate(wk.sundayDate) || 'No date'}</div>
+        ${wk.occasion?`<div class="wc-occasion">${wk.occasion}</div>`:''}
+      </div>
+      <div class="wc-main">
+        <div class="wc-series ${wk.sundaySeries?'':'empty'}">${wk.sundaySeries || 'Untitled Sunday'}</div>
+        ${wk.postService?`<div class="wc-post">${wk.postService}</div>`:''}
+        <div class="wc-mid">
+          ${midweek.map(m=>{
+            const tag = tagById(m.tagId);
+            if(!tag) return '';
+            return `<span class="wc-rhythm-pill" style="background:${audienceColorVar(tag.audience)};" title="${tag.audience}${m.recurringId?' · recurring':''}">${tag.name}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}</span>`;
+          }).join('')}
+          ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
+          ${busy?`<span class="busy-flag">Busy midweek</span>`:''}
+        </div>
+        ${wk.happening?`<div class="wc-happening">${wk.happening}</div>`:''}
+      </div>
+      <div class="wc-actions">
+        <button class="edit-week" data-id="${wk.id}">Edit</button>
+      </div>
+    </div>`;
+}
+
+function dashboardHTML(){
+  const ws = visibleWeeks();
+  const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:isoDate(new Date()),sundaySeries:'',postService:'',weekCommencing:'',happening:'',midweek:[],excludedRecurring:[]}, ws.length) : '';
+  return `
+    <div class="dash-toolbar">
+      <div class="term-label">${ws.length} week${ws.length===1?'':'s'}${state.termFilter?' · '+state.termFilter:' · all terms'}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="fill-weeks">Fill ${state.termFilter||'current'} term's Sundays</button>
+        <button class="add-btn" id="add-week">+ Add week</button>
+      </div>
+    </div>
+    <div class="weeks-timeline">
+      ${ws.length ? ws.map((w,i)=>weekCardHTML(w,i)).join('') : (state.editingWeekId!=='new' ? `<div class="empty">No weeks on the rhythm yet.<br>Tap "Fill ${state.termFilter||'current'} term's Sundays" to auto-create them, or "+ Add week" for just one.</div>` : '')}
+      ${newDraft}
+    </div>
+  `;
+}
+
+function mainHTML(){
+  return `
+    <div class="masthead">
+      <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
+      <div class="who">Planning as <strong>${state.currentUser.name}</strong> <button id="open-settings" class="settings-btn">⚙ Tags</button> <button id="switch-user">Switch</button></div>
+    </div>
+    ${ribbonHTML()}
+    <div class="toolbar">
+      <div class="view-toggle">
+        <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
+        <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
+        <button data-view="list" class="${state.view==='list'?'active':''}">List by month</button>
+      </div>
+      ${state.view==='calendar'?`
+      <div class="nav-group">
+        <button id="prev-month">‹</button>
+        <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}</div>
+        <button id="next-month">›</button>
+      </div>`:state.view==='list'?`
+      <div class="nav-group">
+        <button id="prev-month">‹</button>
+        <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()} +5mo</div>
+        <button id="next-month">›</button>
+      </div>`:''}
+      ${state.view!=='dashboard'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
+    </div>
+    ${state.view!=='dashboard'?`<div class="filters">
+      ${Object.entries(CATS).map(([k,v])=>`<div class="chip ${state.catFilters.has(k)?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
+    </div>`:''}
+    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : dashboardHTML()}
+    ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
+    ${state.showSettings ? settingsHTML() : ''}
+  `;
+}
+
+function modalHTML(){
+  const ev = state.editingEvent || {title:'', category:'small-group', date:isoDate(new Date()), recurrence:'none', recurrenceEnd:'', notes:''};
+  const isEdit = !!(state.editingEvent && state.editingEvent.id);
+  return `
+  <div class="overlay" id="modal-overlay">
+    <div class="modal">
+      <h2>${isEdit?'Edit item':'Add to the planner'}</h2>
+      <div class="field"><label>Title</label><input id="f-title" value="${ev.title.replace(/"/g,'&quot;')}" placeholder="e.g. Youth small group"></div>
+      <div class="field"><label>Type</label>
+        <div class="cat-picker">
+          ${Object.entries(CATS).map(([k,v])=>`<div class="cat-opt ${ev.category===k?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
+        </div>
+      </div>
+      <div class="field"><label>Date</label><input type="date" id="f-date" value="${ev.date}"></div>
+      <div class="field"><label>Repeats</label>
+        <select id="f-recurrence">
+          <option value="none" ${ev.recurrence==='none'?'selected':''}>Doesn't repeat</option>
+          <option value="weekly" ${ev.recurrence==='weekly'?'selected':''}>Weekly</option>
+          <option value="monthly" ${ev.recurrence==='monthly'?'selected':''}>Monthly</option>
+        </select>
+      </div>
+      <div class="field" id="end-field" style="${ev.recurrence==='none'?'display:none;':''}">
+        <label>Repeat until (optional)</label>
+        <input type="date" id="f-end" value="${ev.recurrenceEnd||''}">
+      </div>
+      <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Location, leader, anything to remember">${ev.notes||''}</textarea></div>
+      <div class="modal-actions">
+        <div>${isEdit?'<button class="btn danger" id="delete-ev">Delete</button>':''}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" id="cancel-modal">Cancel</button>
+          <button class="btn primary" id="save-ev">${isEdit?'Save changes':'Pin to planner'}</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function settingsHTML(){
+  return `
+  <div class="overlay" id="settings-overlay">
+    <div class="modal" style="max-width:480px;">
+      <h2>Tags &amp; audiences</h2>
+      <div class="settings-section">
+        <h4>Midweek tags</h4>
+        ${state.tags.map(t=>`
+          <div class="tag-row" data-id="${t.id}">
+            <span class="aud-swatch" style="background:${audienceColorVar(t.audience)};"></span>
+            <input type="text" class="tag-name" data-id="${t.id}" value="${t.name.replace(/"/g,'&quot;')}">
+            <select class="tag-audience" data-id="${t.id}">
+              ${state.audiences.map(a=>`<option value="${a}" ${t.audience===a?'selected':''}>${a}</option>`).join('')}
+            </select>
+            <button class="tag-remove" data-id="${t.id}" title="Remove tag">✕</button>
+          </div>`).join('')}
+        <button class="mw-add" id="add-tag" type="button">+ Add tag</button>
+      </div>
+      <div class="settings-section">
+        <h4>Audiences</h4>
+        ${state.audiences.map(a=>`
+          <div class="tag-row" data-audience="${a.replace(/"/g,'&quot;')}">
+            <span class="aud-swatch" style="background:${audienceColorVar(a)};"></span>
+            <input type="text" class="audience-name" value="${a.replace(/"/g,'&quot;')}" readonly style="background:var(--paper);">
+            <button class="audience-remove" data-audience="${a.replace(/"/g,'&quot;')}" title="Remove audience">✕</button>
+          </div>`).join('')}
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="new-audience-name" placeholder="New audience name" style="flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+          <button class="mw-add" id="add-audience" type="button">+ Add</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Recurring rhythms</h4>
+        ${state.recurringRhythms.length ? state.recurringRhythms.map(r=>{
+          const tag = tagById(r.tagId);
+          return `
+          <div class="tag-row" data-rid="${r.id}">
+            <span class="aud-swatch" style="background:${tag?audienceColorVar(tag.audience):'var(--ink-soft)'};"></span>
+            <span style="flex:1;font-size:12.5px;">${tag?tag.name:'(deleted tag)'}</span>
+            <input type="date" class="rr-start" data-rid="${r.id}" value="${r.startDate||''}" title="Starts">
+            <input type="date" class="rr-end" data-rid="${r.id}" value="${r.endDate||''}" title="Ends (blank = ongoing)">
+            <button class="rr-remove" data-rid="${r.id}" title="Delete this recurring rhythm">✕</button>
+          </div>`;
+        }).join('') : `<div style="font-size:12.5px;color:var(--ink-soft);">None yet — tick "Repeats weekly" on a midweek activity in any week card to create one.</div>`}
+      </div>
+      <div class="modal-actions">
+        <div></div>
+        <button class="btn primary" id="close-settings">Done</button>
+      </div>
+      <div class="notice">Changes save immediately and apply to every week on the rhythm. Deleting a recurring rhythm removes it from all future weeks; a week's own "remove for this week only" exceptions stay untouched either way.</div>
+    </div>
+  </div>`;
+}
+
+function attachMainHandlers(){
+  document.getElementById('switch-user').onclick = ()=>{ state.currentUser=null; render(); };
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.onclick = ()=>{
+      const t = el.dataset.term;
+      state.termFilter = state.termFilter===t ? null : t;
+      render();
+    };
+  });
+  document.querySelectorAll('.view-toggle button').forEach(el=>{
+    el.onclick = ()=>{ state.view = el.dataset.view; render(); };
+  });
+  const prevBtn = document.getElementById('prev-month');
+  const nextBtn = document.getElementById('next-month');
+  if(prevBtn) prevBtn.onclick = ()=>{
+    const step = state.view==='calendar'?1:6;
+    state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth()-step, 1);
+    render();
+  };
+  if(nextBtn) nextBtn.onclick = ()=>{
+    const step = state.view==='calendar'?1:6;
+    state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth()+step, 1);
+    render();
+  };
+  document.querySelectorAll('.chip').forEach(el=>{
+    el.onclick = ()=>{
+      const c = el.dataset.cat;
+      if(state.catFilters.has(c)) state.catFilters.delete(c); else state.catFilters.add(c);
+      render();
+    };
+  });
+  const openAdd = document.getElementById('open-add');
+  if(openAdd) openAdd.onclick = ()=>{
+    state.editingEvent = null; state.showModal = true; render();
+  };
+  document.querySelectorAll('.ev-pill, .list-row').forEach(el=>{
+    el.onclick = ()=>{
+      if(el.dataset.id && el.dataset.id.startsWith('wk-')){
+        state.view = 'dashboard'; render(); return;
+      }
+      const ev = state.events.find(e=>e.id===el.dataset.id);
+      if(ev){ state.editingEvent = {...ev}; state.showModal = true; render(); }
+    };
+  });
+  if(state.view==='dashboard') attachDashboardHandlers();
+  const openSettings = document.getElementById('open-settings');
+  if(openSettings) openSettings.onclick = ()=>{ state.showSettings = true; render(); };
+  const settingsOverlay = document.getElementById('settings-overlay');
+  if(settingsOverlay){
+    document.getElementById('close-settings').onclick = ()=>{ state.showSettings=false; render(); };
+    document.querySelectorAll('.tag-name').forEach(el=>{
+      el.onchange = async ()=>{
+        const tag = tagById(el.dataset.id);
+        if(tag){ tag.name = el.value.trim() || tag.name; await saveTags(); }
+      };
+    });
+    document.querySelectorAll('.tag-audience').forEach(el=>{
+      el.onchange = async ()=>{
+        const tag = tagById(el.dataset.id);
+        if(tag){ tag.audience = el.value; await saveTags(); render(); }
+      };
+    });
+    document.querySelectorAll('.tag-remove').forEach(el=>{
+      el.onclick = async ()=>{
+        state.tags = state.tags.filter(t=>t.id!==el.dataset.id);
+        const { error } = await sb.from('tags').delete().eq('id', el.dataset.id);
+        if(error) console.error('delete tag failed', error.message);
+        render();
+      };
+    });
+    const addTagBtn = document.getElementById('add-tag');
+    if(addTagBtn) addTagBtn.onclick = async ()=>{
+      state.tags.push({id:uid(), name:'New tag', audience: state.audiences[0]||'Whole Church'});
+      await saveTags(); render();
+    };
+    document.querySelectorAll('.audience-remove').forEach(el=>{
+      el.onclick = async ()=>{
+        const inUse = state.tags.some(t=>t.audience===el.dataset.audience);
+        if(inUse){ alert('This audience is used by at least one tag — reassign that tag first.'); return; }
+        state.audiences = state.audiences.filter(a=>a!==el.dataset.audience);
+        const { error } = await sb.from('audiences').delete().eq('name', el.dataset.audience);
+        if(error) console.error('delete audience failed', error.message);
+        render();
+      };
+    });
+    const addAudienceBtn = document.getElementById('add-audience');
+    if(addAudienceBtn) addAudienceBtn.onclick = async ()=>{
+      const input = document.getElementById('new-audience-name');
+      const val = input.value.trim();
+      if(!val || state.audiences.includes(val)) return;
+      state.audiences.push(val);
+      await saveAudiences(); render();
+    };
+    document.querySelectorAll('.rr-start,.rr-end').forEach(el=>{
+      el.onchange = async ()=>{
+        const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
+        if(!r) return;
+        if(el.classList.contains('rr-start')) r.startDate = el.value;
+        else r.endDate = el.value || null;
+        await saveRecurring(); render();
+      };
+    });
+    document.querySelectorAll('.rr-remove').forEach(el=>{
+      el.onclick = async ()=>{
+        state.recurringRhythms = state.recurringRhythms.filter(r=>r.id!==el.dataset.rid);
+        const { error } = await sb.from('recurring_rhythms').delete().eq('id', el.dataset.rid);
+        if(error) console.error('delete recurring rhythm failed', error.message);
+        render();
+      };
+    });
+  }
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay){
+    document.getElementById('cancel-modal').onclick = ()=>{ state.showModal=false; state.editingEvent=null; render(); };
+    document.querySelectorAll('.cat-opt').forEach(el=>{
+      el.onclick = ()=>{
+        document.querySelectorAll('.cat-opt').forEach(o=>o.classList.remove('on'));
+        el.classList.add('on');
+        el.dataset.selected = 'true';
+      };
+    });
+    document.getElementById('f-recurrence').onchange = (e)=>{
+      document.getElementById('end-field').style.display = e.target.value==='none' ? 'none':'block';
+    };
+    const delBtn = document.getElementById('delete-ev');
+    if(delBtn) delBtn.onclick = async ()=>{
+      const id = state.editingEvent.id;
+      state.events = state.events.filter(e=>e.id!==id);
+      const { error } = await sb.from('events').delete().eq('id', id);
+      if(error) console.error('delete event failed', error.message);
+      state.showModal=false; state.editingEvent=null; render();
+    };
+    document.getElementById('save-ev').onclick = async ()=>{
+      const title = document.getElementById('f-title').value.trim();
+      if(!title) return;
+      const catEl = document.querySelector('.cat-opt.on');
+      const category = catEl ? catEl.dataset.cat : 'small-group';
+      const date = document.getElementById('f-date').value;
+      const recurrence = document.getElementById('f-recurrence').value;
+      const recurrenceEnd = document.getElementById('f-end').value || null;
+      const notes = document.getElementById('f-notes').value.trim();
+      if(state.editingEvent && state.editingEvent.id){
+        const idx = state.events.findIndex(e=>e.id===state.editingEvent.id);
+        state.events[idx] = {...state.events[idx], title, category, date, recurrence, recurrenceEnd, notes};
+      } else {
+        state.events.push({id:uid(), title, category, date, recurrence, recurrenceEnd, notes, createdBy: state.currentUser.name});
+      }
+      await saveEvents();
+      state.showModal=false; state.editingEvent=null; render();
+    };
+  }
+}
+
+function attachDashboardHandlers(){
+  document.querySelectorAll('.edit-week').forEach(el=>{
+    el.onclick = ()=>{
+      const wk = state.weeks.find(w=>w.id===el.dataset.id);
+      const mw = wk ? effectiveMidweek(wk) : [];
+      state.editingMidweekRows = mw.length ? mw.map(m=>({...m})) : [{id:uid(), tagId:'', note:''}];
+      state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
+      state.editingWeekId = el.dataset.id;
+      render();
+    };
+  });
+  document.querySelectorAll('.cancel-week').forEach(el=>{
+    el.onclick = ()=>{ state.editingWeekId = null; state.editingMidweekRows = null; state.editingOriginalRecurringIds = null; render(); };
+  });
+  document.querySelectorAll('.delete-week').forEach(el=>{
+    el.onclick = async ()=>{
+      if(el.dataset.id!=='new'){
+        state.weeks = state.weeks.filter(w=>w.id!==el.dataset.id);
+        await deleteWeekRemote(el.dataset.id);
+      }
+      state.editingWeekId = null;
+      state.editingMidweekRows = null;
+      state.editingOriginalRecurringIds = null;
+      render();
+    };
+  });
+  document.querySelectorAll('.mw-remove').forEach(el=>{
+    el.onclick = ()=>{
+      state.editingMidweekRows = state.editingMidweekRows.filter(r=>r.id!==el.dataset.mwid);
+      if(!state.editingMidweekRows.length) state.editingMidweekRows.push({id:uid(), tagId:'', note:''});
+      render();
+    };
+  });
+  const mwAddBtn = document.getElementById('mw-add-row');
+  if(mwAddBtn) mwAddBtn.onclick = ()=>{
+    state.editingMidweekRows.push({id:uid(), tagId:'', note:''});
+    render();
+  };
+  document.querySelectorAll('.save-week').forEach(el=>{
+    el.onclick = async ()=>{
+      const card = el.closest('.week-card');
+      const get = f => card.querySelector(`[data-field="${f}"]`)?.value.trim() || '';
+      const data = {
+        occasion: get('occasion'), sundayDate: get('sundayDate'), sundaySeries: get('sundaySeries'),
+        postService: get('postService'), weekCommencing: get('weekCommencing'), happening: get('happening')
+      };
+      if(!data.sundayDate){ card.querySelector('[data-field="sundayDate"]').style.boxShadow = '0 0 0 2px var(--bad)'; return; }
+
+      const midweek = [];
+      const stillPresentRecurring = new Set();
+      const newRecurringTemplates = [];
+      card.querySelectorAll('.mw-row').forEach(row=>{
+        const mwid = row.dataset.mwid;
+        const recurringId = row.dataset.recurringId || '';
+        const tagId = row.querySelector('.mw-tag').value;
+        const note = row.querySelector('.mw-note').value.trim();
+        if(!tagId) return;
+        if(recurringId){
+          stillPresentRecurring.add(recurringId);
+          return; // recurring items aren't stored per-week; they're computed from the template
+        }
+        const repeatEl = row.querySelector('.mw-repeat');
+        if(repeatEl && repeatEl.checked){
+          newRecurringTemplates.push({id:uid(), tagId, note, startDate: data.weekCommencing || data.sundayDate, endDate:null});
+        } else {
+          midweek.push({id:mwid, tagId, note});
+        }
+      });
+
+      // work out which recurring items were removed for this week only
+      const originally = state.editingOriginalRecurringIds || new Set();
+      const removedThisWeek = [...originally].filter(id=>!stillPresentRecurring.has(id));
+
+      if(newRecurringTemplates.length){
+        state.recurringRhythms.push(...newRecurringTemplates);
+        await saveRecurring();
+      }
+
+      let savedId;
+      if(el.dataset.id==='new'){
+        savedId = uid();
+        state.weeks.push({id: savedId, ...data, midweek, excludedRecurring: removedThisWeek});
+      } else {
+        savedId = el.dataset.id;
+        const idx = state.weeks.findIndex(w=>w.id===savedId);
+        if(idx>-1){
+          const prevExcluded = state.weeks[idx].excludedRecurring || [];
+          const mergedExcluded = Array.from(new Set([...prevExcluded, ...removedThisWeek]));
+          state.weeks[idx] = {...state.weeks[idx], ...data, midweek, excludedRecurring: mergedExcluded};
+        }
+      }
+      await saveWeeks([savedId]);
+      state.editingWeekId = null;
+      state.editingMidweekRows = null;
+      state.editingOriginalRecurringIds = null;
+      render();
+    };
+  });
+  const addWeekBtn = document.getElementById('add-week');
+  if(addWeekBtn) addWeekBtn.onclick = ()=>{
+    state.editingWeekId = 'new';
+    state.editingMidweekRows = [{id:uid(), tagId:'', note:''}];
+    state.editingOriginalRecurringIds = new Set();
+    render();
+    const el = document.querySelector('.week-card.editing');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  };
+  const fillBtn = document.getElementById('fill-weeks');
+  if(fillBtn) fillBtn.onclick = async ()=>{
+    const term = state.termFilter || termOf(new Date());
+    const [start, end] = termDateRange(term, new Date());
+    const sundays = allSundaysInRange(start, end);
+    const existing = new Set(state.weeks.map(w=>w.sundayDate));
+    const newIds = [];
+    sundays.forEach(s=>{
+      const iso = isoDate(s);
+      if(!existing.has(iso)){
+        const wc = new Date(s.getFullYear(), s.getMonth(), s.getDate()+1);
+        const id = uid();
+        state.weeks.push({id, occasion:'', sundayDate:iso, sundaySeries:'', postService:'', weekCommencing:isoDate(wc), happening:'', midweek:[], excludedRecurring:[]});
+        newIds.push(id);
+      }
+    });
+    if(newIds.length){ await saveWeeks(newIds); render(); }
+    else alert('All Sundays for this term are already on the sheet.');
+  };
+}
+
+(async ()=>{
+  await loadData();
+  render();
+  subscribeRealtime();
+})();
+</script>
+</body>
+</html>

@@ -679,7 +679,7 @@ async function saveWeeks(weekOrWeeks){
       week_commencing: w.weekCommencing||null, happening: w.happening||''
     };
     const { error } = await sb.from('weeks').upsert(payload);
-    if(error){ console.error('save week failed', error); continue; }
+    if(error){ console.error('save week failed', error); alert('Could not save this week: '+error.message); continue; }
     // resync only THIS week's own midweek items/tags/exclusions — scoped by week_id,
     // safe even if other people are editing other weeks at the same time.
     const { data: existingItems } = await sb.from('week_midweek_items').select('id').eq('week_id', w.id);
@@ -688,13 +688,13 @@ async function saveWeeks(weekOrWeeks){
     const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
     if(items.length){
       const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
-      if(itemErr) console.error('save midweek items failed', itemErr);
+      if(itemErr){ console.error('save midweek items failed', itemErr); alert('Could not save midweek activity: '+itemErr.message); }
     }
     const tagRows = [];
     (w.midweek||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> tagRows.push({midweek_item_id:m.id, tag_id:tid})));
     if(tagRows.length){
       const { error: tagErr } = await sb.from('week_midweek_item_tags').insert(tagRows);
-      if(tagErr) console.error('save midweek item tags failed', tagErr);
+      if(tagErr){ console.error('save midweek item tags failed', tagErr); alert('Could not save midweek activity tags: '+tagErr.message); }
     }
     await sb.from('week_excluded_recurring').delete().eq('week_id', w.id);
     const exclRows = (w.excludedRecurring||[]).map(rid=>({week_id:w.id, recurring_rhythm_id:rid}));
@@ -1075,9 +1075,8 @@ function weekCardHTML(wk, idx){
             }).join('')}
           </div>
           <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
-          <div class="notice" style="margin-top:6px;">Tap tags to select more than one — e.g. Worship + Production for a joint session. Pick "+ New tag…" to create and tag a one-off activity that isn't in your list yet. Give an activity its own date if it's not on the week-commencing Monday — the dashboard will still show "w/c" for the week, but the date list and calendar will use the actual date. Recurring items (green badge) are managed from Settings — removing one here only skips it for this week.</div>
+          <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
         </div>
-        <div class="full"><label>Happening this week</label><textarea data-field="happening" placeholder="e.g. 1) Team Development, ran by departments">${wk.happening||''}</textarea></div>
       </div>
       <div class="wc-actions">
         <button class="save-week" data-id="${wk.id}">Save</button>
@@ -1109,7 +1108,6 @@ function weekCardHTML(wk, idx){
           ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
           ${busy?`<span class="busy-flag">Busy midweek</span>`:''}
         </div>
-        ${wk.happening?`<div class="wc-happening">${wk.happening}</div>`:''}
       </div>
       <div class="wc-actions">
         <button class="edit-week" data-id="${wk.id}">Edit</button>

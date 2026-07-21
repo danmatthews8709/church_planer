@@ -436,6 +436,7 @@ function effectiveMidweek(wk){
   const excluded = wk.excludedRecurring || [];
   if(wkDate){
     state.recurringRhythms.forEach(r=>{
+      if((r.slot||'midweek')!=='midweek') return;
       if(rhythmAppliesToDate(r, wkDate) && !excluded.includes(r.id)){
         const offset = r.dayOffset || 0;
         const actualDate = new Date(wkDate.getFullYear(), wkDate.getMonth(), wkDate.getDate()+offset);
@@ -450,6 +451,33 @@ function effectiveMidweek(wk){
     ...m,
     tagIds: m.tagIds || (m.tagId?[m.tagId]:[]),
     date: m.date || wk.weekCommencing
+  }));
+  return items;
+}
+
+// Same idea as effectiveMidweek, but anchored to the Sunday itself rather than the
+// week-commencing Monday — for things happening after the service that day (or nearby).
+function effectivePostService(wk){
+  const items = [];
+  const anchor = wk.sundayDate ? parseISO(wk.sundayDate) : null;
+  const excluded = wk.excludedRecurring || [];
+  if(anchor){
+    state.recurringRhythms.forEach(r=>{
+      if((r.slot||'midweek')!=='postService') return;
+      if(rhythmAppliesToDate(r, anchor) && !excluded.includes(r.id)){
+        const offset = r.dayOffset || 0;
+        const actualDate = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()+offset);
+        items.push({
+          id:'psrec-'+r.id+'-'+wk.id, tagIds:r.tagIds||[], note:r.note||'',
+          recurringId:r.id, date:isoDate(actualDate)
+        });
+      }
+    });
+  }
+  (wk.postService||[]).forEach(m=> items.push({
+    ...m,
+    tagIds: m.tagIds || [],
+    date: m.date || wk.sundayDate
   }));
   return items;
 }
@@ -499,6 +527,8 @@ let state = {
   editingWeekId: null,
   editingMidweekRows: null,
   editingOriginalRecurringIds: null,
+  editingPostServiceRows: null,
+  editingOriginalPostServiceRecurringIds: null,
   showSettings: false,
   loaded: false
 };
@@ -527,12 +557,13 @@ async function loadData(){
     sb.from('audiences').select('*'),
     sb.from('tags').select('*'),
     sb.from('weeks').select(`
-      id, occasion, sunday_date, sunday_series, post_service, week_commencing, happening,
+      id, occasion, sunday_date, sunday_series, week_commencing, happening,
       week_midweek_items ( id, note, item_date, week_midweek_item_tags ( tag_id ) ),
+      week_post_service_items ( id, note, item_date, week_post_service_item_tags ( tag_id ) ),
       week_excluded_recurring ( recurring_rhythm_id )
     `).order('sunday_date'),
     sb.from('recurring_rhythms').select(`
-      id, note, start_date, end_date, freq, interval, end_type, occurrence_count, day_offset,
+      id, note, start_date, end_date, freq, interval, end_type, occurrence_count, day_offset, slot,
       recurring_rhythm_tags ( tag_id )
     `),
     sb.from('events').select('*')
@@ -569,12 +600,15 @@ async function loadData(){
     occasion: w.occasion || '',
     sundayDate: w.sunday_date,
     sundaySeries: w.sunday_series || '',
-    postService: w.post_service || '',
     weekCommencing: w.week_commencing,
     happening: w.happening || '',
     midweek: (w.week_midweek_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date,
       tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
+    })),
+    postService: (w.week_post_service_items||[]).map(m=>({
+      id: m.id, note: m.note||'', date: m.item_date,
+      tagIds: (m.week_post_service_item_tags||[]).map(t=>t.tag_id)
     })),
     excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
   }));
@@ -653,7 +687,7 @@ async function saveRecurring(rOrRs){
     const payload = {
       id: row.id, note: row.note||'', start_date: row.startDate, end_date: row.endDate||null,
       freq: row.freq, interval: row.interval, end_type: row.endType,
-      occurrence_count: row.occurrenceCount||null, day_offset: row.dayOffset||0
+      occurrence_count: row.occurrenceCount||null, day_offset: row.dayOffset||0, slot: row.slot||'midweek'
     };
     const { error } = await sb.from('recurring_rhythms').upsert(payload);
     if(error){ console.error('save recurring failed', error); continue; }
@@ -676,7 +710,7 @@ async function saveWeeks(weekOrWeeks){
   for(const w of rows){
     const payload = {
       id: w.id, occasion: w.occasion||'', sunday_date: w.sundayDate,
-      sunday_series: w.sundaySeries||'', post_service: w.postService||'',
+      sunday_series: w.sundaySeries||'',
       week_commencing: w.weekCommencing||null, happening: w.happening||''
     };
     const { error } = await sb.from('weeks').upsert(payload);
@@ -696,6 +730,21 @@ async function saveWeeks(weekOrWeeks){
     if(tagRows.length){
       const { error: tagErr } = await sb.from('week_midweek_item_tags').insert(tagRows);
       if(tagErr){ console.error('save midweek item tags failed', tagErr); alert('Could not save midweek activity tags: '+tagErr.message); }
+    }
+    // same scoped resync for post-service items
+    const { data: existingPsItems } = await sb.from('week_post_service_items').select('id').eq('week_id', w.id);
+    const existingPsIds = (existingPsItems||[]).map(i=>i.id);
+    if(existingPsIds.length) await sb.from('week_post_service_items').delete().in('id', existingPsIds);
+    const psItems = (w.postService||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
+    if(psItems.length){
+      const { error: psItemErr } = await sb.from('week_post_service_items').insert(psItems);
+      if(psItemErr){ console.error('save post-service items failed', psItemErr); alert('Could not save post-service activity: '+psItemErr.message); }
+    }
+    const psTagRows = [];
+    (w.postService||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> psTagRows.push({post_service_item_id:m.id, tag_id:tid})));
+    if(psTagRows.length){
+      const { error: psTagErr } = await sb.from('week_post_service_item_tags').insert(psTagRows);
+      if(psTagErr){ console.error('save post-service tags failed', psTagErr); alert('Could not save post-service activity tags: '+psTagErr.message); }
     }
     await sb.from('week_excluded_recurring').delete().eq('week_id', w.id);
     const exclRows = (w.excludedRecurring||[]).map(rid=>({week_id:w.id, recurring_rhythm_id:rid}));
@@ -798,6 +847,24 @@ function eventsForRange(rangeStart, rangeEnd){
           tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
           audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
           synthetic:true, weekId:wk.id, busyMidweek:busy
+        }, date:itemDate});
+      });
+    }
+    if(wk.sundayDate){
+      const ps = effectivePostService(wk);
+      ps.forEach(m=>{
+        const itemDate = m.date ? parseISO(m.date) : parseISO(wk.sundayDate);
+        if(itemDate < rangeStart || itemDate > rangeEnd) return;
+        if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
+        const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+        if(!tags.length) return;
+        const title = tags.map(t=>t.name).join(' + ') + (m.note?' — '+m.note:'');
+        items.push({ev:{
+          id:'wk-ps-'+wk.id+'-'+m.id, title,
+          category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
+          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
+          audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
+          synthetic:true, weekId:wk.id
         }, date:itemDate});
       });
     }
@@ -1015,15 +1082,59 @@ function fmtDate(iso){
   return `${DOW[(d.getDay()+6)%7]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`;
 }
 
+// Shared row markup for both the midweek and post-service activity editors — same
+// classes/behaviour either way; the two sections are told apart by a data-section
+// wrapper, not by different markup.
+function activityRowsHTML(rows, dateHint){
+  return rows.map(r=>{
+    const isNewTag = !!r.creatingTag;
+    const tagIds = r.tagIds || [];
+    return `
+    <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
+      <div class="mw-tags-line">
+        ${isNewTag ? `
+          <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="New tag name" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
+          <select class="mw-newtag-audience" data-mwid="${r.id}">
+            ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
+          </select>
+          <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking tags">↩ back</button>
+        ` : `
+          ${state.tags.map(t=>{
+            const on = tagIds.includes(t.id);
+            return `<button type="button" class="mw-tag-toggle ${on?'on':''}" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="${on?'background:'+audienceColor(t.audience)+';color:#fff;border-color:transparent;':''}">${t.name}</button>`;
+          }).join('')}
+          ${!r.recurringId ? `<button type="button" class="mw-tag-toggle mw-tag-toggle-new" data-mwid="${r.id}">+ New tag…</button>` : ''}
+        `}
+      </div>
+      <div class="mw-meta-line">
+        <input class="mw-note" data-mwid="${r.id}" placeholder="Note (optional)" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
+        ${r.recurringId
+          ? `<span class="busy-flag" style="background:var(--good-soft);color:var(--good);">Recurring${r.date?' · '+fmtDate(r.date):''}</span>`
+          : `<input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}" title="Actual date (optional — defaults to ${dateHint})">
+             <select class="mw-repeat-freq" data-mwid="${r.id}" title="Repeat pattern">
+              <option value="" ${!r.repeatFreq?'selected':''}>Doesn't repeat</option>
+              <option value="weekly:1" ${r.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
+              <option value="weekly:2" ${r.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
+              <option value="weekly:4" ${r.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
+              <option value="monthly:1" ${r.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
+            </select>`}
+        <button class="mw-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function weekCardHTML(wk, idx){
   const editing = state.editingWeekId === wk.id;
   const term = wk.sundayDate ? termOf(parseISO(wk.sundayDate)) : null;
   const termVar = term ? `var(--${term})` : 'var(--navy)';
   const midweek = effectiveMidweek(wk);
   const busy = midweek.length > 1;
+  const postServiceItems = effectivePostService(wk);
 
   if(editing){
     const rows = state.editingMidweekRows || [];
+    const psRows = state.editingPostServiceRows || [];
     return `
     <div class="week-card editing" style="--term-color:${termVar};" data-id="${wk.id}">
       <div class="wc-left">
@@ -1033,48 +1144,16 @@ function weekCardHTML(wk, idx){
         <div><label>Occasion</label><input data-field="occasion" value="${(wk.occasion||'').replace(/"/g,'&quot;')}" placeholder="e.g. Baptism Sunday"></div>
         <div><label>Sunday date</label><input type="date" data-field="sundayDate" value="${wk.sundayDate||''}"></div>
         <div class="full"><label>Sunday series</label><input data-field="sundaySeries" value="${(wk.sundaySeries||'').replace(/"/g,'&quot;')}" placeholder="Sermon series title"></div>
-        <div class="full"><label>Sunday post service</label><textarea data-field="postService" placeholder="e.g. i) All Group Leaders Lunch">${wk.postService||''}</textarea></div>
+        <div class="full">
+          <label>Sunday post service</label>
+          <div class="mw-rows" data-section="postService">${activityRowsHTML(psRows, 'Sunday')}</div>
+          <button class="mw-add" id="ps-add-row" type="button">+ Add post-service activity</button>
+          <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the Sunday itself.</div>
+        </div>
         <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${wk.weekCommencing||''}"></div>
         <div class="full">
           <label>Midweek activity ${rows.length>1?'<span class="busy-flag">Busy midweek</span>':''}</label>
-          <div class="mw-rows">
-            ${rows.map(r=>{
-              const isNewTag = !!r.creatingTag;
-              const tagIds = r.tagIds || [];
-              return `
-              <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
-                <div class="mw-tags-line">
-                  ${isNewTag ? `
-                    <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="New tag name" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
-                    <select class="mw-newtag-audience" data-mwid="${r.id}">
-                      ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
-                    </select>
-                    <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking tags">↩ back</button>
-                  ` : `
-                    ${state.tags.map(t=>{
-                      const on = tagIds.includes(t.id);
-                      return `<button type="button" class="mw-tag-toggle ${on?'on':''}" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="${on?'background:'+audienceColor(t.audience)+';color:#fff;border-color:transparent;':''}">${t.name}</button>`;
-                    }).join('')}
-                    ${!r.recurringId ? `<button type="button" class="mw-tag-toggle mw-tag-toggle-new" data-mwid="${r.id}">+ New tag…</button>` : ''}
-                  `}
-                </div>
-                <div class="mw-meta-line">
-                  <input class="mw-note" data-mwid="${r.id}" placeholder="Note (optional)" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
-                  ${r.recurringId
-                    ? `<span class="busy-flag" style="background:var(--good-soft);color:var(--good);">Recurring${r.date?' · '+fmtDate(r.date):''}</span>`
-                    : `<input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}" title="Actual date (optional — defaults to week commencing)">
-                       <select class="mw-repeat-freq" data-mwid="${r.id}" title="Repeat pattern">
-                        <option value="" ${!r.repeatFreq?'selected':''}>Doesn't repeat</option>
-                        <option value="weekly:1" ${r.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
-                        <option value="weekly:2" ${r.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
-                        <option value="weekly:4" ${r.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
-                        <option value="monthly:1" ${r.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
-                      </select>`}
-                  <button class="mw-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>
+          <div class="mw-rows" data-section="midweek">${activityRowsHTML(rows, 'week commencing')}</div>
           <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
           <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
         </div>
@@ -1096,7 +1175,16 @@ function weekCardHTML(wk, idx){
       </div>
       <div class="wc-main">
         <div class="wc-series ${wk.sundaySeries?'':'empty'}">${wk.sundaySeries || 'Untitled Sunday'}</div>
-        ${wk.postService?`<div class="wc-post">${wk.postService}</div>`:''}
+        ${postServiceItems.length ? `<div class="wc-mid" style="margin-bottom:8px;">
+          ${postServiceItems.map(m=>{
+            const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+            if(!tags.length) return '';
+            const dom = tags.some(t=>isDominantAudience(t.audience));
+            const label = tags.map(t=>t.name).join(' + ');
+            const showDate = m.date && m.date !== wk.sundayDate;
+            return `<span class="wc-rhythm-pill${dom?' dominant':''}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
+          }).join('')}
+        </div>` : ''}
         <div class="wc-mid">
           ${midweek.map(m=>{
             const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
@@ -1118,7 +1206,7 @@ function weekCardHTML(wk, idx){
 
 function dashboardHTML(){
   const ws = visibleWeeks();
-  const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:isoDate(new Date()),sundaySeries:'',postService:'',weekCommencing:'',happening:'',midweek:[],excludedRecurring:[]}, ws.length) : '';
+  const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:isoDate(new Date()),sundaySeries:'',weekCommencing:'',happening:'',midweek:[],postService:[],excludedRecurring:[]}, ws.length) : '';
   return `
     <div class="dash-toolbar">
       <div class="term-label">${ws.length} week${ws.length===1?'':'s'}${state.termFilter?' · '+state.termFilter:' · all terms'}</div>
@@ -1266,9 +1354,11 @@ function settingsHTML(){
           const interval = r.interval || 1;
           const endType = r.endType || (r.endDate ? 'byDate' : 'never');
           const dayOffset = r.dayOffset || 0;
+          const slot = r.slot || 'midweek';
           return `
           <div class="rr-card" data-rid="${r.id}">
             <div class="rr-line" style="flex-wrap:wrap;">
+              <span class="busy-flag" style="background:var(--paper);color:var(--ink-soft);">${slot==='postService'?'Post-service':'Midweek'}</span>
               ${state.tags.map(t=>{
                 const on = tagIds.includes(t.id);
                 return `<button type="button" class="rr-tag-toggle ${on?'on':''}" data-rid="${r.id}" data-tagid="${t.id}" style="${on?'background:'+audienceColor(t.audience)+';color:#fff;border-color:transparent;':''}">${t.name}</button>`;
@@ -1528,12 +1618,21 @@ function attachMainHandlers(){
 
 // Reads any in-progress typing in the midweek rows back into state.editingMidweekRows
 // before we mutate the row list and re-render, so nothing typed gets lost.
-function syncMidweekRowsFromDOM(){
+// A row's id is unique regardless of which section it belongs to, so we can find it
+// by searching both editing arrays rather than needing to inspect the DOM for section.
+function findEditingRow(id){
+  let entry = (state.editingMidweekRows||[]).find(r=>r.id===id);
+  if(entry) return {entry, section:'midweek'};
+  entry = (state.editingPostServiceRows||[]).find(r=>r.id===id);
+  if(entry) return {entry, section:'postService'};
+  return {entry:null, section:null};
+}
+
+function syncAllActivityRowsFromDOM(){
   const card = document.querySelector('.week-card.editing');
-  if(!card || !state.editingMidweekRows) return;
+  if(!card) return;
   card.querySelectorAll('.mw-row').forEach(row=>{
-    const mwid = row.dataset.mwid;
-    const entry = state.editingMidweekRows.find(r=>r.id===mwid);
+    const {entry} = findEditingRow(row.dataset.mwid);
     if(!entry) return;
     const noteInp = row.querySelector('.mw-note');
     if(noteInp && !noteInp.disabled) entry.note = noteInp.value;
@@ -1552,8 +1651,8 @@ function attachDashboardHandlers(){
   document.querySelectorAll('.mw-tag-toggle:not(.mw-tag-toggle-new)').forEach(el=>{
     el.onclick = ()=>{
       if(el.disabled) return;
-      syncMidweekRowsFromDOM();
-      const entry = state.editingMidweekRows.find(r=>r.id===el.dataset.mwid);
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
       if(!entry) return;
       entry.tagIds = entry.tagIds || [];
       const tid = el.dataset.tagid;
@@ -1564,16 +1663,16 @@ function attachDashboardHandlers(){
   });
   document.querySelectorAll('.mw-tag-toggle-new').forEach(el=>{
     el.onclick = ()=>{
-      syncMidweekRowsFromDOM();
-      const entry = state.editingMidweekRows.find(r=>r.id===el.dataset.mwid);
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
       if(entry) entry.creatingTag = true;
       render();
     };
   });
   document.querySelectorAll('.mw-cancel-newtag').forEach(el=>{
     el.onclick = ()=>{
-      syncMidweekRowsFromDOM();
-      const entry = state.editingMidweekRows.find(r=>r.id===el.dataset.mwid);
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
       if(entry){ entry.creatingTag=false; entry.newTagName=''; }
       render();
     };
@@ -1582,14 +1681,21 @@ function attachDashboardHandlers(){
     el.onclick = ()=>{
       const wk = state.weeks.find(w=>w.id===el.dataset.id);
       const mw = wk ? effectiveMidweek(wk) : [];
+      const ps = wk ? effectivePostService(wk) : [];
       state.editingMidweekRows = mw.length ? mw.map(m=>({...m})) : [{id:uid(), tagIds:[], note:''}];
+      state.editingPostServiceRows = ps.length ? ps.map(m=>({...m})) : [{id:uid(), tagIds:[], note:''}];
       state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
+      state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingWeekId = el.dataset.id;
       render();
     };
   });
   document.querySelectorAll('.cancel-week').forEach(el=>{
-    el.onclick = ()=>{ state.editingWeekId = null; state.editingMidweekRows = null; state.editingOriginalRecurringIds = null; render(); };
+    el.onclick = ()=>{
+      state.editingWeekId = null; state.editingMidweekRows = null; state.editingPostServiceRows = null;
+      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
+      render();
+    };
   });
   document.querySelectorAll('.delete-week').forEach(el=>{
     el.onclick = async ()=>{
@@ -1597,24 +1703,36 @@ function attachDashboardHandlers(){
         await deleteWeekRemote(el.dataset.id);
         state.weeks = state.weeks.filter(w=>w.id!==el.dataset.id);
       }
-      state.editingWeekId = null;
-      state.editingMidweekRows = null;
-      state.editingOriginalRecurringIds = null;
+      state.editingWeekId = null; state.editingMidweekRows = null; state.editingPostServiceRows = null;
+      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
       render();
     };
   });
   document.querySelectorAll('.mw-remove').forEach(el=>{
     el.onclick = ()=>{
-      syncMidweekRowsFromDOM();
-      state.editingMidweekRows = state.editingMidweekRows.filter(r=>r.id!==el.dataset.mwid);
-      if(!state.editingMidweekRows.length) state.editingMidweekRows.push({id:uid(), tagIds:[], note:''});
+      syncAllActivityRowsFromDOM();
+      const id = el.dataset.mwid;
+      const {section} = findEditingRow(id);
+      if(section==='midweek'){
+        state.editingMidweekRows = state.editingMidweekRows.filter(r=>r.id!==id);
+        if(!state.editingMidweekRows.length) state.editingMidweekRows.push({id:uid(), tagIds:[], note:''});
+      } else if(section==='postService'){
+        state.editingPostServiceRows = state.editingPostServiceRows.filter(r=>r.id!==id);
+        if(!state.editingPostServiceRows.length) state.editingPostServiceRows.push({id:uid(), tagIds:[], note:''});
+      }
       render();
     };
   });
   const mwAddBtn = document.getElementById('mw-add-row');
   if(mwAddBtn) mwAddBtn.onclick = ()=>{
-    syncMidweekRowsFromDOM();
+    syncAllActivityRowsFromDOM();
     state.editingMidweekRows.push({id:uid(), tagIds:[], note:''});
+    render();
+  };
+  const psAddBtn = document.getElementById('ps-add-row');
+  if(psAddBtn) psAddBtn.onclick = ()=>{
+    syncAllActivityRowsFromDOM();
+    state.editingPostServiceRows.push({id:uid(), tagIds:[], note:''});
     render();
   };
   document.querySelectorAll('.save-week').forEach(el=>{
@@ -1623,80 +1741,95 @@ function attachDashboardHandlers(){
       const get = f => card.querySelector(`[data-field="${f}"]`)?.value.trim() || '';
       const data = {
         occasion: get('occasion'), sundayDate: get('sundayDate'), sundaySeries: get('sundaySeries'),
-        postService: get('postService'), weekCommencing: get('weekCommencing'), happening: get('happening')
+        weekCommencing: get('weekCommencing'), happening: get('happening')
       };
       if(!data.sundayDate){ card.querySelector('[data-field="sundayDate"]').style.boxShadow = '0 0 0 2px var(--bad)'; return; }
 
-      const midweek = [];
-      const stillPresentRecurring = new Set();
-      const newRecurringTemplates = [];
-      const newTags = [];
-      card.querySelectorAll('.mw-row').forEach(row=>{
-        const mwid = row.dataset.mwid;
-        const recurringId = row.dataset.recurringId || '';
-        if(recurringId){
-          stillPresentRecurring.add(recurringId);
-          return; // recurring items aren't stored per-week; they're computed from the template
-        }
-        const entry = state.editingMidweekRows.find(r=>r.id===mwid) || {};
-        let tagIds = (entry.tagIds || []).slice();
-        const isNewTag = row.dataset.newtag === '1';
-        if(isNewTag){
-          const nameInp = row.querySelector('.mw-newtag-name');
-          const name = nameInp ? nameInp.value.trim() : '';
-          if(name){
-            const audSel = row.querySelector('.mw-newtag-audience');
-            const audience = audSel ? audSel.value : ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
-            const newTag = {id:uid(), name, audience};
-            state.tags.push(newTag);
-            newTags.push(newTag);
-            tagIds.push(newTag.id);
+      // Processes one section's rows (midweek or post-service) — same logic either way,
+      // just anchored to a different date and tagged with a different rhythm "slot".
+      function processSection(sectionName, anchorDate){
+        const items = [];
+        const stillPresentRecurring = new Set();
+        const newRecurringTemplates = [];
+        const newTags = [];
+        const container = card.querySelector(`.mw-rows[data-section="${sectionName}"]`);
+        if(!container) return {items, stillPresentRecurring, newRecurringTemplates, newTags};
+        container.querySelectorAll('.mw-row').forEach(row=>{
+          const mwid = row.dataset.mwid;
+          const recurringId = row.dataset.recurringId || '';
+          if(recurringId){ stillPresentRecurring.add(recurringId); return; }
+          const {entry} = findEditingRow(mwid);
+          let tagIds = ((entry && entry.tagIds) || []).slice();
+          const isNewTag = row.dataset.newtag === '1';
+          if(isNewTag){
+            const nameInp = row.querySelector('.mw-newtag-name');
+            const name = nameInp ? nameInp.value.trim() : '';
+            if(name){
+              const audSel = row.querySelector('.mw-newtag-audience');
+              const audience = audSel ? audSel.value : ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
+              const newTag = {id:uid(), name, audience};
+              state.tags.push(newTag);
+              newTags.push(newTag);
+              tagIds.push(newTag.id);
+            }
           }
-        }
-        if(!tagIds.length) return; // nothing picked or created — skip this row rather than lose the others
-        const note = row.querySelector('.mw-note') ? row.querySelector('.mw-note').value.trim() : '';
-        const dateInp = row.querySelector('.mw-date');
-        const date = dateInp ? dateInp.value : '';
-        const freqSel = row.querySelector('.mw-repeat-freq');
-        const freqVal = freqSel ? freqSel.value : '';
-        if(freqVal){
-          const [freq, intervalStr] = freqVal.split(':');
-          newRecurringTemplates.push({
-            id:uid(), tagIds, note, startDate: data.weekCommencing || data.sundayDate,
-            endDate:null, freq, interval: parseInt(intervalStr,10)||1, endType:'never', occurrenceCount:null, dayOffset:0
-          });
-        } else {
-          midweek.push({id:mwid, tagIds, note, date: date || null});
-        }
-      });
-      if(newTags.length) await saveTags(newTags);
+          if(!tagIds.length) return;
+          const note = row.querySelector('.mw-note') ? row.querySelector('.mw-note').value.trim() : '';
+          const dateInp = row.querySelector('.mw-date');
+          const date = dateInp ? dateInp.value : '';
+          const freqSel = row.querySelector('.mw-repeat-freq');
+          const freqVal = freqSel ? freqSel.value : '';
+          if(freqVal){
+            const [freq, intervalStr] = freqVal.split(':');
+            newRecurringTemplates.push({
+              id:uid(), tagIds, note, startDate: anchorDate,
+              endDate:null, freq, interval: parseInt(intervalStr,10)||1, endType:'never', occurrenceCount:null,
+              dayOffset:0, slot: sectionName
+            });
+          } else {
+            items.push({id:mwid, tagIds, note, date: date || null});
+          }
+        });
+        return {items, stillPresentRecurring, newRecurringTemplates, newTags};
+      }
 
-      // work out which recurring items were removed for this week only
-      const originally = state.editingOriginalRecurringIds || new Set();
-      const removedThisWeek = [...originally].filter(id=>!stillPresentRecurring.has(id));
+      const mwResult = processSection('midweek', data.weekCommencing || data.sundayDate);
+      const psResult = processSection('postService', data.sundayDate);
 
-      if(newRecurringTemplates.length){
-        state.recurringRhythms.push(...newRecurringTemplates);
-        await saveRecurring(newRecurringTemplates);
+      const allNewTags = [...mwResult.newTags, ...psResult.newTags];
+      if(allNewTags.length) await saveTags(allNewTags);
+
+      // work out which recurring items (either section) were removed for this week only
+      const originally = new Set([
+        ...(state.editingOriginalRecurringIds || []),
+        ...(state.editingOriginalPostServiceRecurringIds || [])
+      ]);
+      const stillPresent = new Set([...mwResult.stillPresentRecurring, ...psResult.stillPresentRecurring]);
+      const removedThisWeek = [...originally].filter(id=>!stillPresent.has(id));
+
+      const allNewRecurringTemplates = [...mwResult.newRecurringTemplates, ...psResult.newRecurringTemplates];
+      if(allNewRecurringTemplates.length){
+        state.recurringRhythms.push(...allNewRecurringTemplates);
+        await saveRecurring(allNewRecurringTemplates);
       }
 
       let savedWeek;
       if(el.dataset.id==='new'){
-        savedWeek = {id: uid(), ...data, midweek, excludedRecurring: removedThisWeek};
+        savedWeek = {id: uid(), ...data, midweek: mwResult.items, postService: psResult.items, excludedRecurring: removedThisWeek};
         state.weeks.push(savedWeek);
       } else {
         const idx = state.weeks.findIndex(w=>w.id===el.dataset.id);
         if(idx>-1){
           const prevExcluded = state.weeks[idx].excludedRecurring || [];
           const mergedExcluded = Array.from(new Set([...prevExcluded, ...removedThisWeek]));
-          state.weeks[idx] = {...state.weeks[idx], ...data, midweek, excludedRecurring: mergedExcluded};
+          state.weeks[idx] = {...state.weeks[idx], ...data, midweek: mwResult.items, postService: psResult.items, excludedRecurring: mergedExcluded};
           savedWeek = state.weeks[idx];
         }
       }
       if(savedWeek) await saveWeeks(savedWeek);
       state.editingWeekId = null;
-      state.editingMidweekRows = null;
-      state.editingOriginalRecurringIds = null;
+      state.editingMidweekRows = null; state.editingPostServiceRows = null;
+      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
       render();
     };
   });
@@ -1704,7 +1837,9 @@ function attachDashboardHandlers(){
   if(addWeekBtn) addWeekBtn.onclick = ()=>{
     state.editingWeekId = 'new';
     state.editingMidweekRows = [{id:uid(), tagIds:[], note:''}];
+    state.editingPostServiceRows = [{id:uid(), tagIds:[], note:''}];
     state.editingOriginalRecurringIds = new Set();
+    state.editingOriginalPostServiceRecurringIds = new Set();
     render();
     const el = document.querySelector('.week-card.editing');
     if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
@@ -1720,7 +1855,7 @@ function attachDashboardHandlers(){
       const iso = isoDate(s);
       if(!existing.has(iso)){
         const wc = new Date(s.getFullYear(), s.getMonth(), s.getDate()+1);
-        const w = {id:uid(), occasion:'', sundayDate:iso, sundaySeries:'', postService:'', weekCommencing:isoDate(wc), happening:'', midweek:[], excludedRecurring:[]};
+        const w = {id:uid(), occasion:'', sundayDate:iso, sundaySeries:'', weekCommencing:isoDate(wc), happening:'', midweek:[], postService:[], excludedRecurring:[]};
         state.weeks.push(w);
         added.push(w);
       }

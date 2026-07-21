@@ -339,7 +339,11 @@
 <body>
 <div class="app" id="app">Loading…</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
 <script>
+const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
 const CATS = {
   'small-group':{label:'Small Group'},
   'prayer':{label:'Prayer Service'},
@@ -505,127 +509,230 @@ function termOf(date){
   if([8,9,10].includes(m)) return 'autumn';
   return 'winter';
 }
-function uid(){ return Math.random().toString(36).slice(2,10); }
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  // fallback for older browsers without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
 function isoDate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
 
 async function loadData(){
-  try{
-    const u = await window.storage.get('users-list', true);
-    state.users = u ? JSON.parse(u.value) : [];
-  }catch(e){ state.users = []; }
-  try{
-    const ev = await window.storage.get('events-list', true);
-    state.events = ev ? JSON.parse(ev.value) : [];
-  }catch(e){ state.events = []; }
-  try{
-    const wk = await window.storage.get('weeks-list', true);
-    state.weeks = wk ? JSON.parse(wk.value) : [];
-  }catch(e){ state.weeks = []; }
-  try{
-    const tg = await window.storage.get('tags-list', true);
-    state.tags = tg ? JSON.parse(tg.value) : null;
-  }catch(e){ state.tags = null; }
-  if(!state.tags || !state.tags.length){ state.tags = DEFAULT_TAGS.slice(); await saveTags(); }
-  try{
-    const au = await window.storage.get('audiences-list', true);
-    state.audiences = au ? JSON.parse(au.value) : null;
-  }catch(e){ state.audiences = null; }
-  if(!state.audiences || !state.audiences.length){ state.audiences = DEFAULT_AUDIENCES.map(a=>({...a})); await saveAudiences(); }
-  else if(typeof state.audiences[0] === 'string'){
-    // migrate legacy plain-string audiences into {name,color} objects
-    state.audiences = state.audiences.map((name,i)=>{
-      const def = DEFAULT_AUDIENCES.find(d=>d.name===name);
-      return {name, color: def ? def.color : TAG_PALETTE[i % TAG_PALETTE.length]};
-    });
-    await saveAudiences();
+  const [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes] = await Promise.all([
+    sb.from('users').select('*'),
+    sb.from('audiences').select('*'),
+    sb.from('tags').select('*'),
+    sb.from('weeks').select(`
+      id, occasion, sunday_date, sunday_series, post_service, week_commencing, happening,
+      week_midweek_items ( id, note, item_date, week_midweek_item_tags ( tag_id ) ),
+      week_excluded_recurring ( recurring_rhythm_id )
+    `).order('sunday_date'),
+    sb.from('recurring_rhythms').select(`
+      id, note, start_date, end_date, freq, interval, end_type, occurrence_count, day_offset,
+      recurring_rhythm_tags ( tag_id )
+    `),
+    sb.from('events').select('*')
+  ]);
+
+  [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes].forEach(r=>{
+    if(r.error) console.error('Supabase load error:', r.error);
+  });
+
+  state.users = (usersRes.data||[]).map(u=>({id:u.id, name:u.name, pin:u.pin}));
+
+  state.audiences = (audRes.data||[]).map(a=>({name:a.name, color:a.color}));
+  if(!state.audiences.length){
+    state.audiences = DEFAULT_AUDIENCES.map(a=>({...a}));
+    await saveAudiences(state.audiences);
   }
-  let audiencesMigrated = false;
   ['Core Team','Service Team'].forEach(name=>{
     if(!state.audiences.some(a=>a.name===name)){
       const def = DEFAULT_AUDIENCES.find(d=>d.name===name);
-      state.audiences.push({name, color: def ? def.color : TAG_PALETTE[state.audiences.length % TAG_PALETTE.length]});
-      audiencesMigrated = true;
+      const a = {name, color: def ? def.color : TAG_PALETTE[state.audiences.length % TAG_PALETTE.length]};
+      state.audiences.push(a);
+      saveAudiences(a);
     }
   });
-  if(audiencesMigrated) await saveAudiences();
-  try{
-    const rr = await window.storage.get('recurring-list', true);
-    state.recurringRhythms = rr ? JSON.parse(rr.value) : [];
-  }catch(e){ state.recurringRhythms = []; }
-  // migrate legacy single-rhythm weeks to midweek arrays
-  let migrated = false;
-  let recurringMigrated = false;
-  state.recurringRhythms.forEach(r=>{
-    if(!r.freq){ r.freq = 'weekly'; recurringMigrated = true; }
-    if(!r.interval){ r.interval = 1; recurringMigrated = true; }
-    if(!r.endType){ r.endType = r.endDate ? 'byDate' : 'never'; recurringMigrated = true; }
-    if(!r.tagIds){ r.tagIds = r.tagId ? [r.tagId] : []; recurringMigrated = true; }
-    if(r.dayOffset===undefined){ r.dayOffset = 0; recurringMigrated = true; }
-  });
-  if(recurringMigrated) await saveRecurring();
-  state.weeks.forEach(w=>{
-    if(!w.excludedRecurring) w.excludedRecurring = [];
-    if(!w.midweek){
-      w.midweek = [];
-      if(w.rhythm){
-        let tag = state.tags.find(t=>t.name.toLowerCase()===w.rhythm.toLowerCase());
-        if(!tag){ tag = {id:uid(), name:w.rhythm, audience:'Whole Church'}; state.tags.push(tag); }
-        w.midweek.push({id:uid(), tagIds:[tag.id], note:''});
-      }
-      delete w.rhythm;
-      migrated = true;
-    } else {
-      w.midweek.forEach(m=>{
-        if(!m.tagIds){ m.tagIds = m.tagId ? [m.tagId] : []; delete m.tagId; migrated = true; }
-      });
-    }
-    // one-time correction: dates saved by the old UTC-based isoDate() landed a day early in
-    // positive-UTC-offset timezones (e.g. Sunday stored/shown as Saturday). Shift them forward.
-    if(w.sundayDate){
-      const sd = parseISO(w.sundayDate);
-      if(sd.getDay()===6){ // Saturday -> should be Sunday
-        w.sundayDate = isoDate(new Date(sd.getFullYear(), sd.getMonth(), sd.getDate()+1));
-        migrated = true;
-      }
-    }
-    if(w.weekCommencing){
-      const wc = parseISO(w.weekCommencing);
-      if(wc.getDay()===0){ // Sunday -> should be Monday
-        w.weekCommencing = isoDate(new Date(wc.getFullYear(), wc.getMonth(), wc.getDate()+1));
-        migrated = true;
-      }
-    }
-  });
-  if(migrated){ await saveWeeks(); await saveTags(); }
+
+  state.tags = (tagsRes.data||[]).map(t=>({id:t.id, name:t.name, audience:t.audience}));
+  if(!state.tags.length){
+    state.tags = DEFAULT_TAGS.map(t=>({...t, id: uid()}));
+    await saveTags(state.tags);
+  }
+
+  state.weeks = (weeksRes.data||[]).map(w=>({
+    id: w.id,
+    occasion: w.occasion || '',
+    sundayDate: w.sunday_date,
+    sundaySeries: w.sunday_series || '',
+    postService: w.post_service || '',
+    weekCommencing: w.week_commencing,
+    happening: w.happening || '',
+    midweek: (w.week_midweek_items||[]).map(m=>({
+      id: m.id, note: m.note||'', date: m.item_date,
+      tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
+    })),
+    excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
+  }));
   state.weeks.sort((a,b)=> a.sundayDate < b.sundayDate ? -1 : 1);
+
+  state.recurringRhythms = (rrRes.data||[]).map(r=>({
+    id: r.id, note: r.note||'', startDate: r.start_date, endDate: r.end_date,
+    freq: r.freq, interval: r.interval, endType: r.end_type, occurrenceCount: r.occurrence_count,
+    dayOffset: r.day_offset||0, tagIds: (r.recurring_rhythm_tags||[]).map(t=>t.tag_id)
+  }));
+
+  state.events = (evRes.data||[]).map(e=>({
+    id: e.id, title: e.title, category: e.category, date: e.event_date,
+    recurrence: e.recurrence, recurrenceInterval: e.recurrence_interval,
+    recurrenceEndType: e.recurrence_end_type, recurrenceCount: e.recurrence_count,
+    recurrenceEnd: e.recurrence_end, notes: e.notes||'', createdBy: e.created_by
+  }));
+
   state.loaded = true;
 }
-async function saveUsers(){
-  try{ await window.storage.set('users-list', JSON.stringify(state.users), true); }
-  catch(e){ console.error('save users failed', e); }
+
+// ---------- Save / delete helpers ----------
+// Each accepts a single item, an array, or nothing (meaning "everything currently
+// in local state") — and only ever touches the rows it's given, upserting them.
+// Deletions are always explicit, separate calls at the point of removal, so one
+// person's edit can never silently wipe out another person's concurrent change.
+
+async function saveUsers(userOrUsers){
+  const rows = userOrUsers ? (Array.isArray(userOrUsers)?userOrUsers:[userOrUsers]) : state.users;
+  const payload = rows.map(u=>({id:u.id, name:u.name, pin:u.pin}));
+  const { error } = await sb.from('users').upsert(payload);
+  if(error) console.error('save users failed', error);
 }
-async function saveEvents(){
-  try{ await window.storage.set('events-list', JSON.stringify(state.events), true); }
-  catch(e){ console.error('save events failed', e); }
+
+async function saveTags(tagOrTags){
+  const rows = tagOrTags ? (Array.isArray(tagOrTags)?tagOrTags:[tagOrTags]) : state.tags;
+  const payload = rows.map(t=>({id:t.id, name:t.name, audience:t.audience}));
+  const { error } = await sb.from('tags').upsert(payload);
+  if(error) console.error('save tags failed', error);
 }
-async function saveWeeks(){
+async function deleteTagRemote(id){
+  const { error } = await sb.from('tags').delete().eq('id', id);
+  if(error) console.error('delete tag failed', error);
+}
+
+async function saveAudiences(audOrAuds){
+  const rows = audOrAuds ? (Array.isArray(audOrAuds)?audOrAuds:[audOrAuds]) : state.audiences;
+  const payload = rows.map(a=>({name:a.name, color:a.color}));
+  const { error } = await sb.from('audiences').upsert(payload, {onConflict:'name'});
+  if(error) console.error('save audiences failed', error);
+}
+async function deleteAudienceRemote(name){
+  const { error } = await sb.from('audiences').delete().eq('name', name);
+  if(error) console.error('delete audience failed', error);
+}
+
+async function saveEvents(evOrEvs){
+  const rows = evOrEvs ? (Array.isArray(evOrEvs)?evOrEvs:[evOrEvs]) : state.events;
+  const payload = rows.map(e=>({
+    id:e.id, title:e.title, category:e.category, event_date:e.date,
+    recurrence:e.recurrence, recurrence_interval:e.recurrenceInterval,
+    recurrence_end_type:e.recurrenceEndType, recurrence_count:e.recurrenceCount,
+    recurrence_end:e.recurrenceEnd, notes:e.notes||'', created_by:e.createdBy
+  }));
+  const { error } = await sb.from('events').upsert(payload);
+  if(error) console.error('save events failed', error);
+}
+async function deleteEventRemote(id){
+  const { error } = await sb.from('events').delete().eq('id', id);
+  if(error) console.error('delete event failed', error);
+}
+
+async function saveRecurring(rOrRs){
+  const rows = rOrRs ? (Array.isArray(rOrRs)?rOrRs:[rOrRs]) : state.recurringRhythms;
+  for(const row of rows){
+    const payload = {
+      id: row.id, note: row.note||'', start_date: row.startDate, end_date: row.endDate||null,
+      freq: row.freq, interval: row.interval, end_type: row.endType,
+      occurrence_count: row.occurrenceCount||null, day_offset: row.dayOffset||0
+    };
+    const { error } = await sb.from('recurring_rhythms').upsert(payload);
+    if(error){ console.error('save recurring failed', error); continue; }
+    // resync only THIS rhythm's tag links — scoped, doesn't touch any other rhythm
+    await sb.from('recurring_rhythm_tags').delete().eq('recurring_rhythm_id', row.id);
+    const tagRows = (row.tagIds||[]).map(tid=>({recurring_rhythm_id:row.id, tag_id:tid}));
+    if(tagRows.length){
+      const { error: tagErr } = await sb.from('recurring_rhythm_tags').insert(tagRows);
+      if(tagErr) console.error('save recurring tags failed', tagErr);
+    }
+  }
+}
+async function deleteRecurringRemote(id){
+  const { error } = await sb.from('recurring_rhythms').delete().eq('id', id);
+  if(error) console.error('delete recurring failed', error);
+}
+
+async function saveWeeks(weekOrWeeks){
+  const rows = weekOrWeeks ? (Array.isArray(weekOrWeeks)?weekOrWeeks:[weekOrWeeks]) : state.weeks;
+  for(const w of rows){
+    const payload = {
+      id: w.id, occasion: w.occasion||'', sunday_date: w.sundayDate,
+      sunday_series: w.sundaySeries||'', post_service: w.postService||'',
+      week_commencing: w.weekCommencing||null, happening: w.happening||''
+    };
+    const { error } = await sb.from('weeks').upsert(payload);
+    if(error){ console.error('save week failed', error); continue; }
+    // resync only THIS week's own midweek items/tags/exclusions — scoped by week_id,
+    // safe even if other people are editing other weeks at the same time.
+    const { data: existingItems } = await sb.from('week_midweek_items').select('id').eq('week_id', w.id);
+    const existingIds = (existingItems||[]).map(i=>i.id);
+    if(existingIds.length) await sb.from('week_midweek_items').delete().in('id', existingIds);
+    const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
+    if(items.length){
+      const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
+      if(itemErr) console.error('save midweek items failed', itemErr);
+    }
+    const tagRows = [];
+    (w.midweek||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> tagRows.push({midweek_item_id:m.id, tag_id:tid})));
+    if(tagRows.length){
+      const { error: tagErr } = await sb.from('week_midweek_item_tags').insert(tagRows);
+      if(tagErr) console.error('save midweek item tags failed', tagErr);
+    }
+    await sb.from('week_excluded_recurring').delete().eq('week_id', w.id);
+    const exclRows = (w.excludedRecurring||[]).map(rid=>({week_id:w.id, recurring_rhythm_id:rid}));
+    if(exclRows.length){
+      const { error: exErr } = await sb.from('week_excluded_recurring').insert(exclRows);
+      if(exErr) console.error('save week exclusions failed', exErr);
+    }
+  }
   state.weeks.sort((a,b)=> a.sundayDate < b.sundayDate ? -1 : 1);
-  try{ await window.storage.set('weeks-list', JSON.stringify(state.weeks), true); }
-  catch(e){ console.error('save weeks failed', e); }
 }
-async function saveTags(){
-  try{ await window.storage.set('tags-list', JSON.stringify(state.tags), true); }
-  catch(e){ console.error('save tags failed', e); }
+async function deleteWeekRemote(id){
+  const { error } = await sb.from('weeks').delete().eq('id', id);
+  if(error) console.error('delete week failed', error);
 }
-async function saveAudiences(){
-  try{ await window.storage.set('audiences-list', JSON.stringify(state.audiences), true); }
-  catch(e){ console.error('save audiences failed', e); }
+
+// ---------- Realtime: any change from any browser tab triggers a fresh reload ----------
+let refreshTimer = null;
+function scheduleRefresh(){
+  // debounce — a single edit often touches 2-3 tables at once (e.g. a week plus its
+  // midweek items and tags), so wait a moment for the burst to settle before refetching.
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(async ()=>{
+    await loadData();
+    render();
+  }, 400);
 }
-async function saveRecurring(){
-  try{ await window.storage.set('recurring-list', JSON.stringify(state.recurringRhythms), true); }
-  catch(e){ console.error('save recurring failed', e); }
+function subscribeRealtime(){
+  const tables = [
+    'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags',
+    'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events'
+  ];
+  const channel = sb.channel('planner-changes');
+  tables.forEach(t=>{
+    channel.on('postgres_changes', {event:'*', schema:'public', table:t}, scheduleRefresh);
+  });
+  channel.subscribe();
 }
+
 
 // ---------- Occurrence expansion for recurring items ----------
 function occurrencesInRange(ev, rangeStart, rangeEnd){
@@ -775,7 +882,7 @@ function attachLoginHandlers(){
       if(!/^\d{4}$/.test(pin)){ err.textContent='PIN must be 4 digits.'; return; }
       const user = {id:uid(), name, pin};
       state.users.push(user);
-      await saveUsers();
+      await saveUsers(user);
       state.currentUser = user;
       state.loginStep = 'pick';
       render();
@@ -1262,38 +1369,41 @@ function attachMainHandlers(){
     document.querySelectorAll('.tag-name').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
-        if(tag){ tag.name = el.value.trim() || tag.name; await saveTags(); }
+        if(tag){ tag.name = el.value.trim() || tag.name; await saveTags(tag); }
       };
     });
     document.querySelectorAll('.tag-audience').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
-        if(tag){ tag.audience = el.value; await saveTags(); render(); }
+        if(tag){ tag.audience = el.value; await saveTags(tag); render(); }
       };
     });
     document.querySelectorAll('.tag-remove').forEach(el=>{
       el.onclick = async ()=>{
+        await deleteTagRemote(el.dataset.id);
         state.tags = state.tags.filter(t=>t.id!==el.dataset.id);
-        await saveTags(); render();
+        render();
       };
     });
     const addTagBtn = document.getElementById('add-tag');
     if(addTagBtn) addTagBtn.onclick = async ()=>{
-      state.tags.push({id:uid(), name:'New tag', audience: (state.audiences[0] && state.audiences[0].name) || 'Whole Church'});
-      await saveTags(); render();
+      const newTag = {id:uid(), name:'New tag', audience: (state.audiences[0] && state.audiences[0].name) || 'Whole Church'};
+      state.tags.push(newTag);
+      await saveTags(newTag); render();
     };
     document.querySelectorAll('.audience-remove').forEach(el=>{
       el.onclick = async ()=>{
         const inUse = state.tags.some(t=>t.audience===el.dataset.audience);
         if(inUse){ alert('This audience is used by at least one tag — reassign that tag first.'); return; }
+        await deleteAudienceRemote(el.dataset.audience);
         state.audiences = state.audiences.filter(a=>a.name!==el.dataset.audience);
-        await saveAudiences(); render();
+        render();
       };
     });
     document.querySelectorAll('.audience-color').forEach(el=>{
       el.onchange = async ()=>{
         const a = audienceObj(el.dataset.audience);
-        if(a){ a.color = el.value; await saveAudiences(); render(); }
+        if(a){ a.color = el.value; await saveAudiences(a); render(); }
       };
     });
     const addAudienceBtn = document.getElementById('add-audience');
@@ -1302,8 +1412,9 @@ function attachMainHandlers(){
       const val = input.value.trim();
       if(!val || state.audiences.some(a=>a.name===val)) return;
       const nextColor = TAG_PALETTE[state.audiences.length % TAG_PALETTE.length];
-      state.audiences.push({name:val, color:nextColor});
-      await saveAudiences(); render();
+      const newAud = {name:val, color:nextColor};
+      state.audiences.push(newAud);
+      await saveAudiences(newAud); render();
     };
     document.querySelectorAll('.rr-tag-toggle').forEach(el=>{
       el.onclick = async ()=>{
@@ -1313,13 +1424,13 @@ function attachMainHandlers(){
         const tid = el.dataset.tagid;
         if(r.tagIds.includes(tid)) r.tagIds = r.tagIds.filter(x=>x!==tid);
         else r.tagIds.push(tid);
-        await saveRecurring(); render();
+        await saveRecurring(r); render();
       };
     });
     document.querySelectorAll('.rr-dayoffset').forEach(el=>{
       el.onchange = async ()=>{
         const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
-        if(r){ r.dayOffset = parseInt(el.value,10)||0; await saveRecurring(); render(); }
+        if(r){ r.dayOffset = parseInt(el.value,10)||0; await saveRecurring(r); render(); }
       };
     });
     document.querySelectorAll('.rr-start,.rr-end').forEach(el=>{
@@ -1328,37 +1439,38 @@ function attachMainHandlers(){
         if(!r) return;
         if(el.classList.contains('rr-start')) r.startDate = el.value;
         else r.endDate = el.value || null;
-        await saveRecurring(); render();
+        await saveRecurring(r); render();
       };
     });
     document.querySelectorAll('.rr-freq').forEach(el=>{
       el.onchange = async ()=>{
         const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
-        if(r){ r.freq = el.value; await saveRecurring(); render(); }
+        if(r){ r.freq = el.value; await saveRecurring(r); render(); }
       };
     });
     document.querySelectorAll('.rr-interval').forEach(el=>{
       el.onchange = async ()=>{
         const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
-        if(r){ r.interval = Math.max(1, parseInt(el.value,10)||1); await saveRecurring(); }
+        if(r){ r.interval = Math.max(1, parseInt(el.value,10)||1); await saveRecurring(r); }
       };
     });
     document.querySelectorAll('.rr-endtype').forEach(el=>{
       el.onchange = async ()=>{
         const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
-        if(r){ r.endType = el.value; await saveRecurring(); render(); }
+        if(r){ r.endType = el.value; await saveRecurring(r); render(); }
       };
     });
     document.querySelectorAll('.rr-count').forEach(el=>{
       el.onchange = async ()=>{
         const r = state.recurringRhythms.find(x=>x.id===el.dataset.rid);
-        if(r){ r.occurrenceCount = Math.max(1, parseInt(el.value,10)||1); await saveRecurring(); }
+        if(r){ r.occurrenceCount = Math.max(1, parseInt(el.value,10)||1); await saveRecurring(r); }
       };
     });
     document.querySelectorAll('.rr-remove').forEach(el=>{
       el.onclick = async ()=>{
+        await deleteRecurringRemote(el.dataset.rid);
         state.recurringRhythms = state.recurringRhythms.filter(r=>r.id!==el.dataset.rid);
-        await saveRecurring(); render();
+        render();
       };
     });
   }
@@ -1383,8 +1495,8 @@ function attachMainHandlers(){
     };
     const delBtn = document.getElementById('delete-ev');
     if(delBtn) delBtn.onclick = async ()=>{
+      await deleteEventRemote(state.editingEvent.id);
       state.events = state.events.filter(e=>e.id!==state.editingEvent.id);
-      await saveEvents();
       state.showModal=false; state.editingEvent=null; render();
     };
     document.getElementById('save-ev').onclick = async ()=>{
@@ -1400,13 +1512,16 @@ function attachMainHandlers(){
       const recurrenceEnd = document.getElementById('f-end').value || null;
       const notes = document.getElementById('f-notes').value.trim();
       const payload = {title, category, date, recurrence, recurrenceInterval, recurrenceEndType, recurrenceCount, recurrenceEnd, notes};
+      let savedEvent;
       if(state.editingEvent && state.editingEvent.id){
         const idx = state.events.findIndex(e=>e.id===state.editingEvent.id);
         state.events[idx] = {...state.events[idx], ...payload};
+        savedEvent = state.events[idx];
       } else {
-        state.events.push({id:uid(), ...payload, createdBy: state.currentUser.name});
+        savedEvent = {id:uid(), ...payload, createdBy: state.currentUser.name};
+        state.events.push(savedEvent);
       }
-      await saveEvents();
+      await saveEvents(savedEvent);
       state.showModal=false; state.editingEvent=null; render();
     };
   }
@@ -1480,8 +1595,8 @@ function attachDashboardHandlers(){
   document.querySelectorAll('.delete-week').forEach(el=>{
     el.onclick = async ()=>{
       if(el.dataset.id!=='new'){
+        await deleteWeekRemote(el.dataset.id);
         state.weeks = state.weeks.filter(w=>w.id!==el.dataset.id);
-        await saveWeeks();
       }
       state.editingWeekId = null;
       state.editingMidweekRows = null;
@@ -1516,7 +1631,7 @@ function attachDashboardHandlers(){
       const midweek = [];
       const stillPresentRecurring = new Set();
       const newRecurringTemplates = [];
-      let tagsChanged = false;
+      const newTags = [];
       card.querySelectorAll('.mw-row').forEach(row=>{
         const mwid = row.dataset.mwid;
         const recurringId = row.dataset.recurringId || '';
@@ -1535,7 +1650,7 @@ function attachDashboardHandlers(){
             const audience = audSel ? audSel.value : ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
             const newTag = {id:uid(), name, audience};
             state.tags.push(newTag);
-            tagsChanged = true;
+            newTags.push(newTag);
             tagIds.push(newTag.id);
           }
         }
@@ -1555,7 +1670,7 @@ function attachDashboardHandlers(){
           midweek.push({id:mwid, tagIds, note, date: date || null});
         }
       });
-      if(tagsChanged) await saveTags();
+      if(newTags.length) await saveTags(newTags);
 
       // work out which recurring items were removed for this week only
       const originally = state.editingOriginalRecurringIds || new Set();
@@ -1563,20 +1678,23 @@ function attachDashboardHandlers(){
 
       if(newRecurringTemplates.length){
         state.recurringRhythms.push(...newRecurringTemplates);
-        await saveRecurring();
+        await saveRecurring(newRecurringTemplates);
       }
 
+      let savedWeek;
       if(el.dataset.id==='new'){
-        state.weeks.push({id: uid(), ...data, midweek, excludedRecurring: removedThisWeek});
+        savedWeek = {id: uid(), ...data, midweek, excludedRecurring: removedThisWeek};
+        state.weeks.push(savedWeek);
       } else {
         const idx = state.weeks.findIndex(w=>w.id===el.dataset.id);
         if(idx>-1){
           const prevExcluded = state.weeks[idx].excludedRecurring || [];
           const mergedExcluded = Array.from(new Set([...prevExcluded, ...removedThisWeek]));
           state.weeks[idx] = {...state.weeks[idx], ...data, midweek, excludedRecurring: mergedExcluded};
+          savedWeek = state.weeks[idx];
         }
       }
-      await saveWeeks();
+      if(savedWeek) await saveWeeks(savedWeek);
       state.editingWeekId = null;
       state.editingMidweekRows = null;
       state.editingOriginalRecurringIds = null;
@@ -1598,16 +1716,17 @@ function attachDashboardHandlers(){
     const [start, end] = termDateRange(term, new Date());
     const sundays = allSundaysInRange(start, end);
     const existing = new Set(state.weeks.map(w=>w.sundayDate));
-    let added = 0;
+    const added = [];
     sundays.forEach(s=>{
       const iso = isoDate(s);
       if(!existing.has(iso)){
         const wc = new Date(s.getFullYear(), s.getMonth(), s.getDate()+1);
-        state.weeks.push({id:uid(), occasion:'', sundayDate:iso, sundaySeries:'', postService:'', weekCommencing:isoDate(wc), happening:'', midweek:[], excludedRecurring:[]});
-        added++;
+        const w = {id:uid(), occasion:'', sundayDate:iso, sundaySeries:'', postService:'', weekCommencing:isoDate(wc), happening:'', midweek:[], excludedRecurring:[]};
+        state.weeks.push(w);
+        added.push(w);
       }
     });
-    if(added){ await saveWeeks(); render(); }
+    if(added.length){ await saveWeeks(added); render(); }
     else alert('All Sundays for this term are already on the sheet.');
   };
 }
@@ -1615,6 +1734,7 @@ function attachDashboardHandlers(){
 (async ()=>{
   await loadData();
   render();
+  subscribeRealtime();
 })();
 </script>
 </body>

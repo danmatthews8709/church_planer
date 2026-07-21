@@ -184,6 +184,7 @@
     display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;
     cursor:pointer;
   }
+  .list-row.indented{margin-left:34px;padding-left:14px;border-left:2px solid var(--line);}
   .list-row:hover{background:var(--paper-raised);}
   .list-date{
     font-family:'Calibri','Carlito',sans-serif;font-size:12px;color:var(--ink-soft);min-width:76px;
@@ -989,7 +990,7 @@ function listHTML(){
     return `<div class="list-month">
       <h3>${MONTHS[m]} ${y}</h3>
       ${items.map(o=>`
-        <div class="list-row" data-id="${o.ev.id}">
+        <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
           <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
           <div class="list-dot ${o.ev.color?'':o.ev.category}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
           <div class="list-title">${o.ev.title}${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}</div>

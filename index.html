@@ -195,6 +195,7 @@
   .list-dot.service{background:var(--navy);}
   .list-dot.event{background:var(--autumn);}
   .list-title{font-weight:600;font-size:14px;flex:1;}
+  .list-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1;}
   .list-meta{font-size:11.5px;color:var(--ink-soft);}
   .empty{
     text-align:center;padding:50px 20px;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-size:17px;
@@ -615,11 +616,11 @@ async function loadData(){
     happening: w.happening || '',
     midweek: (w.week_midweek_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date,
-      tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
+      tagIds: [...new Set((m.week_midweek_item_tags||[]).map(t=>t.tag_id))]
     })),
     postService: (w.week_post_service_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date,
-      tagIds: (m.week_post_service_item_tags||[]).map(t=>t.tag_id)
+      tagIds: [...new Set((m.week_post_service_item_tags||[]).map(t=>t.tag_id))]
     })),
     excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
   }));
@@ -730,14 +731,21 @@ async function saveWeeks(weekOrWeeks){
     // safe even if other people are editing other weeks at the same time.
     const { data: existingItems } = await sb.from('week_midweek_items').select('id').eq('week_id', w.id);
     const existingIds = (existingItems||[]).map(i=>i.id);
-    if(existingIds.length) await sb.from('week_midweek_items').delete().in('id', existingIds);
+    const keepIds = new Set((w.midweek||[]).map(m=>m.id));
+    const removedIds = existingIds.filter(id=>!keepIds.has(id));
+    if(removedIds.length) await sb.from('week_midweek_items').delete().in('id', removedIds);
     const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
     if(items.length){
-      const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
+      // upsert (not insert) so re-saving the same row, or a near-simultaneous edit
+      // by someone else, can't crash with a duplicate-key error
+      const { error: itemErr } = await sb.from('week_midweek_items').upsert(items);
       if(itemErr){ console.error('save midweek items failed', itemErr); alert('Could not save midweek activity: '+itemErr.message); }
     }
+    // clear each kept item's existing tag links first, so re-saving never piles
+    // duplicate tag links on top of what's already there
+    if(items.length) await sb.from('week_midweek_item_tags').delete().in('midweek_item_id', items.map(i=>i.id));
     const tagRows = [];
-    (w.midweek||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> tagRows.push({midweek_item_id:m.id, tag_id:tid})));
+    (w.midweek||[]).forEach(m=> [...new Set(m.tagIds||[])].forEach(tid=> tagRows.push({midweek_item_id:m.id, tag_id:tid})));
     if(tagRows.length){
       const { error: tagErr } = await sb.from('week_midweek_item_tags').insert(tagRows);
       if(tagErr){ console.error('save midweek item tags failed', tagErr); alert('Could not save midweek activity tags: '+tagErr.message); }
@@ -745,14 +753,17 @@ async function saveWeeks(weekOrWeeks){
     // same scoped resync for post-service items
     const { data: existingPsItems } = await sb.from('week_post_service_items').select('id').eq('week_id', w.id);
     const existingPsIds = (existingPsItems||[]).map(i=>i.id);
-    if(existingPsIds.length) await sb.from('week_post_service_items').delete().in('id', existingPsIds);
+    const keepPsIds = new Set((w.postService||[]).map(m=>m.id));
+    const removedPsIds = existingPsIds.filter(id=>!keepPsIds.has(id));
+    if(removedPsIds.length) await sb.from('week_post_service_items').delete().in('id', removedPsIds);
     const psItems = (w.postService||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
     if(psItems.length){
-      const { error: psItemErr } = await sb.from('week_post_service_items').insert(psItems);
+      const { error: psItemErr } = await sb.from('week_post_service_items').upsert(psItems);
       if(psItemErr){ console.error('save post-service items failed', psItemErr); alert('Could not save post-service activity: '+psItemErr.message); }
     }
+    if(psItems.length) await sb.from('week_post_service_item_tags').delete().in('post_service_item_id', psItems.map(i=>i.id));
     const psTagRows = [];
-    (w.postService||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> psTagRows.push({post_service_item_id:m.id, tag_id:tid})));
+    (w.postService||[]).forEach(m=> [...new Set(m.tagIds||[])].forEach(tid=> psTagRows.push({post_service_item_id:m.id, tag_id:tid})));
     if(psTagRows.length){
       const { error: psTagErr } = await sb.from('week_post_service_item_tags').insert(psTagRows);
       if(psTagErr){ console.error('save post-service tags failed', psTagErr); alert('Could not save post-service activity tags: '+psTagErr.message); }
@@ -849,14 +860,14 @@ function eventsForRange(rangeStart, rangeEnd){
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.weekCommencing);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
-        const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+        const tags = [...new Set(m.tagIds||[])].map(tagById).filter(Boolean);
         if(!tags.length) return;
-        const title = tags.map(t=>t.name).join(' + ') + (m.note?' — '+m.note:'');
+        const title = m.note || '';
         items.push({ev:{
           id:'wk-mid-'+wk.id+'-'+m.id, title,
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
-          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
-          audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
+          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience), audience:t.audience})),
+          audience: [...new Set(tags.map(t=>t.audience))].join(', '), recurrence:'none',
           synthetic:true, weekId:wk.id, busyMidweek:busy
         }, date:itemDate});
       });
@@ -867,14 +878,14 @@ function eventsForRange(rangeStart, rangeEnd){
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.sundayDate);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
-        const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+        const tags = [...new Set(m.tagIds||[])].map(tagById).filter(Boolean);
         if(!tags.length) return;
-        const title = tags.map(t=>t.name).join(' + ') + (m.note?' — '+m.note:'');
+        const title = m.note || '';
         items.push({ev:{
           id:'wk-ps-'+wk.id+'-'+m.id, title,
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
-          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
-          audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
+          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience), audience:t.audience})),
+          audience: [...new Set(tags.map(t=>t.audience))].join(', '), recurrence:'none',
           synthetic:true, weekId:wk.id
         }, date:itemDate});
       });
@@ -1071,9 +1082,9 @@ function listHTML(){
         <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
           <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
           <div class="list-dot ${o.ev.color?'':o.ev.category}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
-          <div class="list-title">${o.ev.title}${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}</div>
-          ${o.ev.tags ? o.ev.tags.map(t=>`<span class="list-tag-chip${t.dominant?' dominant':''}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66;">${t.name}</span>`).join('') : ''}
-          <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
+          ${o.ev.title ? `<div class="list-title">${o.ev.title}${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}</div>` : (o.ev.busyMidweek ? `<span class="busy-flag">Busy midweek</span>` : '')}
+          ${o.ev.tags ? `<div class="list-tags">${o.ev.tags.map(t=>`<span class="list-tag-chip${t.dominant?' dominant':''}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66;" title="${t.audience}">${t.name}</span>`).join('')}</div>` : ''}
+          ${o.ev.category!=='tag' ? `<div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>` : ''}
         </div>`).join('')}
     </div>`;
   }).join('');

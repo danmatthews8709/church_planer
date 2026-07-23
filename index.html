@@ -154,7 +154,6 @@
   .cal-cell:nth-child(7n){border-right:none;}
   .cal-cell.other-month{opacity:.35;}
   .cal-cell.today{background:var(--gold-soft);}
-  .cal-cell.busy{box-shadow:inset 0 0 0 2px var(--warn);}
   .cal-date{font-family:'Calibri','Carlito',sans-serif;font-size:11px;color:var(--ink-soft);}
   .cal-events{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
   .ev-pill{
@@ -856,18 +855,18 @@ function eventsForRange(rangeStart, rangeEnd){
     }
     if(wk.weekCommencing){
       const mw = effectiveMidweek(wk);
-      const busy = mw.length > 1;
       mw.forEach(m=>{
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.weekCommencing);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = [...new Set(m.tagIds||[])].map(tagById).filter(Boolean);
         if(!tags.length) return;
+        const label = tags.map(t=>t.name).join(' + ');
         items.push({ev:{
-          id:'wk-mid-'+wk.id+'-'+m.id, label: tags.map(t=>t.name).join(' + '), note: m.note||'',
+          id:'wk-mid-'+wk.id+'-'+m.id, title:label, label, note: m.note||'',
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
           audience: [...new Set(tags.map(t=>t.audience))].join(', '), recurrence:'none',
-          synthetic:true, weekId:wk.id, busyMidweek:busy
+          synthetic:true, weekId:wk.id
         }, date:itemDate});
       });
     }
@@ -879,8 +878,9 @@ function eventsForRange(rangeStart, rangeEnd){
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = [...new Set(m.tagIds||[])].map(tagById).filter(Boolean);
         if(!tags.length) return;
+        const label = tags.map(t=>t.name).join(' + ');
         items.push({ev:{
-          id:'wk-ps-'+wk.id+'-'+m.id, label: tags.map(t=>t.name).join(' + '), note: m.note||'',
+          id:'wk-ps-'+wk.id+'-'+m.id, title:label, label, note: m.note||'',
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
           audience: [...new Set(tags.map(t=>t.audience))].join(', '), recurrence:'none',
           synthetic:true, weekId:wk.id
@@ -1048,8 +1048,7 @@ function calendarHTML(){
     const k = isoDate(d);
     const inMonth = d.getMonth()===m;
     const dayEvents = byDay[k]||[];
-    const isBusy = dayEvents.some(o=>o.ev.busyMidweek);
-    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''} ${isBusy?'busy':''}">
+    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''}">
       <div class="cal-date">${d.getDate()}</div>
       <div class="cal-events">
         ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
@@ -1079,7 +1078,6 @@ function listHTML(){
         <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
           <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
           <div class="list-dot ${o.ev.color?'':o.ev.category}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
-          ${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}
           ${o.ev.category==='tag' ? `
             <div class="list-activity">
               <span class="list-tag-chip${o.ev.dominant?' dominant':''}" style="background:${o.ev.color}22;color:${o.ev.color};border:1px solid ${o.ev.color}66;" title="${o.ev.audience}">${o.ev.label}</span>
@@ -1162,7 +1160,6 @@ function weekCardHTML(wk, idx){
   const term = wk.sundayDate ? termOf(parseISO(wk.sundayDate)) : null;
   const termVar = term ? `var(--${term})` : 'var(--navy)';
   const midweek = effectiveMidweek(wk);
-  const busy = midweek.length > 1;
   const postServiceItems = effectivePostService(wk);
 
   if(editing){
@@ -1191,7 +1188,7 @@ function weekCardHTML(wk, idx){
         </div>
         <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${weekCommencingVal}"></div>
         <div class="full">
-          <label>Midweek activity ${rows.length>1?'<span class="busy-flag">Busy midweek</span>':''}</label>
+          <label>Midweek activity</label>
           <div class="mw-rows" data-section="midweek">${activityRowsHTML(rows, 'week commencing')}</div>
           <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
           <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
@@ -1234,7 +1231,6 @@ function weekCardHTML(wk, idx){
             return `<span class="wc-rhythm-pill${dom?' dominant':''}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
           }).join('')}
           ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
-          ${busy?`<span class="busy-flag">Busy midweek</span>`:''}
         </div>
       </div>
       <div class="wc-actions">

@@ -31,6 +31,12 @@
     --autumn-soft:#F1DDCF;
     --winter:#4A6C8C;
     --winter-soft:#DEE6ED;
+    --tl-green:#1E9E5C;
+    --tl-green-soft:#E0F4E8;
+    --tl-amber:#E0A020;
+    --tl-amber-soft:#FBF0D6;
+    --tl-red:#D9453D;
+    --tl-red-soft:#FBE2E0;
     --radius:10px;
   }
 
@@ -344,25 +350,30 @@
   .dash-toolbar .term-label{font-family:'Calibri','Carlito',sans-serif;font-size:11.5px;color:var(--ink-soft);letter-spacing:.06em;}
 
   /* ---------- Status (confirmed / needs approval / cancelled) ---------- */
-  .mw-status-picker{display:flex;gap:4px;align-items:center;flex:0 0 auto;}
-  .status-dot-btn{width:15px;height:15px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:0 0 auto;}
-  .status-dot-btn.confirmed{background:var(--good);}
-  .status-dot-btn.pending{background:var(--warn);}
-  .status-dot-btn.declined{background:var(--bad);}
-  .status-dot-btn.selected{border-color:var(--ink);box-shadow:0 0 0 1px #fff inset;}
+  .mw-status-picker{display:flex;gap:6px;align-items:center;flex:0 0 auto;}
+  .mw-status-label{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+  .status-dot-btn{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:0 0 auto;transition:transform .1s ease;}
+  .status-dot-btn.confirmed{background:var(--tl-green);}
+  .status-dot-btn.pending{background:var(--tl-amber);}
+  .status-dot-btn.declined{background:var(--tl-red);}
+  .status-dot-btn.selected{border-color:var(--ink);box-shadow:0 0 0 1.5px #fff inset;transform:scale(1.15);}
+  .mw-status-current{font-size:11.5px;font-weight:700;margin-left:2px;white-space:nowrap;}
+  .mw-status-current.confirmed{color:var(--tl-green);}
+  .mw-status-current.pending{color:var(--tl-amber);}
+  .mw-status-current.declined{color:var(--tl-red);}
   .status-badge{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;display:inline-block;}
-  .status-badge.confirmed{background:var(--good-soft);color:var(--good);}
-  .status-badge.pending{background:var(--warn-soft);color:var(--warn);}
-  .status-badge.declined{background:var(--bad-soft);color:var(--bad);}
-  .wc-rhythm-pill.status-confirmed{box-shadow:0 0 0 2px var(--good) inset;}
-  .wc-rhythm-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
-  .wc-rhythm-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;text-decoration:line-through;}
-  .ev-pill.status-confirmed{box-shadow:0 0 0 2px var(--good) inset;}
-  .ev-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
-  .ev-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;}
-  .list-dot.status-confirmed{background:var(--good)!important;}
-  .list-dot.status-pending{background:var(--warn)!important;}
-  .list-dot.status-declined{background:var(--bad)!important;opacity:.6;}
+  .status-badge.confirmed{background:var(--tl-green-soft);color:var(--tl-green);}
+  .status-badge.pending{background:var(--tl-amber-soft);color:var(--tl-amber);}
+  .status-badge.declined{background:var(--tl-red-soft);color:var(--tl-red);}
+  .wc-rhythm-pill.status-confirmed{box-shadow:0 0 0 2px var(--tl-green) inset;}
+  .wc-rhythm-pill.status-pending{box-shadow:0 0 0 2px var(--tl-amber) inset;}
+  .wc-rhythm-pill.status-declined{box-shadow:0 0 0 2px var(--tl-red) inset;opacity:.6;text-decoration:line-through;}
+  .ev-pill.status-confirmed{box-shadow:0 0 0 2px var(--tl-green) inset;}
+  .ev-pill.status-pending{box-shadow:0 0 0 2px var(--tl-amber) inset;}
+  .ev-pill.status-declined{box-shadow:0 0 0 2px var(--tl-red) inset;opacity:.6;}
+  .list-dot.status-confirmed{background:var(--tl-green)!important;}
+  .list-dot.status-pending{background:var(--tl-amber)!important;}
+  .list-dot.status-declined{background:var(--tl-red)!important;opacity:.6;}
   .list-month-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:6px;margin:0 0 10px;}
   .list-month-head h3{border:none;padding:0;margin:0;}
   .export-pdf-month{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
@@ -381,9 +392,9 @@
     .print-table th{text-align:left;border-bottom:2px solid var(--navy);padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);}
     .print-table td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
     .print-status{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
-    .print-status.confirmed{color:#1E7145;}
-    .print-status.pending{color:#C99A3B;}
-    .print-status.declined{color:#B0392F;}
+    .print-status.confirmed{color:#1E9E5C;}
+    .print-status.pending{color:#E0A020;}
+    .print-status.declined{color:#D9453D;}
     .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
   }
 
@@ -974,10 +985,14 @@ function printableMonthHTML(y, m, items){
 // ---------- ChurchSuite calendar CSV export ----------
 // Produces a CSV using ChurchSuite's documented import column headers (name, datetime_start,
 // datetime_end, category, description, status) so it can be uploaded directly via
-// Calendar module -> Events -> Import events. Categories must already exist in ChurchSuite
-// with matching names, or they'll be flagged as unmapped during their import preview step.
-// Cancelled items are left out entirely rather than exported with a status ChurchSuite may not
-// recognise for import.
+// Calendar module -> Events -> Import events. Category is the item's audience (e.g. "Leadership",
+// "Connections", "Worship") so it must already exist as a Category in ChurchSuite with a matching
+// name, or it'll show as unmapped in their import preview step. Where an item has more than one
+// tag, the first tag's audience is used as the category (same convention the app already uses for
+// pill colouring). ChurchSuite's accepted status values are pending/confirmed/cancelled, so our
+// 'declined' items map to their 'cancelled' — they're included, not dropped, so Core Team sees
+// them reflected as cancelled rather than silently missing.
+const CHURCHSUITE_STATUS = {confirmed:'confirmed', pending:'pending', declined:'cancelled'};
 function churchSuiteCSVRows(){
   const ws = visibleWeeks();
   const rows = [['name','datetime_start','datetime_end','category','description','status']];
@@ -986,16 +1001,14 @@ function churchSuiteCSVRows(){
       rows.push([wk.occasion || wk.sundaySeries || 'Sunday Service', wk.sundayDate, '', 'Sunday Service', wk.sundaySeries||'', 'confirmed']);
     }
     effectiveMidweek(wk).forEach(m=>{
-      if(m.status==='declined') return;
       const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
       if(!tags.length) return;
-      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.weekCommencing || '', '', 'Midweek Activity', m.note||'', m.status||'confirmed']);
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.weekCommencing || '', '', tags[0].audience, m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
     });
     effectivePostService(wk).forEach(m=>{
-      if(m.status==='declined') return;
       const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
       if(!tags.length) return;
-      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.sundayDate || '', '', 'Post-Service Activity', m.note||'', m.status||'confirmed']);
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.sundayDate || '', '', tags[0].audience, m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
     });
   });
   return rows;
@@ -1236,9 +1249,11 @@ function fmtDate(iso){
 function statusPickerHTML(r){
   const s = r.status || 'confirmed';
   return `<div class="mw-status-picker" data-mwid="${r.id}">
+    <span class="mw-status-label">Status</span>
     <button type="button" class="status-dot-btn confirmed ${s==='confirmed'?'selected':''}" data-mwid="${r.id}" data-status="confirmed" title="Confirmed"></button>
     <button type="button" class="status-dot-btn pending ${s==='pending'?'selected':''}" data-mwid="${r.id}" data-status="pending" title="Needs approval"></button>
     <button type="button" class="status-dot-btn declined ${s==='declined'?'selected':''}" data-mwid="${r.id}" data-status="declined" title="Cancelled"></button>
+    <span class="mw-status-current ${s}">${STATUSES[s].label}</span>
   </div>`;
 }
 

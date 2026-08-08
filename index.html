@@ -351,14 +351,18 @@
   .status-dot-btn.declined{background:var(--bad);}
   .status-dot-btn.selected{border-color:var(--ink);box-shadow:0 0 0 1px #fff inset;}
   .status-badge{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;display:inline-block;}
+  .status-badge.confirmed{background:var(--good-soft);color:var(--good);}
   .status-badge.pending{background:var(--warn-soft);color:var(--warn);}
   .status-badge.declined{background:var(--bad-soft);color:var(--bad);}
+  .wc-rhythm-pill.status-confirmed{box-shadow:0 0 0 2px var(--good) inset;}
   .wc-rhythm-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
   .wc-rhythm-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;text-decoration:line-through;}
+  .ev-pill.status-confirmed{box-shadow:0 0 0 2px var(--good) inset;}
   .ev-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
   .ev-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;}
-  .list-dot.status-pending{box-shadow:0 0 0 2px var(--warn);}
-  .list-dot.status-declined{box-shadow:0 0 0 2px var(--bad);opacity:.6;}
+  .list-dot.status-confirmed{background:var(--good)!important;}
+  .list-dot.status-pending{background:var(--warn)!important;}
+  .list-dot.status-declined{background:var(--bad)!important;opacity:.6;}
   .list-month-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:6px;margin:0 0 10px;}
   .list-month-head h3{border:none;padding:0;margin:0;}
   .export-pdf-month{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
@@ -377,6 +381,9 @@
     .print-table th{text-align:left;border-bottom:2px solid var(--navy);padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);}
     .print-table td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
     .print-status{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+    .print-status.confirmed{color:#1E7145;}
+    .print-status.pending{color:#C99A3B;}
+    .print-status.declined{color:#B0392F;}
     .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
   }
 
@@ -944,7 +951,7 @@ function eventsForRange(rangeStart, rangeEnd){
 function printableMonthHTML(y, m, items){
   const rows = items.map(o=>{
     const dateStr = `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)}`;
-    const statusTxt = o.ev.status && o.ev.status!=='confirmed' ? `<div class="print-status">${STATUSES[o.ev.status].label}</div>` : '';
+    const statusTxt = o.ev.status ? `<div class="print-status ${o.ev.status}">${STATUSES[o.ev.status].label}</div>` : '';
     return `<tr>
       <td>${dateStr}</td>
       <td>${o.ev.title}${statusTxt}</td>
@@ -1169,7 +1176,7 @@ function calendarHTML(){
     html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''}">
       <div class="cal-date">${d.getDate()}</div>
       <div class="cal-events">
-        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status && o.ev.status!=='confirmed'?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
+        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
         ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
       </div>
     </div>`;
@@ -1198,9 +1205,9 @@ function listHTML(){
       ${items.map(o=>`
         <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
           <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
-          <div class="list-dot ${o.ev.color?'':o.ev.category}${o.ev.status && o.ev.status!=='confirmed'?' status-'+o.ev.status:''}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
+          <div class="list-dot${o.ev.status ? ' status-'+o.ev.status : (o.ev.color?'':' '+o.ev.category)}" style="${(!o.ev.status && o.ev.color)?'background:'+o.ev.color+';':''}"></div>
           <div class="list-title">${o.ev.title}</div>
-          ${o.ev.status && o.ev.status!=='confirmed' ? `<span class="status-badge ${o.ev.status}">${STATUSES[o.ev.status].label}</span>` : ''}
+          ${o.ev.status ? `<span class="status-badge ${o.ev.status}">${STATUSES[o.ev.status].label}</span>` : ''}
           ${o.ev.tags ? o.ev.tags.map(t=>`<span class="list-tag-chip${t.dominant?' dominant':''}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66;">${t.name}</span>`).join('') : ''}
           <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
         </div>`).join('')}
@@ -1332,7 +1339,7 @@ function weekCardHTML(wk, idx){
             const dom = tags.some(t=>isDominantAudience(t.audience));
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.sundayDate;
-            const statusClass = m.status && m.status!=='confirmed' ? ' status-'+m.status : '';
+            const statusClass = m.status ? ' status-'+m.status : '';
             return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
           }).join('')}
         </div>` : ''}
@@ -1343,7 +1350,7 @@ function weekCardHTML(wk, idx){
             const dom = tags.some(t=>isDominantAudience(t.audience));
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.weekCommencing;
-            const statusClass = m.status && m.status!=='confirmed' ? ' status-'+m.status : '';
+            const statusClass = m.status ? ' status-'+m.status : '';
             return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
           }).join('')}
           ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}

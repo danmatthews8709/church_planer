@@ -97,11 +97,9 @@
   .tab[data-term="spring"]{--tab-color:var(--spring);}
   .tab[data-term="summer"]{--tab-color:var(--summer);}
   .tab[data-term="autumn"]{--tab-color:var(--autumn);}
-  .tab[data-term="winter"]{--tab-color:var(--winter);}
   .tab.active[data-term="spring"]{background:var(--spring-soft);}
   .tab.active[data-term="summer"]{background:var(--summer-soft);}
   .tab.active[data-term="autumn"]{background:var(--autumn-soft);}
-  .tab.active[data-term="winter"]{background:var(--winter-soft);}
   .ribbon-bar{height:3px;background:var(--navy);margin-top:-1px;margin-bottom:20px;}
 
   /* ---------- Church year switcher ---------- */
@@ -173,7 +171,6 @@
   .cal-cell:nth-child(7n){border-right:none;}
   .cal-cell.other-month{opacity:.35;}
   .cal-cell.today{background:var(--gold-soft);}
-  .cal-cell.busy{box-shadow:inset 0 0 0 2px var(--warn);}
   .cal-date{font-family:'Calibri','Carlito',sans-serif;font-size:11px;color:var(--ink-soft);}
   .cal-events{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
   .ev-pill{
@@ -343,8 +340,45 @@
     width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-family:'Calibri','Carlito',sans-serif;font-size:13px;background:#fff;color:var(--ink);
   }
   .wc-edit-grid textarea{resize:vertical;min-height:44px;}
-  .dash-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .dash-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
   .dash-toolbar .term-label{font-family:'Calibri','Carlito',sans-serif;font-size:11.5px;color:var(--ink-soft);letter-spacing:.06em;}
+
+  /* ---------- Status (confirmed / needs approval / cancelled) ---------- */
+  .mw-status-picker{display:flex;gap:4px;align-items:center;flex:0 0 auto;}
+  .status-dot-btn{width:15px;height:15px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:0 0 auto;}
+  .status-dot-btn.confirmed{background:var(--good);}
+  .status-dot-btn.pending{background:var(--warn);}
+  .status-dot-btn.declined{background:var(--bad);}
+  .status-dot-btn.selected{border-color:var(--ink);box-shadow:0 0 0 1px #fff inset;}
+  .status-badge{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;display:inline-block;}
+  .status-badge.pending{background:var(--warn-soft);color:var(--warn);}
+  .status-badge.declined{background:var(--bad-soft);color:var(--bad);}
+  .wc-rhythm-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
+  .wc-rhythm-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;text-decoration:line-through;}
+  .ev-pill.status-pending{box-shadow:0 0 0 2px var(--warn) inset;}
+  .ev-pill.status-declined{box-shadow:0 0 0 2px var(--bad) inset;opacity:.6;}
+  .list-dot.status-pending{box-shadow:0 0 0 2px var(--warn);}
+  .list-dot.status-declined{box-shadow:0 0 0 2px var(--bad);opacity:.6;}
+  .list-month-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:6px;margin:0 0 10px;}
+  .list-month-head h3{border:none;padding:0;margin:0;}
+  .export-pdf-month{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
+  .export-pdf-month:hover{background:var(--paper);color:var(--ink);}
+
+  /* ---------- PDF print export ---------- */
+  .print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    .print-area, .print-area *{visibility:visible;}
+    .print-area{display:block;position:absolute;top:0;left:0;width:100%;padding:10px 20px;}
+    .print-header{border-bottom:3px solid var(--navy);padding-bottom:10px;margin-bottom:16px;}
+    .print-header h1{font-family:'Calibri','Carlito',sans-serif;font-size:20px;margin:0;color:var(--navy);}
+    .print-header h2{font-family:'Calibri','Carlito',sans-serif;font-size:15px;margin:3px 0 0;color:var(--ink-soft);font-weight:400;}
+    .print-table{width:100%;border-collapse:collapse;font-family:'Calibri','Carlito',sans-serif;font-size:12px;}
+    .print-table th{text-align:left;border-bottom:2px solid var(--navy);padding:6px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);}
+    .print-table td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
+    .print-status{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+    .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
+  }
 
   @media (max-width:640px){
     .masthead h1{font-size:26px;}
@@ -358,6 +392,7 @@
 </head>
 <body>
 <div class="app" id="app">Loading…</div>
+<div class="print-area" id="print-area"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -372,6 +407,15 @@ const CATS = {
 };
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// Per-item status (midweek / post-service activities only — not the Sunday itself).
+// Recurring-rhythm-generated instances always read as 'confirmed' since the status
+// applies to a specific one-off booking, not the recurring template.
+const STATUSES = {
+  confirmed: {label:'Confirmed'},
+  pending: {label:'Needs approval'},
+  declined: {label:'Cancelled'}
+};
 
 // "Whole Church" tags stay tied to the church's own brand colour so they read as the dominant/default
 // tag at a glance; every other audience gets a distinct colour from the palette below (or a custom
@@ -501,32 +545,20 @@ function effectivePostService(wk){
   return items;
 }
 
-// Date range for a given term key, anchored to a reference date (handles winter spanning year-end).
-function termDateRange(termKey, refDate){
-  function rangeForYear(y){
-    if(termKey==='winter') return [new Date(y,11,1), new Date(y+1,1,28)];
-    const bounds = {spring:[2,4], summer:[5,7], autumn:[8,10]}[termKey];
-    return [new Date(y,bounds[0],1), new Date(y,bounds[1]+1,0)];
-  }
-  const y = refDate.getFullYear();
-  let [s,e] = rangeForYear(y);
-  if(e < refDate) [s,e] = rangeForYear(y+1); // this year's instance already finished — use next year's
-  return [s,e];
-}
-
-// A "church year" runs Spring -> Winter (e.g. 2025 = Mar 2025 through Feb 2026),
-// matching how the Winter term already spans the calendar year-end.
+// A "church year" runs Autumn -> Summer (e.g. church year 2026 = Sep 2026 through Aug 2027),
+// starting with the Autumn term. None of the three terms below span a calendar year-end
+// themselves — only the church year as a whole does, at the Aug/Sep boundary.
 function churchYearOf(date){
   const m = date.getMonth(); // 0-11
   const y = date.getFullYear();
-  return m<=1 ? y-1 : y; // Jan/Feb belong to the church year that started the previous March
+  return m>=8 ? y : y-1; // Sep-Dec belong to church year y; Jan-Aug belong to the church year that started the previous September
 }
 
 // Exact date range for a term within a specific, explicit church year (no "closest occurrence" guessing).
 function termDateRangeForYear(termKey, churchYear){
-  if(termKey==='winter') return [new Date(churchYear,11,1), new Date(churchYear+1,1,28)];
-  const bounds = {spring:[2,4], summer:[5,7], autumn:[8,10]}[termKey];
-  return [new Date(churchYear,bounds[0],1), new Date(churchYear,bounds[1]+1,0)];
+  if(termKey==='autumn') return [new Date(churchYear,8,1), new Date(churchYear,11,31)];
+  if(termKey==='spring') return [new Date(churchYear+1,0,1), new Date(churchYear+1,3,30)];
+  return [new Date(churchYear+1,4,1), new Date(churchYear+1,7,31)]; // summer
 }
 
 function churchYearLabel(y){ return `${y}–${String(y+1).slice(2)}`; }
@@ -572,10 +604,9 @@ let state = {
 
 function termOf(date){
   const m = date.getMonth(); // 0-11
-  if([2,3,4].includes(m)) return 'spring';
-  if([5,6,7].includes(m)) return 'summer';
-  if([8,9,10].includes(m)) return 'autumn';
-  return 'winter';
+  if([8,9,10,11].includes(m)) return 'autumn'; // Sep-Dec
+  if([0,1,2,3].includes(m)) return 'spring';   // Jan-Apr
+  return 'summer';                             // May-Aug
 }
 function uid(){
   if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -595,8 +626,8 @@ async function loadData(){
     sb.from('tags').select('*'),
     sb.from('weeks').select(`
       id, occasion, sunday_date, sunday_series, week_commencing, happening,
-      week_midweek_items ( id, note, item_date, week_midweek_item_tags ( tag_id ) ),
-      week_post_service_items ( id, note, item_date, week_post_service_item_tags ( tag_id ) ),
+      week_midweek_items ( id, note, item_date, status, week_midweek_item_tags ( tag_id ) ),
+      week_post_service_items ( id, note, item_date, status, week_post_service_item_tags ( tag_id ) ),
       week_excluded_recurring ( recurring_rhythm_id )
     `).order('sunday_date'),
     sb.from('recurring_rhythms').select(`
@@ -640,11 +671,11 @@ async function loadData(){
     weekCommencing: w.week_commencing,
     happening: w.happening || '',
     midweek: (w.week_midweek_items||[]).map(m=>({
-      id: m.id, note: m.note||'', date: m.item_date,
+      id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
       tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
     })),
     postService: (w.week_post_service_items||[]).map(m=>({
-      id: m.id, note: m.note||'', date: m.item_date,
+      id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
       tagIds: (m.week_post_service_item_tags||[]).map(t=>t.tag_id)
     })),
     excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
@@ -757,7 +788,7 @@ async function saveWeeks(weekOrWeeks){
     const { data: existingItems } = await sb.from('week_midweek_items').select('id').eq('week_id', w.id);
     const existingIds = (existingItems||[]).map(i=>i.id);
     if(existingIds.length) await sb.from('week_midweek_items').delete().in('id', existingIds);
-    const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
+    const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed'}));
     if(items.length){
       const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
       if(itemErr){ console.error('save midweek items failed', itemErr); alert('Could not save midweek activity: '+itemErr.message); }
@@ -772,7 +803,7 @@ async function saveWeeks(weekOrWeeks){
     const { data: existingPsItems } = await sb.from('week_post_service_items').select('id').eq('week_id', w.id);
     const existingPsIds = (existingPsItems||[]).map(i=>i.id);
     if(existingPsIds.length) await sb.from('week_post_service_items').delete().in('id', existingPsIds);
-    const psItems = (w.postService||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null}));
+    const psItems = (w.postService||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed'}));
     if(psItems.length){
       const { error: psItemErr } = await sb.from('week_post_service_items').insert(psItems);
       if(psItemErr){ console.error('save post-service items failed', psItemErr); alert('Could not save post-service activity: '+psItemErr.message); }
@@ -870,7 +901,6 @@ function eventsForRange(rangeStart, rangeEnd){
     }
     if(wk.weekCommencing){
       const mw = effectiveMidweek(wk);
-      const busy = mw.length > 1;
       mw.forEach(m=>{
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.weekCommencing);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
@@ -883,7 +913,7 @@ function eventsForRange(rangeStart, rangeEnd){
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
           tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
           audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
-          synthetic:true, weekId:wk.id, busyMidweek:busy
+          synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
         }, date:itemDate});
       });
     }
@@ -901,13 +931,73 @@ function eventsForRange(rangeStart, rangeEnd){
           category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
           tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
           audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
-          synthetic:true, weekId:wk.id
+          synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
         }, date:itemDate});
       });
     }
   });
   items.sort((a,b)=> a.date - b.date);
   return items;
+}
+
+// ---------- PDF export (per-month, via browser print) ----------
+function printableMonthHTML(y, m, items){
+  const rows = items.map(o=>{
+    const dateStr = `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)}`;
+    const statusTxt = o.ev.status && o.ev.status!=='confirmed' ? `<div class="print-status">${STATUSES[o.ev.status].label}</div>` : '';
+    return `<tr>
+      <td>${dateStr}</td>
+      <td>${o.ev.title}${statusTxt}</td>
+      <td>${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="print-header">
+      <h1>The Church Planner</h1>
+      <h2>${MONTHS[m]} ${y}</h2>
+    </div>
+    <table class="print-table">
+      <thead><tr><th>Date</th><th>What's on</th><th>For</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="3">Nothing on the sheet for this month.</td></tr>'}</tbody>
+    </table>
+    <div class="print-footer">Exported ${isoDate(new Date())}</div>
+  `;
+}
+
+// ---------- ChurchSuite calendar CSV export ----------
+// Produces a CSV using ChurchSuite's documented import column headers (name, datetime_start,
+// datetime_end, category, description, status) so it can be uploaded directly via
+// Calendar module -> Events -> Import events. Categories must already exist in ChurchSuite
+// with matching names, or they'll be flagged as unmapped during their import preview step.
+// Cancelled items are left out entirely rather than exported with a status ChurchSuite may not
+// recognise for import.
+function churchSuiteCSVRows(){
+  const ws = visibleWeeks();
+  const rows = [['name','datetime_start','datetime_end','category','description','status']];
+  ws.forEach(wk=>{
+    if(wk.sundayDate){
+      rows.push([wk.occasion || wk.sundaySeries || 'Sunday Service', wk.sundayDate, '', 'Sunday Service', wk.sundaySeries||'', 'confirmed']);
+    }
+    effectiveMidweek(wk).forEach(m=>{
+      if(m.status==='declined') return;
+      const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+      if(!tags.length) return;
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.weekCommencing || '', '', 'Midweek Activity', m.note||'', m.status||'confirmed']);
+    });
+    effectivePostService(wk).forEach(m=>{
+      if(m.status==='declined') return;
+      const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+      if(!tags.length) return;
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.sundayDate || '', '', 'Post-Service Activity', m.note||'', m.status||'confirmed']);
+    });
+  });
+  return rows;
+}
+function toCSV(rows){
+  return rows.map(r=>r.map(v=>{
+    const s = String(v==null?'':v);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\r\n');
 }
 
 // ---------- Rendering ----------
@@ -1042,10 +1132,9 @@ function yearSwitcherHTML(){
 
 function ribbonHTML(){
   const seasons = [
-    {key:'spring', label:'Spring', months:'Mar–May'},
-    {key:'summer', label:'Summer', months:'Jun–Aug'},
-    {key:'autumn', label:'Autumn', months:'Sep–Nov'},
-    {key:'winter', label:'Winter', months:'Dec–Feb'},
+    {key:'autumn', label:'Autumn', months:'Sep–Dec'},
+    {key:'spring', label:'Spring', months:'Jan–Apr'},
+    {key:'summer', label:'Summer', months:'May–Aug'},
   ];
   const nowTerm = termOf(new Date());
   const isCurrentYear = state.churchYear === churchYearOf(new Date());
@@ -1077,11 +1166,10 @@ function calendarHTML(){
     const k = isoDate(d);
     const inMonth = d.getMonth()===m;
     const dayEvents = byDay[k]||[];
-    const isBusy = dayEvents.some(o=>o.ev.busyMidweek);
-    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''} ${isBusy?'busy':''}">
+    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''}">
       <div class="cal-date">${d.getDate()}</div>
       <div class="cal-events">
-        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
+        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status && o.ev.status!=='confirmed'?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
         ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
       </div>
     </div>`;
@@ -1103,12 +1191,16 @@ function listHTML(){
   return Object.entries(byMonth).map(([key, items])=>{
     const [y,m] = key.split('-').map(Number);
     return `<div class="list-month">
-      <h3>${MONTHS[m]} ${y}</h3>
+      <div class="list-month-head">
+        <h3>${MONTHS[m]} ${y}</h3>
+        <button class="export-pdf-month" type="button" data-year="${y}" data-month="${m}">Export PDF</button>
+      </div>
       ${items.map(o=>`
         <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
           <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
-          <div class="list-dot ${o.ev.color?'':o.ev.category}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
-          <div class="list-title">${o.ev.title}${o.ev.busyMidweek?'<span class="busy-flag">Busy midweek</span>':''}</div>
+          <div class="list-dot ${o.ev.color?'':o.ev.category}${o.ev.status && o.ev.status!=='confirmed'?' status-'+o.ev.status:''}" style="${o.ev.color?'background:'+o.ev.color+';':''}"></div>
+          <div class="list-title">${o.ev.title}</div>
+          ${o.ev.status && o.ev.status!=='confirmed' ? `<span class="status-badge ${o.ev.status}">${STATUSES[o.ev.status].label}</span>` : ''}
           ${o.ev.tags ? o.ev.tags.map(t=>`<span class="list-tag-chip${t.dominant?' dominant':''}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66;">${t.name}</span>`).join('') : ''}
           <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
         </div>`).join('')}
@@ -1134,6 +1226,15 @@ function fmtDate(iso){
 // Shared row markup for both the midweek and post-service activity editors — same
 // classes/behaviour either way; the two sections are told apart by a data-section
 // wrapper, not by different markup.
+function statusPickerHTML(r){
+  const s = r.status || 'confirmed';
+  return `<div class="mw-status-picker" data-mwid="${r.id}">
+    <button type="button" class="status-dot-btn confirmed ${s==='confirmed'?'selected':''}" data-mwid="${r.id}" data-status="confirmed" title="Confirmed"></button>
+    <button type="button" class="status-dot-btn pending ${s==='pending'?'selected':''}" data-mwid="${r.id}" data-status="pending" title="Needs approval"></button>
+    <button type="button" class="status-dot-btn declined ${s==='declined'?'selected':''}" data-mwid="${r.id}" data-status="declined" title="Cancelled"></button>
+  </div>`;
+}
+
 function activityRowsHTML(rows, dateHint){
   return rows.map(r=>{
     const isNewTag = !!r.creatingTag;
@@ -1157,6 +1258,7 @@ function activityRowsHTML(rows, dateHint){
       </div>
       <div class="mw-meta-line">
         <input class="mw-note" data-mwid="${r.id}" placeholder="Note (optional)" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
+        ${!r.recurringId ? statusPickerHTML(r) : ''}
         ${r.recurringId
           ? `<span class="busy-flag" style="background:var(--good-soft);color:var(--good);">Recurring${r.date?' · '+fmtDate(r.date):''}</span>`
           : `<input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}" title="Actual date (optional — defaults to ${dateHint})">
@@ -1178,7 +1280,6 @@ function weekCardHTML(wk, idx){
   const term = wk.sundayDate ? termOf(parseISO(wk.sundayDate)) : null;
   const termVar = term ? `var(--${term})` : 'var(--navy)';
   const midweek = effectiveMidweek(wk);
-  const busy = midweek.length > 1;
   const postServiceItems = effectivePostService(wk);
 
   if(editing){
@@ -1201,7 +1302,7 @@ function weekCardHTML(wk, idx){
         </div>
         <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${wk.weekCommencing||''}"></div>
         <div class="full">
-          <label>Midweek activity ${rows.length>1?'<span class="busy-flag">Busy midweek</span>':''}</label>
+          <label>Midweek activity</label>
           <div class="mw-rows" data-section="midweek">${activityRowsHTML(rows, 'week commencing')}</div>
           <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
           <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
@@ -1231,7 +1332,8 @@ function weekCardHTML(wk, idx){
             const dom = tags.some(t=>isDominantAudience(t.audience));
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.sundayDate;
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
+            const statusClass = m.status && m.status!=='confirmed' ? ' status-'+m.status : '';
+            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
           }).join('')}
         </div>` : ''}
         <div class="wc-mid">
@@ -1241,10 +1343,10 @@ function weekCardHTML(wk, idx){
             const dom = tags.some(t=>isDominantAudience(t.audience));
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.weekCommencing;
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
+            const statusClass = m.status && m.status!=='confirmed' ? ' status-'+m.status : '';
+            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
           }).join('')}
           ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
-          ${busy?`<span class="busy-flag">Busy midweek</span>`:''}
         </div>
       </div>
       <div class="wc-actions">
@@ -1258,15 +1360,16 @@ function dashboardHTML(){
   const draftDate = (()=>{
     const today = new Date();
     if(churchYearOf(today)===state.churchYear && (!state.termFilter || termOf(today)===state.termFilter)) return isoDate(today);
-    const [start] = termDateRangeForYear(state.termFilter || 'spring', state.churchYear);
+    const [start] = termDateRangeForYear(state.termFilter || 'autumn', state.churchYear);
     return isoDate(start);
   })();
   const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:draftDate,sundaySeries:'',weekCommencing:'',happening:'',midweek:[],postService:[],excludedRecurring:[]}, ws.length) : '';
   return `
     <div class="dash-toolbar">
       <div class="term-label">${ws.length} week${ws.length===1?'':'s'}${state.termFilter?' · '+state.termFilter:' · all terms'} · ${churchYearLabel(state.churchYear)}</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn" id="fill-weeks">Fill ${state.termFilter?state.termFilter+' '+churchYearLabel(state.churchYear):'term'}'s Sundays</button>
+        <button class="btn" id="export-churchsuite" title="Download a CSV formatted for ChurchSuite's Calendar &gt; Import events">Export ChurchSuite CSV</button>
         <button class="add-btn" id="add-week">+ Add week</button>
       </div>
     </div>
@@ -1510,6 +1613,27 @@ function attachMainHandlers(){
     };
   });
   if(state.view==='dashboard') attachDashboardHandlers();
+  const exportCsvBtn = document.getElementById('export-churchsuite');
+  if(exportCsvBtn) exportCsvBtn.onclick = ()=>{
+    const csv = toCSV(churchSuiteCSVRows());
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `churchsuite-import-${state.termFilter||'all-terms'}-${churchYearLabel(state.churchYear)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  document.querySelectorAll('.export-pdf-month').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const y = parseInt(el.dataset.year,10), m = parseInt(el.dataset.month,10);
+      const start = new Date(y,m,1), end = new Date(y,m+1,0);
+      const items = eventsForRange(start, end);
+      document.getElementById('print-area').innerHTML = printableMonthHTML(y, m, items);
+      window.print();
+    };
+  });
   const openSettings = document.getElementById('open-settings');
   if(openSettings) openSettings.onclick = ()=>{ state.showSettings = true; render(); };
   const settingsOverlay = document.getElementById('settings-overlay');
@@ -1737,6 +1861,14 @@ function attachDashboardHandlers(){
       render();
     };
   });
+  document.querySelectorAll('.status-dot-btn').forEach(el=>{
+    el.onclick = ()=>{
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.status = el.dataset.status;
+      render();
+    };
+  });
   document.querySelectorAll('.edit-week').forEach(el=>{
     el.onclick = ()=>{
       const wk = state.weeks.find(w=>w.id===el.dataset.id);
@@ -1835,6 +1967,7 @@ function attachDashboardHandlers(){
           }
           if(!tagIds.length) return;
           const note = row.querySelector('.mw-note') ? row.querySelector('.mw-note').value.trim() : '';
+          const status = (entry && entry.status) || 'confirmed';
           const dateInp = row.querySelector('.mw-date');
           const date = dateInp ? dateInp.value : '';
           const freqSel = row.querySelector('.mw-repeat-freq');
@@ -1847,7 +1980,7 @@ function attachDashboardHandlers(){
               dayOffset:0, slot: sectionName
             });
           } else {
-            items.push({id:mwid, tagIds, note, date: date || null});
+            items.push({id:mwid, tagIds, note, date: date || null, status});
           }
         });
         return {items, stillPresentRecurring, newRecurringTemplates, newTags};
@@ -1907,7 +2040,7 @@ function attachDashboardHandlers(){
   const fillBtn = document.getElementById('fill-weeks');
   if(fillBtn) fillBtn.onclick = async ()=>{
     if(!state.termFilter){
-      alert('Pick a term tab first (Spring/Summer/Autumn/Winter) so we know which Sundays to fill for '+churchYearLabel(state.churchYear)+'.');
+      alert('Pick a term tab first (Autumn/Spring/Summer) so we know which Sundays to fill for '+churchYearLabel(state.churchYear)+'.');
       return;
     }
     const term = state.termFilter;

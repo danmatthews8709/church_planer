@@ -193,8 +193,6 @@
     display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:9.5px;font-weight:700;
     padding:1px 6px;border-radius:20px;margin-left:5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;
   }
-  .list-tag-chip{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;}
-  .list-tag-chip.dominant{font-weight:800;}
 
   /* ---------- List view ---------- */
   .list-month{margin-bottom:26px;}
@@ -291,25 +289,33 @@
   .wc-rhythm-pill{font-size:11px;font-weight:600;padding:3px 11px;border-radius:20px;color:#fff;}
   .wc-rhythm-pill.dominant{font-weight:800;box-shadow:0 0 0 1px rgba(255,255,255,.5) inset;}
   .mw-rows{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
-  .mw-row{display:flex;flex-direction:column;gap:7px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:#fff;}
+  .mw-row{position:relative;display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:8px;padding:10px 34px 12px 10px;background:#fff;}
   .mw-tags-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-  .mw-meta-line{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-  .mw-meta-line select,.mw-tags-line select{flex:1.1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
-  .mw-meta-line input,.mw-tags-line input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
-  .mw-meta-line button,.mw-tags-line button{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:2px 4px;}
+  .mw-tags-line select{flex:1.1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
+  .mw-tags-line input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);}
+  .mw-tags-line button{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:2px 4px;}
+  .mw-row-remove{position:absolute;top:8px;right:8px;border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:4px 6px;line-height:1;border-radius:5px;}
+  .mw-row-remove:hover{background:var(--paper);}
+  .mw-field{display:flex;flex-direction:column;gap:4px;}
+  .mw-field label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-weight:700;}
+  .mw-field input,.mw-field select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;background:#fff;color:var(--ink);font-family:'Calibri','Carlito',sans-serif;}
+  .mw-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .mw-field-grid .full{grid-column:1/3;}
+  .mw-repeat-link{border:none;background:none;color:var(--ink-soft);text-decoration:underline;font-size:11.5px;cursor:pointer;padding:0;font-family:'Calibri','Carlito',sans-serif;}
+  .mw-repeat-link:hover{color:var(--ink);}
+  .mw-tags-edit-link,.mw-tags-collapse-link{border:1px dashed var(--line);background:none;border-radius:20px;font-size:12px;padding:5px 12px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;white-space:nowrap;}
+  .mw-tags-edit-link:hover,.mw-tags-collapse-link:hover{background:var(--paper);color:var(--ink);}
   .mw-tag-toggle{
-    border:1px solid var(--line)!important;background:#fff!important;color:var(--ink-soft)!important;
+    border:1px solid var(--line);background:#fff;color:var(--ink-soft);
     border-radius:20px;font-size:12px!important;padding:5px 12px!important;cursor:pointer;white-space:nowrap;
     font-family:'Calibri','Carlito',sans-serif;font-weight:600;flex:0 0 auto!important;
   }
-  .mw-tag-toggle:hover{background:var(--paper)!important;}
+  .mw-tag-toggle:not(.on):hover{background:var(--paper);}
   .mw-tag-toggle-new{border-style:dashed!important;color:var(--ink-soft)!important;}
   .mw-add{border:1px dashed var(--line);background:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
   .mw-add:hover{background:var(--paper);color:var(--ink);}
   .mw-cancel-newtag{border:1px solid var(--line)!important;background:#fff!important;color:var(--ink-soft)!important;border-radius:6px;font-size:11px!important;padding:5px 8px!important;white-space:nowrap;font-family:'Calibri','Carlito',sans-serif;flex:0 0 auto!important;}
   .mw-cancel-newtag:hover{background:var(--paper)!important;color:var(--ink)!important;}
-  .mw-meta-line select.mw-repeat-freq{flex:0 0 auto;width:auto;min-width:120px;}
-  .mw-meta-line input.mw-date{flex:0 0 auto;width:auto;}
   .rr-tag-toggle{
     border:1px solid var(--line);background:#fff;color:var(--ink-soft);
     border-radius:20px;font-size:11.5px;padding:4px 11px;cursor:pointer;white-space:nowrap;
@@ -399,6 +405,8 @@
   }
 
   @media (max-width:640px){
+    .mw-field-grid{grid-template-columns:1fr;}
+    .mw-field-grid .full{grid-column:1;}
     .masthead h1{font-size:26px;}
     .tab .label{font-size:14px;}
     .cal-cell{min-height:64px;}
@@ -1221,7 +1229,6 @@ function listHTML(){
           <div class="list-dot${o.ev.status ? ' status-'+o.ev.status : (o.ev.color?'':' '+o.ev.category)}" style="${(!o.ev.status && o.ev.color)?'background:'+o.ev.color+';':''}"></div>
           <div class="list-title">${o.ev.title}</div>
           ${o.ev.status ? `<span class="status-badge ${o.ev.status}">${STATUSES[o.ev.status].label}</span>` : ''}
-          ${o.ev.tags ? o.ev.tags.map(t=>`<span class="list-tag-chip${t.dominant?' dominant':''}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}66;">${t.name}</span>`).join('') : ''}
           <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
         </div>`).join('')}
     </div>`;
@@ -1249,7 +1256,6 @@ function fmtDate(iso){
 function statusPickerHTML(r){
   const s = r.status || 'confirmed';
   return `<div class="mw-status-picker" data-mwid="${r.id}">
-    <span class="mw-status-label">Status</span>
     <button type="button" class="status-dot-btn confirmed ${s==='confirmed'?'selected':''}" data-mwid="${r.id}" data-status="confirmed" title="Confirmed"></button>
     <button type="button" class="status-dot-btn pending ${s==='pending'?'selected':''}" data-mwid="${r.id}" data-status="pending" title="Needs approval"></button>
     <button type="button" class="status-dot-btn declined ${s==='declined'?'selected':''}" data-mwid="${r.id}" data-status="declined" title="Cancelled"></button>
@@ -1261,8 +1267,12 @@ function activityRowsHTML(rows, dateHint){
   return rows.map(r=>{
     const isNewTag = !!r.creatingTag;
     const tagIds = r.tagIds || [];
+    const hasTags = tagIds.length > 0;
+    const tagsCollapsed = hasTags && !r.tagsExpanded && !isNewTag;
+    const showRepeatPicker = !!r.repeatFreq || !!r.showRepeat;
     return `
     <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
+      <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
       <div class="mw-tags-line">
         ${isNewTag ? `
           <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="New tag name" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
@@ -1270,29 +1280,54 @@ function activityRowsHTML(rows, dateHint){
             ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
           </select>
           <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking tags">↩ back</button>
+        ` : tagsCollapsed ? `
+          ${tagIds.map(tid=>{
+            const t = tagById(tid);
+            if(!t) return '';
+            return `<button type="button" class="mw-tag-toggle on" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="background:${audienceColor(t.audience)};color:#fff;border-color:transparent;">${t.name}</button>`;
+          }).join('')}
+          ${!r.recurringId ? `<button type="button" class="mw-tags-edit-link" data-mwid="${r.id}">+ Edit tags</button>` : ''}
         ` : `
           ${state.tags.map(t=>{
             const on = tagIds.includes(t.id);
             return `<button type="button" class="mw-tag-toggle ${on?'on':''}" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="${on?'background:'+audienceColor(t.audience)+';color:#fff;border-color:transparent;':''}">${t.name}</button>`;
           }).join('')}
           ${!r.recurringId ? `<button type="button" class="mw-tag-toggle mw-tag-toggle-new" data-mwid="${r.id}">+ New tag…</button>` : ''}
+          ${hasTags && !r.recurringId ? `<button type="button" class="mw-tags-collapse-link" data-mwid="${r.id}">▲ Done</button>` : ''}
         `}
       </div>
-      <div class="mw-meta-line">
-        <input class="mw-note" data-mwid="${r.id}" placeholder="Note (optional)" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
-        ${!r.recurringId ? statusPickerHTML(r) : ''}
-        ${r.recurringId
-          ? `<span class="busy-flag" style="background:var(--good-soft);color:var(--good);">Recurring${r.date?' · '+fmtDate(r.date):''}</span>`
-          : `<input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}" title="Actual date (optional — defaults to ${dateHint})">
-             <select class="mw-repeat-freq" data-mwid="${r.id}" title="Repeat pattern">
-              <option value="" ${!r.repeatFreq?'selected':''}>Doesn't repeat</option>
-              <option value="weekly:1" ${r.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
-              <option value="weekly:2" ${r.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
-              <option value="weekly:4" ${r.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
-              <option value="monthly:1" ${r.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
-            </select>`}
-        <button class="mw-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
+
+      <div class="mw-field full">
+        <label>Note</label>
+        <input class="mw-note" data-mwid="${r.id}" placeholder="Optional — e.g. led by Sarah" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
       </div>
+
+      ${r.recurringId ? `
+        <span class="busy-flag" style="background:var(--good-soft);color:var(--good);align-self:flex-start;">Recurring${r.date?' · '+fmtDate(r.date):''} — edit in Settings</span>
+      ` : `
+        <div class="mw-field-grid">
+          <div class="mw-field">
+            <label>Status</label>
+            ${statusPickerHTML(r)}
+          </div>
+          <div class="mw-field">
+            <label>Date, if not ${dateHint}</label>
+            <input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}">
+          </div>
+          <div class="mw-field full">
+            ${showRepeatPicker ? `
+              <label>Repeats</label>
+              <select class="mw-repeat-freq" data-mwid="${r.id}">
+                <option value="" ${!r.repeatFreq?'selected':''}>Doesn't repeat</option>
+                <option value="weekly:1" ${r.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
+                <option value="weekly:2" ${r.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
+                <option value="weekly:4" ${r.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
+                <option value="monthly:1" ${r.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
+              </select>
+            ` : `<button type="button" class="mw-repeat-link" data-mwid="${r.id}">+ Make this repeat</button>`}
+          </div>
+        </div>
+      `}
     </div>`;
   }).join('');
 }
@@ -1862,8 +1897,26 @@ function attachDashboardHandlers(){
       if(!entry) return;
       entry.tagIds = entry.tagIds || [];
       const tid = el.dataset.tagid;
+      const wasEmpty = entry.tagIds.length === 0;
       if(entry.tagIds.includes(tid)) entry.tagIds = entry.tagIds.filter(x=>x!==tid);
       else entry.tagIds.push(tid);
+      if(wasEmpty && entry.tagIds.length>0) entry.tagsExpanded = false; // fold once the first tag is picked
+      render();
+    };
+  });
+  document.querySelectorAll('.mw-tags-edit-link').forEach(el=>{
+    el.onclick = ()=>{
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.tagsExpanded = true;
+      render();
+    };
+  });
+  document.querySelectorAll('.mw-tags-collapse-link').forEach(el=>{
+    el.onclick = ()=>{
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.tagsExpanded = false;
       render();
     };
   });
@@ -1922,7 +1975,7 @@ function attachDashboardHandlers(){
       render();
     };
   });
-  document.querySelectorAll('.mw-remove').forEach(el=>{
+  document.querySelectorAll('.mw-row-remove').forEach(el=>{
     el.onclick = ()=>{
       syncAllActivityRowsFromDOM();
       const id = el.dataset.mwid;
@@ -1934,6 +1987,14 @@ function attachDashboardHandlers(){
         state.editingPostServiceRows = state.editingPostServiceRows.filter(r=>r.id!==id);
         if(!state.editingPostServiceRows.length) state.editingPostServiceRows.push({id:uid(), tagIds:[], note:''});
       }
+      render();
+    };
+  });
+  document.querySelectorAll('.mw-repeat-link').forEach(el=>{
+    el.onclick = ()=>{
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.showRepeat = true;
       render();
     };
   });

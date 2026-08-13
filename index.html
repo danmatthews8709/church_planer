@@ -152,13 +152,19 @@
   }
   .add-btn:hover{opacity:.88;}
 
-  .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
   .chip{
     font-family:'Calibri','Carlito',sans-serif;font-size:11px;letter-spacing:0.03em;
     padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:var(--paper-raised);
     cursor:pointer;color:var(--ink-soft);
   }
-  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 0 0 2px var(--gold-soft);}
+  .clear-filters{
+    font-family:'Calibri','Carlito',sans-serif;font-size:11px;letter-spacing:0.02em;
+    padding:5px 11px;border-radius:20px;border:1px dashed var(--bad);background:var(--bad-soft);
+    cursor:pointer;color:var(--bad);font-weight:700;
+  }
+  .clear-filters:hover{background:var(--bad);color:#fff;}
 
   /* ---------- Calendar ---------- */
   .cal-grid{
@@ -177,6 +183,8 @@
   .cal-cell:nth-child(7n){border-right:none;}
   .cal-cell.other-month{opacity:.35;}
   .cal-cell.today{background:var(--gold-soft);}
+  .cal-cell.sunday{background:var(--navy-deep);background:linear-gradient(0deg, var(--paper-raised), var(--paper-raised));}
+  .cal-cell.sunday .cal-date{color:var(--navy);font-weight:700;}
   .cal-date{font-family:'Calibri','Carlito',sans-serif;font-size:11px;color:var(--ink-soft);}
   .cal-events{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
   .ev-pill{
@@ -185,13 +193,34 @@
   }
   .ev-pill.small-group{background:var(--spring);}
   .ev-pill.prayer{background:var(--winter);}
-  .ev-pill.service{background:var(--navy);}
+  .ev-pill.service{background:var(--navy);font-weight:700;}
   .ev-pill.event{background:var(--autumn);}
   .ev-pill.tag{color:#fff;}
   .ev-pill.tag.dominant{font-weight:700;box-shadow:0 0 0 1px rgba(255,255,255,.5) inset;}
   .busy-flag{
     display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:9.5px;font-weight:700;
     padding:1px 6px;border-radius:20px;margin-left:5px;text-transform:uppercase;letter-spacing:.03em;vertical-align:middle;
+  }
+
+  /* ---------- Mobile calendar agenda ---------- */
+  .cal-agenda{display:flex;flex-direction:column;gap:10px;}
+  .agenda-day{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;display:flex;gap:14px;
+  }
+  .agenda-day.today{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);}
+  .agenda-day.sunday{border-left:4px solid var(--navy);}
+  .agenda-day.empty-day{opacity:.5;}
+  .agenda-date{flex-shrink:0;width:46px;text-align:center;}
+  .agenda-date .dow{font-family:'Calibri','Carlito',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .agenda-date .num{font-family:'Calibri','Carlito',sans-serif;font-size:22px;line-height:1.1;}
+  .agenda-day.today .num{color:var(--gold);}
+  .agenda-events{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .agenda-events .ev-pill{white-space:normal;font-size:12px;padding:5px 9px;}
+  .agenda-none{font-size:12px;color:var(--ink-soft);font-style:italic;padding-top:4px;}
+  .agenda-month-divider{
+    font-family:'Calibri','Carlito',sans-serif;font-size:13px;font-weight:700;color:var(--ink-soft);
+    margin:8px 2px 0;text-transform:uppercase;letter-spacing:.05em;
   }
 
   /* ---------- List view ---------- */
@@ -202,7 +231,7 @@
   }
   .list-row{
     display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;
-    cursor:pointer;
+    cursor:pointer;flex-wrap:wrap;
   }
   .list-row.indented{margin-left:34px;padding-left:14px;border-left:2px solid var(--line);}
   .list-row:hover{background:var(--paper-raised);}
@@ -214,7 +243,7 @@
   .list-dot.prayer{background:var(--winter);}
   .list-dot.service{background:var(--navy);}
   .list-dot.event{background:var(--autumn);}
-  .list-title{font-weight:600;font-size:14px;flex:1;}
+  .list-title{font-weight:600;font-size:14px;flex:1;min-width:120px;}
   .list-meta{font-size:11.5px;color:var(--ink-soft);}
   .empty{
     text-align:center;padding:50px 20px;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-size:17px;
@@ -404,15 +433,28 @@
     .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
   }
 
+  @media (max-width:900px){
+    .cal-grid{display:none;}
+  }
+  @media (min-width:901px){
+    .cal-agenda{display:none;}
+  }
+
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
-    .masthead h1{font-size:26px;}
+    .masthead h1{font-size:22px;}
     .tab .label{font-size:14px;}
-    .cal-cell{min-height:64px;}
-    .cal-dow{font-size:8.5px;}
     .week-card{flex-direction:column;}
     .wc-actions{flex-direction:row;}
+    .wc-edit-grid{grid-template-columns:1fr;}
+    .wc-edit-grid .full{grid-column:1;}
+    .month-label{min-width:0;font-size:16px;}
+    .toolbar{gap:10px;}
+    .view-toggle button{padding:8px 10px;font-size:12px;}
+    .dash-toolbar{flex-direction:column;align-items:flex-start;}
+    .dash-toolbar > div{width:100%;}
+    .dash-toolbar button{flex:1;}
   }
 </style>
 </head>
@@ -1175,6 +1217,58 @@ function ribbonHTML(){
   </div><div class="ribbon-bar"></div>`;
 }
 
+// Full desktop 7-column month grid.
+function calendarGridHTML(cells, m, byDay, today){
+  let html = `<div class="cal-grid">`;
+  DOW.forEach(d=> html += `<div class="cal-dow">${d}</div>`);
+  cells.forEach(d=>{
+    const k = isoDate(d);
+    const inMonth = d.getMonth()===m;
+    const dayEvents = byDay[k]||[];
+    const isSunday = d.getDay()===0;
+    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''} ${isSunday?'sunday':''}">
+      <div class="cal-date">${d.getDate()}</div>
+      <div class="cal-events">
+        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
+        ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+// Mobile agenda: only days that fall within the displayed month, one row per day,
+// blank days collapsed to a thin empty row rather than a full grid cell — reads
+// top-to-bottom like a list, no squeezed 7-column grid to fight with on a phone.
+function calendarAgendaHTML(y, m, byDay, today){
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  let html = `<div class="cal-agenda">`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(y, m, day);
+    const k = isoDate(d);
+    const dayEvents = byDay[k]||[];
+    const isSunday = d.getDay()===0;
+    const isToday = k===today;
+    if(!dayEvents.length && !isSunday && !isToday){
+      // Collapse ordinary empty weekdays to keep the agenda scannable —
+      // Sundays and today always get a full row even with nothing on them.
+      continue;
+    }
+    html += `<div class="agenda-day ${isToday?'today':''} ${isSunday?'sunday':''} ${!dayEvents.length?'empty-day':''}">
+      <div class="agenda-date">
+        <div class="dow">${DOW[(d.getDay()+6)%7]}</div>
+        <div class="num">${day}</div>
+      </div>
+      <div class="agenda-events">
+        ${dayEvents.length ? dayEvents.map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}">${o.ev.title}</div>`).join('') : `<div class="agenda-none">Nothing on the sheet</div>`}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 function calendarHTML(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   const first = new Date(y,m,1);
@@ -1188,22 +1282,9 @@ function calendarHTML(){
   occ.forEach(o=>{ const k=isoDate(o.date); (byDay[k]=byDay[k]||[]).push(o); });
   const today = isoDate(new Date());
 
-  let html = `<div class="cal-grid">`;
-  DOW.forEach(d=> html += `<div class="cal-dow">${d}</div>`);
-  cells.forEach(d=>{
-    const k = isoDate(d);
-    const inMonth = d.getMonth()===m;
-    const dayEvents = byDay[k]||[];
-    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''}">
-      <div class="cal-date">${d.getDate()}</div>
-      <div class="cal-events">
-        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
-        ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
-      </div>
-    </div>`;
-  });
-  html += `</div>`;
-  return html;
+  // Both are rendered; CSS media queries show only the one that fits the viewport,
+  // so resizing/rotating the browser swaps layout instantly with no extra re-render.
+  return calendarGridHTML(cells, m, byDay, today) + calendarAgendaHTML(y, m, byDay, today);
 }
 
 function listHTML(){
@@ -1438,6 +1519,7 @@ function dashboardHTML(){
 }
 
 function mainHTML(){
+  const filtersActive = state.catFilters.size > 0;
   return `
     <div class="masthead">
       <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
@@ -1466,7 +1548,8 @@ function mainHTML(){
     </div>
     ${state.view!=='dashboard'?`<div class="filters">
       ${Object.entries(CATS).map(([k,v])=>`<div class="chip ${state.catFilters.has(k)?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
-    </div>`:''}
+      ${filtersActive?`<button type="button" class="clear-filters" id="clear-filters">✕ Showing ${state.catFilters.size} of ${Object.keys(CATS).length} types — clear filter</button>`:''}
+    </div>`:filtersActive?`<div class="notice" style="margin:-8px 0 14px;">Note: a category filter is still active from Calendar/List view (${[...state.catFilters].map(c=>CATS[c].label).join(', ')}) — it won't affect the Dashboard, but will hide other types again when you switch views.</div>`:''}
     ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
@@ -1656,6 +1739,8 @@ function attachMainHandlers(){
       render();
     };
   });
+  const clearFiltersBtn = document.getElementById('clear-filters');
+  if(clearFiltersBtn) clearFiltersBtn.onclick = ()=>{ state.catFilters.clear(); render(); };
   const openAdd = document.getElementById('open-add');
   if(openAdd) openAdd.onclick = ()=>{
     state.editingEvent = null; state.showModal = true; render();

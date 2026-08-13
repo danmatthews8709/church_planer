@@ -167,29 +167,10 @@
   .clear-filters:hover{background:var(--bad);color:#fff;}
 
   /* ---------- Calendar ---------- */
-  .cal-grid{
-    display:grid;grid-template-columns:repeat(7,1fr);
-    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--paper-raised);
-  }
-  .cal-dow{
-    padding:8px 0;text-align:center;font-family:'Calibri','Carlito',sans-serif;font-size:10px;
-    text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);
-    border-bottom:1px solid var(--line);background:var(--paper);
-  }
-  .cal-cell{
-    min-height:98px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
-    padding:6px;position:relative;
-  }
-  .cal-cell:nth-child(7n){border-right:none;}
-  .cal-cell.other-month{opacity:.35;}
-  .cal-cell.today{background:var(--gold-soft);}
-  .cal-cell.sunday{background:var(--navy-deep);background:linear-gradient(0deg, var(--paper-raised), var(--paper-raised));}
-  .cal-cell.sunday .cal-date{color:var(--navy);font-weight:700;}
-  .cal-date{font-family:'Calibri','Carlito',sans-serif;font-size:11px;color:var(--ink-soft);}
-  .cal-events{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
   .ev-pill{
     font-size:10.5px;padding:2px 6px;border-radius:5px;cursor:pointer;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;
+    min-width:0;max-width:100%;
   }
   .ev-pill.small-group{background:var(--spring);}
   .ev-pill.prayer{background:var(--winter);}
@@ -218,6 +199,12 @@
   .agenda-events{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}
   .agenda-events .ev-pill{white-space:normal;font-size:12px;padding:5px 9px;}
   .agenda-none{font-size:12px;color:var(--ink-soft);font-style:italic;padding-top:4px;}
+  @media (min-width:641px){
+    .agenda-day{padding:14px 18px;}
+    .agenda-date{width:60px;}
+    .agenda-date .num{font-size:26px;}
+    .agenda-events .ev-pill{font-size:13px;padding:6px 11px;}
+  }
   .agenda-month-divider{
     font-family:'Calibri','Carlito',sans-serif;font-size:13px;font-weight:700;color:var(--ink-soft);
     margin:8px 2px 0;text-transform:uppercase;letter-spacing:.05em;
@@ -433,13 +420,6 @@
     .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
   }
 
-  @media (max-width:900px){
-    .cal-grid{display:none;}
-  }
-  @media (min-width:901px){
-    .cal-agenda{display:none;}
-  }
-
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
@@ -455,6 +435,17 @@
     .dash-toolbar{flex-direction:column;align-items:flex-start;}
     .dash-toolbar > div{width:100%;}
     .dash-toolbar button{flex:1;}
+    .list-row{
+      flex-direction:column;align-items:flex-start;gap:5px;
+      padding:12px 14px;border:1px solid var(--line);background:var(--paper-raised);
+      border-radius:10px;margin-bottom:8px;
+    }
+    .list-row.indented{margin-left:0;padding-left:14px;}
+    .list-row:hover{background:var(--paper-raised);}
+    .list-date{font-family:'Calibri','Carlito',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;min-width:0;}
+    .list-title{font-size:15px;}
+    .list-meta{font-size:11.5px;}
+    .list-month-head{flex-wrap:wrap;gap:8px;}
   }
 </style>
 </head>
@@ -1217,27 +1208,6 @@ function ribbonHTML(){
   </div><div class="ribbon-bar"></div>`;
 }
 
-// Full desktop 7-column month grid.
-function calendarGridHTML(cells, m, byDay, today){
-  let html = `<div class="cal-grid">`;
-  DOW.forEach(d=> html += `<div class="cal-dow">${d}</div>`);
-  cells.forEach(d=>{
-    const k = isoDate(d);
-    const inMonth = d.getMonth()===m;
-    const dayEvents = byDay[k]||[];
-    const isSunday = d.getDay()===0;
-    html += `<div class="cal-cell ${inMonth?'':'other-month'} ${k===today?'today':''} ${isSunday?'sunday':''}">
-      <div class="cal-date">${d.getDate()}</div>
-      <div class="cal-events">
-        ${dayEvents.slice(0,3).map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}" title="${o.ev.audience||''}">${o.ev.title}</div>`).join('')}
-        ${dayEvents.length>3?`<div style="font-size:10px;color:var(--ink-soft);">+${dayEvents.length-3} more</div>`:''}
-      </div>
-    </div>`;
-  });
-  html += `</div>`;
-  return html;
-}
-
 // Mobile agenda: only days that fall within the displayed month, one row per day,
 // blank days collapsed to a thin empty row rather than a full grid cell — reads
 // top-to-bottom like a list, no squeezed 7-column grid to fight with on a phone.
@@ -1282,9 +1252,10 @@ function calendarHTML(){
   occ.forEach(o=>{ const k=isoDate(o.date); (byDay[k]=byDay[k]||[]).push(o); });
   const today = isoDate(new Date());
 
-  // Both are rendered; CSS media queries show only the one that fits the viewport,
-  // so resizing/rotating the browser swaps layout instantly with no extra re-render.
-  return calendarGridHTML(cells, m, byDay, today) + calendarAgendaHTML(y, m, byDay, today);
+  // Agenda list is now the calendar view everywhere — desktop included — rather than
+  // the old 7-column grid, which this replaced after the grid's fixed-width columns
+  // proved unreliable with long, un-wrapping event titles.
+  return calendarAgendaHTML(y, m, byDay, today);
 }
 
 function listHTML(){
@@ -1531,7 +1502,7 @@ function mainHTML(){
       <div class="view-toggle">
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
-        <button data-view="list" class="${state.view==='list'?'active':''}">List by month</button>
+        <button data-view="list" class="${state.view==='list'?'active':''}">Look Ahead</button>
       </div>
       ${state.view==='calendar'?`
       <div class="nav-group">

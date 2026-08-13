@@ -1276,6 +1276,10 @@ function commsPostsFor(planId){ return state.commsPosts.filter(p=>p.commsPlanId=
 
 // Auto-applies the default Sunday flow to any Sunday in range that doesn't have a
 // comms plan yet — no Needs comms? question asked, matching the agreed design.
+// Also backfills posts for a Sunday that already has an auto-flow plan but no posts
+// yet — this covers plans created before the flow's steps existed (exactly what
+// happened here: the plan saved, the steps didn't, until fixed), so it self-heals
+// rather than staying permanently empty just because a plan row exists.
 // Mutates state synchronously so the same render pass reflects it; the Supabase
 // writes happen in the background and reconcile via the item_ref_id unique constraint
 // if two people open the tab for the same week at once.
@@ -1283,14 +1287,20 @@ function ensureAutoCommsForSundays(items){
   const defaultFlow = state.commsFlows[0];
   if(!defaultFlow) return;
   const steps = state.commsFlowSteps.filter(s=>s.flowId===defaultFlow.id);
+  if(!steps.length) return;
   const newPlans = [], newPosts = [];
   items.forEach(o=>{
     if(commsItemType(o.ev)!=='sunday') return;
     const key = commsItemKey(o);
-    if(state.commsPlans.some(p=>p.itemRefId===key)) return;
-    const plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, itemTitle:o.ev.title, notes:''};
-    state.commsPlans.push(plan);
-    newPlans.push(plan);
+    let plan = state.commsPlans.find(p=>p.itemRefId===key);
+    if(!plan){
+      plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, itemTitle:o.ev.title, notes:''};
+      state.commsPlans.push(plan);
+      newPlans.push(plan);
+    }
+    if(!plan.autoFlowId) return; // manually-decided plan, not an auto-flow one — leave it alone
+    const hasPosts = state.commsPosts.some(p=>p.commsPlanId===plan.id);
+    if(hasPosts) return;
     steps.forEach(s=>{
       const d = new Date(o.date.getFullYear(), o.date.getMonth(), o.date.getDate()+s.dayOffset);
       const post = {id:uid(), commsPlanId:plan.id, channel:s.channel, platform:s.platform, format:s.format, postDate:isoDate(d), endDate:null, note:s.note, status:'planned'};

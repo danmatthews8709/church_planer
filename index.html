@@ -320,6 +320,14 @@
   .mw-repeat-link{border:none;background:none;color:var(--ink-soft);text-decoration:underline;font-size:11.5px;cursor:pointer;padding:0;font-family:'Calibri','Carlito',sans-serif;}
   .mw-repeat-link:hover{color:var(--ink);}
   .mw-row-fields{display:flex;flex-direction:column;gap:12px;width:100%;}
+  .mw-row-fold{position:absolute;top:8px;right:34px;border:none;background:none;color:var(--ink-soft);text-decoration:underline;font-size:11px;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
+  .mw-row-fold:hover{color:var(--ink);}
+  .mw-row-folded{display:flex;align-items:center;gap:8px;padding:10px 34px 10px 10px;position:relative;border:1px solid var(--line);border-radius:8px;background:#fff;}
+  .mw-row-summary{flex:1;min-width:0;padding:6px 12px;border-radius:6px;color:#fff;overflow:hidden;}
+  .mw-row-summary-name{font-size:13px;font-weight:700;display:block;}
+  .mw-row-summary-meta{font-size:11px;opacity:.9;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mw-row-edit{border:1px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;flex-shrink:0;}
+  .mw-row-edit:hover{background:var(--paper);color:var(--ink);}
   .mw-row-fields .mw-field label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
   .mw-row-fields select,.mw-row-fields input[type="text"],.mw-row-fields input[type="date"],.mw-row-fields input[type="time"]{
     width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;
@@ -434,6 +442,21 @@
     font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--gold-soft);color:var(--gold);
     text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;
   }
+  .comms-row{
+    display:flex;align-items:center;gap:12px;background:var(--paper-raised);border:1px solid var(--line);
+    border-radius:8px;padding:9px 12px;margin-bottom:8px;flex-wrap:wrap;
+  }
+  .comms-row-date{font-family:'Calibri','Carlito',sans-serif;font-size:12px;color:var(--ink-soft);min-width:66px;flex-shrink:0;}
+  .comms-row-main{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .comms-row-title{font-size:13.5px;font-weight:600;}
+  .comms-row-meta{font-size:11px;color:var(--ink-soft);}
+  .comms-row-chan-badge{font-size:10.5px;font-weight:700;color:#fff;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+  .comms-status-badge-sm{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
+  .comms-post-expand,.comms-post-fold{
+    border:1px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:6px;padding:5px 12px;
+    font-size:12px;font-weight:600;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;flex-shrink:0;
+  }
+  .comms-post-expand:hover,.comms-post-fold:hover{background:var(--paper);color:var(--ink);}
   .comms-posts{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
   .comms-post-row{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 34px 10px 10px;background:#fff;}
   .comms-post-remove{position:absolute;top:8px;right:8px;border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:4px 6px;}
@@ -1292,50 +1315,92 @@ function commsPostRowHTML(p){
   </div>`;
 }
 
-function commsReviewHTML(){
+// Flat, per-post list, ordered by each post's own date — matching Look Ahead's
+// style rather than nesting posts under their source Sunday/item. Decisions not
+// yet made still show as a compact single-line "Needs comms?" row; once a post
+// exists, it appears in the flow on its own date, folded by default (same
+// fold/unfold pattern as the week editor rows), with "for <item title>" as its
+// only tie back to the thing that generated it.
+function commsReviewEntries(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
   const items = commsItemsForRange(rangeStart, rangeEnd);
   ensureAutoCommsForSundays(items);
-  const visible = items.filter(o=>{
+  const entries = [];
+  items.forEach(o=>{
     const plan = commsPlanFor(o);
-    return !plan || plan.needsComms !== false;
+    if(plan && plan.needsComms === false) return;
+    if(!plan || plan.needsComms == null){
+      entries.push({kind:'decision', date:o.date, o, key:commsItemKey(o)});
+      return;
+    }
+    const posts = commsPostsFor(plan.id);
+    if(!posts.length){
+      entries.push({kind:'empty-yes', date:o.date, o, plan});
+    } else {
+      posts.forEach(p=> entries.push({kind:'post', date: p.postDate ? parseISO(p.postDate) : o.date, o, plan, post:p}));
+    }
   });
-  if(!visible.length) return `<div class="empty">Nothing to review this month.</div>`;
-  return visible.map(o=>{
-    const key = commsItemKey(o);
-    const plan = commsPlanFor(o);
-    const type = commsItemType(o.ev);
-    const dateLabel = `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)}`;
-    if(!plan || plan.needsComms==null){
-      return `<div class="comms-item">
-        <div class="comms-item-head">
-          <div>
-            <div class="comms-item-meta">${dateLabel} &middot; ${COMMS_TYPE_LABELS[type]}</div>
-            <div class="comms-item-title">${o.ev.title}</div>
-          </div>
-          <div class="comms-yesno">
-            <button type="button" class="comms-no-btn" data-key="${key}" data-itemtype="${type}">No comms</button>
-            <button type="button" class="comms-yes-btn" data-key="${key}" data-itemtype="${type}" data-anchor="${isoDate(o.date)}">Needs comms</button>
-          </div>
+  entries.sort((a,b)=> a.date - b.date);
+  return entries;
+}
+
+function commsReviewHTML(){
+  const entries = commsReviewEntries();
+  if(!entries.length) return `<div class="empty">Nothing to review this month.</div>`;
+  return entries.map(e=>{
+    const dateLabel = `${DOW[(e.date.getDay()+6)%7]} ${e.date.getDate()} ${MONTHS[e.date.getMonth()].slice(0,3)}`;
+
+    if(e.kind==='decision'){
+      const type = commsItemType(e.o.ev);
+      return `<div class="comms-row">
+        <div class="comms-row-date">${dateLabel}</div>
+        <div class="comms-row-main">
+          <span class="comms-row-title">${e.o.ev.title}</span>
+          <span class="comms-row-meta">${COMMS_TYPE_LABELS[type]}</span>
+        </div>
+        <div class="comms-yesno">
+          <button type="button" class="comms-no-btn" data-key="${e.key}" data-itemtype="${type}">No comms</button>
+          <button type="button" class="comms-yes-btn" data-key="${e.key}" data-itemtype="${type}" data-anchor="${isoDate(e.o.date)}">Needs comms</button>
         </div>
       </div>`;
     }
-    const isAuto = !!plan.autoFlowId;
-    const flow = isAuto ? state.commsFlows.find(f=>f.id===plan.autoFlowId) : null;
-    const posts = commsPostsFor(plan.id);
+
+    if(e.kind==='empty-yes'){
+      return `<div class="comms-row">
+        <div class="comms-row-date">${dateLabel}</div>
+        <div class="comms-row-main">
+          <span class="comms-row-title">${e.o.ev.title}</span>
+          <span class="comms-row-meta">Needs comms — no posts added yet</span>
+        </div>
+        <button type="button" class="comms-add-post" data-plan-id="${e.plan.id}" data-anchor="${isoDate(e.o.date)}">+ Add post</button>
+      </div>`;
+    }
+
+    const p = e.post;
+    if(!p.reviewExpanded){
+      const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
+      const chanLabel = p.channel==='social'
+        ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
+        : (COMMS_CHANNELS[p.channel]?COMMS_CHANNELS[p.channel].label:p.channel);
+      return `<div class="comms-row" data-post-id="${p.id}">
+        <div class="comms-row-date">${dateLabel}</div>
+        <div class="comms-row-main">
+          <span class="comms-row-chan-badge" style="background:${st.color};">${chanLabel}</span>
+          <span class="comms-row-title">${p.note || e.o.ev.title}</span>
+          <span class="comms-row-meta">for ${e.o.ev.title}</span>
+        </div>
+        <span class="comms-status-badge-sm" style="background:${st.soft};color:${st.color};">${st.label}</span>
+        <button type="button" class="comms-post-expand" data-post-id="${p.id}">Edit</button>
+      </div>`;
+    }
+
     return `<div class="comms-item expanded">
       <div class="comms-item-head">
-        <div>
-          <div class="comms-item-meta">${dateLabel} &middot; ${COMMS_TYPE_LABELS[type]}</div>
-          <div class="comms-item-title">${o.ev.title}</div>
-        </div>
-        <span class="comms-badge ${isAuto?'auto':''}">${isAuto ? 'Auto-applied: '+(flow?flow.name:'flow') : 'Needs comms'}</span>
+        <div class="comms-item-meta">${dateLabel} &middot; for ${e.o.ev.title}</div>
+        <button type="button" class="comms-post-fold" data-post-id="${p.id}">▲ Done</button>
       </div>
-      <div class="comms-posts">
-        ${posts.map(p=>commsPostRowHTML(p)).join('')}
-        <button type="button" class="comms-add-post" data-plan-id="${plan.id}" data-anchor="${isoDate(o.date)}">+ Add post</button>
-      </div>
+      <div class="comms-posts">${commsPostRowHTML(p)}</div>
     </div>`;
   }).join('');
 }
@@ -1703,11 +1768,34 @@ function activityRowsHTML(rows, dateHint){
     const isNewTag = !!r.creatingTag;
     const showRepeatPicker = !!r.repeatFreq || !!r.showRepeat;
     const selectedTagId = (r.tagIds||[])[0] || '';
+    const t = selectedTagId ? tagById(selectedTagId) : null;
     const s = r.status || 'confirmed';
     const allDay = r.allDay !== false;
+    // Rows carried over from an already-saved week arrive folded (rowExpanded===false,
+    // set when populating state.editingMidweekRows/editingPostServiceRows) — a
+    // freshly added row has no tag yet so there's nothing to summarise, and always
+    // shows the full form regardless of that flag.
+    const folded = !isNewTag && !r.recurringId && t && r.rowExpanded===false;
+
+    if(folded){
+      const aud = r.audience || t.audience;
+      const timeLabel = allDay ? 'All day' : (r.startTime ? r.startTime+(r.endTime?'–'+r.endTime:'') : '');
+      const dateLabel = r.date ? fmtDate(r.date) : `w/c ${dateHint}`;
+      return `
+      <div class="mw-row mw-row-folded" data-mwid="${r.id}">
+        <div class="mw-row-summary" style="background:${audienceColor(aud)};">
+          <span class="mw-row-summary-name">${t.name}</span>
+          <span class="mw-row-summary-meta">${aud} · ${STATUSES[s].label} · ${dateLabel}${timeLabel?' · '+timeLabel:''}${r.needsComms===true?' · Needs comms':''}</span>
+        </div>
+        <button type="button" class="mw-row-edit" data-mwid="${r.id}">Edit</button>
+        <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="Remove">✕</button>
+      </div>`;
+    }
+
     return `
     <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
       <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
+      ${(!isNewTag && !r.recurringId && t) ? `<button type="button" class="mw-row-fold" data-mwid="${r.id}">▲ Done</button>` : ''}
       <div class="mw-row-fields">
 
         ${isNewTag ? `
@@ -1726,8 +1814,8 @@ function activityRowsHTML(rows, dateHint){
           <div class="mw-field full">
             <label>Item</label>
             ${(r.tagIds||[]).map(tid=>{
-              const t = tagById(tid);
-              return t ? `<span class="mw-recurring-item" style="background:${audienceColor(t.audience)};">${t.name}</span>` : '';
+              const rt = tagById(tid);
+              return rt ? `<span class="mw-recurring-item" style="background:${audienceColor(rt.audience)};">${rt.name}</span>` : '';
             }).join('')}
           </div>
           <span class="busy-flag" style="background:var(--good-soft);color:var(--good);align-self:flex-start;">Recurring${r.date?' · '+fmtDate(r.date):''} — edit in Settings</span>
@@ -1737,7 +1825,7 @@ function activityRowsHTML(rows, dateHint){
             <div class="mw-item-row">
               <select class="mw-item-select" data-mwid="${r.id}">
                 <option value="" ${!selectedTagId?'selected':''}>— Choose an item —</option>
-                ${sortedTags.map(t=>`<option value="${t.id}" ${selectedTagId===t.id?'selected':''}>${t.name}</option>`).join('')}
+                ${sortedTags.map(tg=>`<option value="${tg.id}" ${selectedTagId===tg.id?'selected':''}>${tg.name}</option>`).join('')}
                 <option value="__new__">+ New activity…</option>
               </select>
               ${selectedTagId ? `<button type="button" class="mw-item-delete" data-mwid="${r.id}" data-tagid="${selectedTagId}" title="Delete this item everywhere">✕</button>` : ''}
@@ -1828,14 +1916,14 @@ function weekCardHTML(wk, idx){
           <label>Sunday post service</label>
           <div class="mw-rows" data-section="postService">${activityRowsHTML(psRows, 'Sunday')}</div>
           <button class="mw-add" id="ps-add-row" type="button">+ Add post-service activity</button>
-          <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the Sunday itself.</div>
+          <div class="notice" style="margin-top:6px;">Use "+ Add post-service activity" for each thing happening — a saved item folds up, tap "Edit" to change it. Add a date only if it's not the Sunday itself.</div>
         </div>
         <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${wk.weekCommencing||''}"></div>
         <div class="full">
           <label>Midweek activity</label>
           <div class="mw-rows" data-section="midweek">${activityRowsHTML(rows, 'week commencing')}</div>
           <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
-          <div class="notice" style="margin-top:6px;">Tap tags to add more than one. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
+          <div class="notice" style="margin-top:6px;">Use "+ Add midweek activity" for each thing happening — a saved item folds up, tap "Edit" to change it. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
         </div>
       </div>
       <div class="wc-actions">
@@ -2451,6 +2539,21 @@ function attachDashboardHandlers(){
       render();
     };
   });
+  document.querySelectorAll('.mw-row-edit').forEach(el=>{
+    el.onclick = ()=>{
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.rowExpanded = true;
+      render();
+    };
+  });
+  document.querySelectorAll('.mw-row-fold').forEach(el=>{
+    el.onclick = ()=>{
+      syncAllActivityRowsFromDOM();
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.rowExpanded = false;
+      render();
+    };
+  });
   document.querySelectorAll('.edit-week').forEach(el=>{
     el.onclick = ()=>{
       const wk = state.weeks.find(w=>w.id===el.dataset.id);
@@ -2461,18 +2564,18 @@ function attachDashboardHandlers(){
       // matching the same item_ref_id scheme eventsForRange/comms use.
       const wcAnchor = wk && wk.weekCommencing ? parseISO(wk.weekCommencing) : null;
       const sunAnchor = wk && wk.sundayDate ? parseISO(wk.sundayDate) : null;
-      state.editingMidweekRows = mw.length ? mw.map(m=>{
+      state.editingMidweekRows = mw.map(m=>{
         const d = m.date ? parseISO(m.date) : wcAnchor;
         const key = d ? 'wk-mid-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
         const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
-        return {...m, needsComms: plan ? plan.needsComms : null, itemPickerOpen:false};
-      }) : [{id:uid(), tagIds:[], note:''}];
-      state.editingPostServiceRows = ps.length ? ps.map(m=>{
+        return {...m, needsComms: plan ? plan.needsComms : null, rowExpanded:false};
+      });
+      state.editingPostServiceRows = ps.map(m=>{
         const d = m.date ? parseISO(m.date) : sunAnchor;
         const key = d ? 'wk-ps-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
         const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
-        return {...m, needsComms: plan ? plan.needsComms : null, itemPickerOpen:false};
-      }) : [{id:uid(), tagIds:[], note:''}];
+        return {...m, needsComms: plan ? plan.needsComms : null, rowExpanded:false};
+      });
       state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingWeekId = el.dataset.id;
@@ -2504,10 +2607,8 @@ function attachDashboardHandlers(){
       const {section} = findEditingRow(id);
       if(section==='midweek'){
         state.editingMidweekRows = state.editingMidweekRows.filter(r=>r.id!==id);
-        if(!state.editingMidweekRows.length) state.editingMidweekRows.push({id:uid(), tagIds:[], note:''});
       } else if(section==='postService'){
         state.editingPostServiceRows = state.editingPostServiceRows.filter(r=>r.id!==id);
-        if(!state.editingPostServiceRows.length) state.editingPostServiceRows.push({id:uid(), tagIds:[], note:''});
       }
       render();
     };
@@ -2523,13 +2624,13 @@ function attachDashboardHandlers(){
   const mwAddBtn = document.getElementById('mw-add-row');
   if(mwAddBtn) mwAddBtn.onclick = ()=>{
     syncAllActivityRowsFromDOM();
-    state.editingMidweekRows.push({id:uid(), tagIds:[], note:''});
+    state.editingMidweekRows.push({id:uid(), tagIds:[], note:'', rowExpanded:true});
     render();
   };
   const psAddBtn = document.getElementById('ps-add-row');
   if(psAddBtn) psAddBtn.onclick = ()=>{
     syncAllActivityRowsFromDOM();
-    state.editingPostServiceRows.push({id:uid(), tagIds:[], note:''});
+    state.editingPostServiceRows.push({id:uid(), tagIds:[], note:'', rowExpanded:true});
     render();
   };
   document.querySelectorAll('.save-week').forEach(el=>{
@@ -2675,8 +2776,8 @@ function attachDashboardHandlers(){
   const addWeekBtn = document.getElementById('add-week');
   if(addWeekBtn) addWeekBtn.onclick = ()=>{
     state.editingWeekId = 'new';
-    state.editingMidweekRows = [{id:uid(), tagIds:[], note:''}];
-    state.editingPostServiceRows = [{id:uid(), tagIds:[], note:''}];
+    state.editingMidweekRows = [];
+    state.editingPostServiceRows = [];
     state.editingOriginalRecurringIds = new Set();
     state.editingOriginalPostServiceRecurringIds = new Set();
     render();
@@ -2711,6 +2812,20 @@ function attachDashboardHandlers(){
 function attachCommsHandlers(){
   document.querySelectorAll('.comms-subtab').forEach(el=>{
     el.onclick = ()=>{ state.commsView = el.dataset.commsview; render(); };
+  });
+  document.querySelectorAll('.comms-post-expand').forEach(el=>{
+    el.onclick = ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post) post.reviewExpanded = true;
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-post-fold').forEach(el=>{
+    el.onclick = ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post) post.reviewExpanded = false;
+      render();
+    };
   });
   // Needs comms? Yes/No — Yes creates an empty plan the person then adds posts to;
   // No is permanent and the item drops off the review list from here on.

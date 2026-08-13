@@ -457,6 +457,11 @@
     font-size:12px;font-weight:600;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;flex-shrink:0;
   }
   .comms-post-expand:hover,.comms-post-fold:hover{background:var(--paper);color:var(--ink);}
+  .comms-cal-pill{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    font-size:11px;padding:5px 9px;border-radius:6px;color:#fff;
+  }
+  .comms-cal-pill-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex-shrink:0;}
   .comms-posts{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
   .comms-post-row{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 34px 10px 10px;background:#fff;}
   .comms-post-remove{position:absolute;top:8px;right:8px;border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:4px 6px;}
@@ -566,12 +571,12 @@ const STATUSES = {
 // week-item Confirmed/Pending/Cancelled status above — this tracks the comms work
 // itself, not whether the underlying event is happening.
 const COMMS_CHANNELS = {
-  social: {label:'Social media'},
-  email: {label:'Email'},
-  website_page: {label:'Website page'},
-  website_banner: {label:'Website banner'},
-  churchsuite: {label:'ChurchSuite ticket'},
-  other: {label:'Other'}
+  social: {label:'Social media', color:'var(--winter)'},
+  email: {label:'Email', color:'var(--autumn)'},
+  website_page: {label:'Website page', color:'var(--spring)'},
+  website_banner: {label:'Website banner', color:'var(--summer)'},
+  churchsuite: {label:'ChurchSuite ticket', color:'var(--navy)'},
+  other: {label:'Other', color:'var(--ink-soft)'}
 };
 const COMMS_FORMATS = {post:'Post', reel:'Reel', story:'Story', link:'Link'};
 const COMMS_PLATFORMS = {facebook:'Facebook', instagram:'Instagram'};
@@ -1325,7 +1330,6 @@ function commsReviewEntries(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
   const items = commsItemsForRange(rangeStart, rangeEnd);
-  ensureAutoCommsForSundays(items);
   const entries = [];
   items.forEach(o=>{
     const plan = commsPlanFor(o);
@@ -1380,13 +1384,14 @@ function commsReviewHTML(){
     const p = e.post;
     if(!p.reviewExpanded){
       const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
+      const chan = COMMS_CHANNELS[p.channel] || {label:p.channel, color:'var(--ink-soft)'};
       const chanLabel = p.channel==='social'
         ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
-        : (COMMS_CHANNELS[p.channel]?COMMS_CHANNELS[p.channel].label:p.channel);
+        : chan.label;
       return `<div class="comms-row" data-post-id="${p.id}">
         <div class="comms-row-date">${dateLabel}</div>
         <div class="comms-row-main">
-          <span class="comms-row-chan-badge" style="background:${st.color};">${chanLabel}</span>
+          <span class="comms-row-chan-badge" style="background:${chan.color};">${chanLabel}</span>
           <span class="comms-row-title">${p.note || e.o.ev.title}</span>
           <span class="comms-row-meta">for ${e.o.ev.title}</span>
         </div>
@@ -1428,10 +1433,14 @@ function commsCalendarHTML(){
       <div class="agenda-events">
         ${posts.map(p=>{
           const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
+          const chan = COMMS_CHANNELS[p.channel] || {label:p.channel, color:'var(--ink-soft)'};
           const chanLabel = p.channel==='social'
             ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
-            : (COMMS_CHANNELS[p.channel]?COMMS_CHANNELS[p.channel].label:p.channel);
-          return `<div class="ev-pill" style="background:${st.color};">${chanLabel}${p.note?' — '+p.note:''}</div>`;
+            : chan.label;
+          return `<div class="comms-cal-pill" style="background:${chan.color};">
+            <span>${chanLabel}${p.note?' — '+p.note:''}</span>
+            <span class="comms-cal-pill-status" style="background:${st.soft};color:${st.color};">${st.label}</span>
+          </div>`;
         }).join('')}
       </div>
     </div>`;
@@ -1442,6 +1451,13 @@ function commsCalendarHTML(){
 }
 
 function commsTabHTML(){
+  // Auto-provisioning must happen here, once, regardless of which sub-tab is
+  // active — previously it only ran inside Review, so jumping straight to Comms
+  // calendar for a month you hadn't opened Review for showed nothing, even
+  // though the underlying Sundays existed.
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
+  ensureAutoCommsForSundays(commsItemsForRange(rangeStart, rangeEnd));
   return `
     <div class="comms-subtabs">
       <button type="button" class="comms-subtab ${state.commsView==='review'?'active':''}" data-commsview="review">Review</button>

@@ -319,15 +319,22 @@
   .mw-field-grid .full{grid-column:1/3;}
   .mw-repeat-link{border:none;background:none;color:var(--ink-soft);text-decoration:underline;font-size:11.5px;cursor:pointer;padding:0;font-family:'Calibri','Carlito',sans-serif;}
   .mw-repeat-link:hover{color:var(--ink);}
-  .mw-tags-edit-link,.mw-tags-collapse-link{border:1px dashed var(--line);background:none;border-radius:20px;font-size:12px;padding:5px 12px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;white-space:nowrap;}
-  .mw-tags-edit-link:hover,.mw-tags-collapse-link:hover{background:var(--paper);color:var(--ink);}
-  .mw-tag-toggle{
-    border:1px solid var(--line);background:#fff;color:var(--ink-soft);
-    border-radius:20px;font-size:12px!important;padding:5px 12px!important;cursor:pointer;white-space:nowrap;
-    font-family:'Calibri','Carlito',sans-serif;font-weight:600;flex:0 0 auto!important;
+  .mw-row-fields{display:flex;flex-direction:column;gap:12px;width:100%;}
+  .mw-row-fields .mw-field label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .mw-row-fields select,.mw-row-fields input[type="text"],.mw-row-fields input[type="date"],.mw-row-fields input[type="time"]{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;
+    background:#fff;color:var(--ink);font-family:'Calibri','Carlito',sans-serif;
   }
-  .mw-tag-toggle:not(.on):hover{background:var(--paper);}
-  .mw-tag-toggle-new{border-style:dashed!important;color:var(--ink-soft)!important;}
+  .mw-item-row{display:flex;gap:8px;align-items:center;}
+  .mw-item-row select{flex:1;}
+  .mw-item-delete{border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;font-size:13px;padding:8px 11px;border-radius:6px;flex-shrink:0;}
+  .mw-item-delete:hover{color:#fff;background:var(--bad);border-color:var(--bad);}
+  .mw-recurring-item{display:inline-block;color:#fff;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;}
+  .mw-radio-group{display:flex;gap:18px;}
+  .mw-radio-option{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;font-weight:600;}
+  .mw-allday-label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);font-weight:600;}
+  .mw-time-row{display:flex;gap:8px;margin-top:8px;}
+  .mw-time-row .mw-field{flex:1;}
   .mw-add{border:1px dashed var(--line);background:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
   .mw-add:hover{background:var(--paper);color:var(--ink);}
   .mw-cancel-newtag{border:1px solid var(--line)!important;background:#fff!important;color:var(--ink-soft)!important;border-radius:6px;font-size:11px!important;padding:5px 8px!important;white-space:nowrap;font-family:'Calibri','Carlito',sans-serif;flex:0 0 auto!important;}
@@ -401,6 +408,58 @@
   .export-pdf-month{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--ink-soft);font-family:'Calibri','Carlito',sans-serif;font-weight:600;}
   .export-pdf-month:hover{background:var(--paper);color:var(--ink);}
 
+  /* ---------- Comms Plan ---------- */
+  .comms-subtabs{display:flex;gap:6px;margin-bottom:16px;}
+  .comms-subtab{
+    font-family:'Calibri','Carlito',sans-serif;font-weight:600;font-size:13px;
+    background:var(--paper-raised);border:1px solid var(--line);padding:8px 16px;cursor:pointer;color:var(--ink-soft);
+    border-radius:8px;
+  }
+  .comms-subtab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .comms-item{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .comms-item.expanded{border-color:var(--gold);}
+  .comms-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .comms-item-meta{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .comms-item-title{font-size:15px;font-weight:600;margin-top:2px;}
+  .comms-yesno{display:flex;gap:6px;flex-shrink:0;}
+  .comms-yesno button{
+    border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 14px;font-size:12px;
+    font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:'Calibri','Carlito',sans-serif;
+  }
+  .comms-yes-btn{border-color:var(--navy)!important;background:var(--navy)!important;color:#fff!important;}
+  .comms-badge{
+    font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--gold-soft);color:var(--gold);
+    text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;
+  }
+  .comms-posts{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .comms-post-row{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 34px 10px 10px;background:#fff;}
+  .comms-post-remove{position:absolute;top:8px;right:8px;border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:4px 6px;}
+  .comms-post-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .comms-post-grid .full{grid-column:1/3;}
+  .comms-post-grid select,.comms-post-grid input{
+    width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;
+    background:#fff;color:var(--ink);font-family:'Calibri','Carlito',sans-serif;
+  }
+  .comms-platform-toggle{display:flex;gap:6px;}
+  .comms-plat-btn{
+    border:1px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:20px;font-size:11.5px;
+    padding:5px 11px;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;font-weight:600;
+  }
+  .comms-plat-btn.on{background:var(--winter);color:#fff;border-color:transparent;}
+  .comms-status-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .comms-status-btn{
+    border:1px solid var(--line);background:#fff;border-radius:20px;font-size:11px;padding:4px 11px;
+    cursor:pointer;font-family:'Calibri','Carlito',sans-serif;font-weight:700;
+  }
+  .comms-add-post{
+    align-self:flex-start;border:1px dashed var(--line);background:none;border-radius:6px;padding:6px 12px;
+    font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:'Calibri','Carlito',sans-serif;
+  }
+  .comms-add-post:hover{background:var(--paper);color:var(--ink);}
+
   /* ---------- PDF print export ---------- */
   .print-area{display:none;}
   @media print{
@@ -423,6 +482,8 @@
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
+    .comms-post-grid{grid-template-columns:1fr;}
+    .comms-post-grid .full{grid-column:1;}
     .masthead h1{font-size:22px;}
     .tab .label{font-size:14px;}
     .week-card{flex-direction:column;}
@@ -476,6 +537,40 @@ const STATUSES = {
   declined: {label:'Cancelled'}
 };
 
+// ---------- Comms Plan ----------
+// Every comms post carries a status matching the church's existing content-calendar
+// convention (Planned -> In progress -> Scheduled -> Posted), distinct from the
+// week-item Confirmed/Pending/Cancelled status above — this tracks the comms work
+// itself, not whether the underlying event is happening.
+const COMMS_CHANNELS = {
+  social: {label:'Social media'},
+  email: {label:'Email'},
+  website_page: {label:'Website page'},
+  website_banner: {label:'Website banner'},
+  churchsuite: {label:'ChurchSuite ticket'},
+  other: {label:'Other'}
+};
+const COMMS_FORMATS = {post:'Post', reel:'Reel', story:'Story', link:'Link'};
+const COMMS_PLATFORMS = {facebook:'Facebook', instagram:'Instagram'};
+const COMMS_STATUSES = {
+  planned: {label:'Planned', color:'var(--bad)', soft:'var(--bad-soft)'},
+  in_progress: {label:'In progress', color:'var(--warn)', soft:'var(--warn-soft)'},
+  scheduled: {label:'Scheduled', color:'var(--winter)', soft:'var(--winter-soft)'},
+  posted: {label:'Posted', color:'var(--good)', soft:'var(--good-soft)'}
+};
+// Seeded once if no flows exist yet — the standard weekly cycle built around every
+// Sunday, extracted from the church's existing social content calendar: a Friday
+// teaser, Saturday reminder, Monday recap and Tuesday follow-up, each offset in days
+// from that week's Sunday date. Auto-applied to every Sunday with no review needed;
+// extra one-off posts (Easter, a new series, a standalone event) are added on top.
+const DEFAULT_COMMS_FLOW = {name:'Sunday weekly rhythm', description:'Auto-applied to every Sunday: Friday teaser, Saturday reminder, Monday recap, Tuesday follow-up.'};
+const DEFAULT_COMMS_FLOW_STEPS = [
+  {dayOffset:-2, channel:'social', platform:'facebook,instagram', format:'reel', note:'Sunday teaser'},
+  {dayOffset:-1, channel:'social', platform:'facebook,instagram', format:'story', note:'Sunday invite reminder'},
+  {dayOffset:1, channel:'social', platform:'facebook,instagram', format:'post', note:'Sermon recap'},
+  {dayOffset:2, channel:'social', platform:'facebook,instagram', format:'story', note:'Sermon links'}
+];
+
 // "Whole Church" tags stay tied to the church's own brand colour so they read as the dominant/default
 // tag at a glance; every other audience gets a distinct colour from the palette below (or a custom
 // one the user picks in Settings).
@@ -522,6 +617,14 @@ function audienceColor(name){
 }
 function isDominantAudience(name){ return name === 'Whole Church'; }
 function tagById(id){ return state.tags.find(t=>t.id===id); }
+// A midweek/post-service item's audience is independently chosen per instance now
+// (not fixed to the tag) — this resolves the effective audience for colouring and
+// ChurchSuite category export: the item's own override if set, else the tag's own
+// default audience, so nothing that predates this change breaks.
+function itemAudience(m, tags){
+  if(m.audience) return m.audience;
+  return (tags && tags[0]) ? tags[0].audience : '';
+}
 
 // Does a recurring rhythm template land on the given date, honouring frequency, interval and end conditions?
 // (Outlook-style: Weekly/Monthly, "every N", and Never/After N occurrences/On a date.)
@@ -641,6 +744,11 @@ let state = {
   tags: [],
   audiences: [],
   recurringRhythms: [],
+  commsFlows: [],
+  commsFlowSteps: [],
+  commsPlans: [],
+  commsPosts: [],
+  commsView: 'review', // review | calendar
   currentUser: null,
   view: 'dashboard',
   cursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -685,8 +793,8 @@ async function loadData(){
     sb.from('tags').select('*'),
     sb.from('weeks').select(`
       id, occasion, sunday_date, sunday_series, week_commencing, happening,
-      week_midweek_items ( id, note, item_date, status, week_midweek_item_tags ( tag_id ) ),
-      week_post_service_items ( id, note, item_date, status, week_post_service_item_tags ( tag_id ) ),
+      week_midweek_items ( id, note, item_date, status, start_time, end_time, all_day, audience, week_midweek_item_tags ( tag_id ) ),
+      week_post_service_items ( id, note, item_date, status, start_time, end_time, all_day, audience, week_post_service_item_tags ( tag_id ) ),
       week_excluded_recurring ( recurring_rhythm_id )
     `).order('sunday_date'),
     sb.from('recurring_rhythms').select(`
@@ -731,10 +839,12 @@ async function loadData(){
     happening: w.happening || '',
     midweek: (w.week_midweek_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
+      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'',
       tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
     })),
     postService: (w.week_post_service_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
+      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'',
       tagIds: (m.week_post_service_item_tags||[]).map(t=>t.tag_id)
     })),
     excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
@@ -752,6 +862,41 @@ async function loadData(){
     recurrence: e.recurrence, recurrenceInterval: e.recurrence_interval,
     recurrenceEndType: e.recurrence_end_type, recurrenceCount: e.recurrence_count,
     recurrenceEnd: e.recurrence_end, notes: e.notes||'', createdBy: e.created_by
+  }));
+
+  // ---------- Comms Plan ----------
+  const [flowsRes, stepsRes, plansRes, postsRes] = await Promise.all([
+    sb.from('comms_flows').select('*'),
+    sb.from('comms_flow_steps').select('*'),
+    sb.from('comms_plans').select('*'),
+    sb.from('comms_posts').select('*')
+  ]);
+  [flowsRes, stepsRes, plansRes, postsRes].forEach(r=>{
+    if(r.error) console.error('Supabase load error:', r.error);
+  });
+
+  state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||''}));
+  state.commsFlowSteps = (stepsRes.data||[]).map(s=>({
+    id:s.id, flowId:s.flow_id, dayOffset:s.day_offset, channel:s.channel,
+    platform:s.platform||'', format:s.format||'', note:s.note||'', sortOrder:s.sort_order||0
+  }));
+  if(!state.commsFlows.length){
+    // Seed the default weekly Sunday flow once, the same way default tags/audiences are seeded.
+    const flow = {id:uid(), ...DEFAULT_COMMS_FLOW};
+    state.commsFlows = [flow];
+    await saveCommsFlow(flow);
+    const steps = DEFAULT_COMMS_FLOW_STEPS.map(s=>({id:uid(), flowId:flow.id, ...s, sortOrder:0}));
+    state.commsFlowSteps = steps;
+    await saveCommsFlowSteps(steps);
+  }
+
+  state.commsPlans = (plansRes.data||[]).map(p=>({
+    id:p.id, itemType:p.item_type, itemRefId:p.item_ref_id, needsComms:p.needs_comms,
+    autoFlowId:p.auto_flow_id, notes:p.notes||''
+  }));
+  state.commsPosts = (postsRes.data||[]).map(p=>({
+    id:p.id, commsPlanId:p.comms_plan_id, channel:p.channel, platform:p.platform||'',
+    format:p.format||'', postDate:p.post_date, endDate:p.end_date, note:p.note||'', status:p.status||'planned'
   }));
 
   state.loaded = true;
@@ -808,6 +953,43 @@ async function deleteEventRemote(id){
   if(error) console.error('delete event failed', error);
 }
 
+// ---------- Comms Plan save/delete helpers ----------
+async function saveCommsFlow(flow){
+  const { error } = await sb.from('comms_flows').upsert({id:flow.id, name:flow.name, description:flow.description||''});
+  if(error) console.error('save comms flow failed', error);
+}
+async function saveCommsFlowSteps(steps){
+  const rows = (Array.isArray(steps)?steps:[steps]).map(s=>({
+    id:s.id, flow_id:s.flowId, day_offset:s.dayOffset, channel:s.channel,
+    platform:s.platform||null, format:s.format||null, note:s.note||'', sort_order:s.sortOrder||0
+  }));
+  const { error } = await sb.from('comms_flow_steps').upsert(rows);
+  if(error) console.error('save comms flow steps failed', error);
+}
+// item_ref_id is unique, so upserting on that key means two team members opening the
+// Comms tab for the same week at the same moment converge on one plan rather than
+// creating duplicates.
+async function saveCommsPlan(planOrPlans){
+  const rows = (Array.isArray(planOrPlans)?planOrPlans:[planOrPlans]).map(p=>({
+    id:p.id, item_type:p.itemType, item_ref_id:p.itemRefId, needs_comms:p.needsComms,
+    auto_flow_id:p.autoFlowId||null, notes:p.notes||'', updated_at:new Date().toISOString()
+  }));
+  const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id'});
+  if(error) console.error('save comms plan failed', error);
+}
+async function saveCommsPost(postOrPosts){
+  const rows = (Array.isArray(postOrPosts)?postOrPosts:[postOrPosts]).map(p=>({
+    id:p.id, comms_plan_id:p.commsPlanId, channel:p.channel, platform:p.platform||null,
+    format:p.format||null, post_date:p.postDate, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned'
+  }));
+  const { error } = await sb.from('comms_posts').upsert(rows);
+  if(error) console.error('save comms post failed', error);
+}
+async function deleteCommsPostRemote(id){
+  const { error } = await sb.from('comms_posts').delete().eq('id', id);
+  if(error) console.error('delete comms post failed', error);
+}
+
 async function saveRecurring(rOrRs){
   const rows = rOrRs ? (Array.isArray(rOrRs)?rOrRs:[rOrRs]) : state.recurringRhythms;
   for(const row of rows){
@@ -847,7 +1029,10 @@ async function saveWeeks(weekOrWeeks){
     const { data: existingItems } = await sb.from('week_midweek_items').select('id').eq('week_id', w.id);
     const existingIds = (existingItems||[]).map(i=>i.id);
     if(existingIds.length) await sb.from('week_midweek_items').delete().in('id', existingIds);
-    const items = (w.midweek||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed'}));
+    const items = (w.midweek||[]).map(m=>({
+      id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed',
+      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null
+    }));
     if(items.length){
       const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
       if(itemErr){ console.error('save midweek items failed', itemErr); alert('Could not save midweek activity: '+itemErr.message); }
@@ -862,7 +1047,10 @@ async function saveWeeks(weekOrWeeks){
     const { data: existingPsItems } = await sb.from('week_post_service_items').select('id').eq('week_id', w.id);
     const existingPsIds = (existingPsItems||[]).map(i=>i.id);
     if(existingPsIds.length) await sb.from('week_post_service_items').delete().in('id', existingPsIds);
-    const psItems = (w.postService||[]).map(m=>({id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed'}));
+    const psItems = (w.postService||[]).map(m=>({
+      id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed',
+      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null
+    }));
     if(psItems.length){
       const { error: psItemErr } = await sb.from('week_post_service_items').insert(psItems);
       if(psItemErr){ console.error('save post-service items failed', psItemErr); alert('Could not save post-service activity: '+psItemErr.message); }
@@ -901,7 +1089,8 @@ function scheduleRefresh(){
 function subscribeRealtime(){
   const tables = [
     'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags',
-    'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events'
+    'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events',
+    'comms_flows','comms_flow_steps','comms_plans','comms_posts'
   ];
   const channel = sb.channel('planner-changes');
   tables.forEach(t=>{
@@ -966,12 +1155,13 @@ function eventsForRange(rangeStart, rangeEnd){
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
         if(!tags.length) return;
+        const aud = itemAudience(m, tags);
         const title = tags.map(t=>t.name).join(' + ') + (m.note?' — '+m.note:'');
         items.push({ev:{
           id:'wk-mid-'+wk.id+'-'+m.id, title,
-          category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
-          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
-          audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
+          category:'tag', color:audienceColor(aud), dominant:isDominantAudience(aud),
+          tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
+          audience: aud, recurrence:'none',
           synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
         }, date:itemDate});
       });
@@ -984,12 +1174,13 @@ function eventsForRange(rangeStart, rangeEnd){
         if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
         if(!tags.length) return;
+        const aud = itemAudience(m, tags);
         const title = tags.map(t=>t.name).join(' + ') + (m.note?' — '+m.note:'');
         items.push({ev:{
           id:'wk-ps-'+wk.id+'-'+m.id, title,
-          category:'tag', color:audienceColor(tags[0].audience), dominant:tags.some(t=>isDominantAudience(t.audience)),
-          tags: tags.map(t=>({name:t.name, color:audienceColor(t.audience), dominant:isDominantAudience(t.audience)})),
-          audience: tags.map(t=>t.audience).join(', '), recurrence:'none',
+          category:'tag', color:audienceColor(aud), dominant:isDominantAudience(aud),
+          tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
+          audience: aud, recurrence:'none',
           synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
         }, date:itemDate});
       });
@@ -997,6 +1188,202 @@ function eventsForRange(rangeStart, rangeEnd){
   });
   items.sort((a,b)=> a.date - b.date);
   return items;
+}
+
+// ---------- Comms Plan ----------
+// Item type + a stable per-occurrence key are derived from the synthetic ids
+// eventsForRange already produces, so no extra bookkeeping is needed elsewhere —
+// a Sunday, midweek activity, post-service activity or event occurrence all get a
+// unique, stable comms_plans.item_ref_id just from their existing id + date.
+function commsItemType(ev){
+  if(!ev.id) return null;
+  if(ev.id.startsWith('wk-sun-')) return 'sunday';
+  if(ev.id.startsWith('wk-mid-')) return 'midweek';
+  if(ev.id.startsWith('wk-ps-')) return 'postService';
+  if(!ev.synthetic) return 'event';
+  return null;
+}
+const COMMS_TYPE_LABELS = {sunday:'Sunday', midweek:'Midweek', postService:'Post-service', event:'Event'};
+function commsItemKey(o){ return o.ev.id + '::' + isoDate(o.date); }
+
+// Comms items are independent of whatever Calendar/List filters happen to be set —
+// temporarily clear them so a leftover category filter can't silently hide items
+// from review.
+function commsItemsForRange(rangeStart, rangeEnd){
+  const savedTerm = state.termFilter, savedCats = state.catFilters;
+  state.termFilter = null; state.catFilters = new Set();
+  const occ = eventsForRange(rangeStart, rangeEnd);
+  state.termFilter = savedTerm; state.catFilters = savedCats;
+  return occ.filter(o=> !!commsItemType(o.ev));
+}
+
+function commsPlanFor(o){ return state.commsPlans.find(p=>p.itemRefId===commsItemKey(o)); }
+function commsPostsFor(planId){ return state.commsPosts.filter(p=>p.commsPlanId===planId).sort((a,b)=> a.postDate<b.postDate?-1:1); }
+
+// Auto-applies the default Sunday flow to any Sunday in range that doesn't have a
+// comms plan yet — no Needs comms? question asked, matching the agreed design.
+// Mutates state synchronously so the same render pass reflects it; the Supabase
+// writes happen in the background and reconcile via the item_ref_id unique constraint
+// if two people open the tab for the same week at once.
+function ensureAutoCommsForSundays(items){
+  const defaultFlow = state.commsFlows[0];
+  if(!defaultFlow) return;
+  const steps = state.commsFlowSteps.filter(s=>s.flowId===defaultFlow.id);
+  const newPlans = [], newPosts = [];
+  items.forEach(o=>{
+    if(commsItemType(o.ev)!=='sunday') return;
+    const key = commsItemKey(o);
+    if(state.commsPlans.some(p=>p.itemRefId===key)) return;
+    const plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, notes:''};
+    state.commsPlans.push(plan);
+    newPlans.push(plan);
+    steps.forEach(s=>{
+      const d = new Date(o.date.getFullYear(), o.date.getMonth(), o.date.getDate()+s.dayOffset);
+      const post = {id:uid(), commsPlanId:plan.id, channel:s.channel, platform:s.platform, format:s.format, postDate:isoDate(d), endDate:null, note:s.note, status:'planned'};
+      state.commsPosts.push(post);
+      newPosts.push(post);
+    });
+  });
+  if(newPlans.length) saveCommsPlan(newPlans);
+  if(newPosts.length) saveCommsPost(newPosts);
+}
+
+function commsPostRowHTML(p){
+  const isSocial = p.channel === 'social';
+  const platforms = (p.platform||'').split(',').filter(Boolean);
+  return `<div class="comms-post-row" data-post-id="${p.id}">
+    <button type="button" class="comms-post-remove" data-post-id="${p.id}" title="Remove post">✕</button>
+    <div class="comms-post-grid">
+      <div class="mw-field">
+        <label>Channel</label>
+        <select class="comms-post-channel" data-post-id="${p.id}">
+          ${Object.entries(COMMS_CHANNELS).map(([k,v])=>`<option value="${k}" ${p.channel===k?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </div>
+      ${isSocial ? `
+      <div class="mw-field">
+        <label>Platform</label>
+        <div class="comms-platform-toggle">
+          ${Object.entries(COMMS_PLATFORMS).map(([k,v])=>`<button type="button" class="comms-plat-btn ${platforms.includes(k)?'on':''}" data-post-id="${p.id}" data-plat="${k}">${v}</button>`).join('')}
+        </div>
+      </div>
+      <div class="mw-field">
+        <label>Format</label>
+        <select class="comms-post-format" data-post-id="${p.id}">
+          ${Object.entries(COMMS_FORMATS).map(([k,v])=>`<option value="${k}" ${p.format===k?'selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>` : ''}
+      <div class="mw-field">
+        <label>Date</label>
+        <input type="date" class="comms-post-date" data-post-id="${p.id}" value="${p.postDate||''}">
+      </div>
+      <div class="mw-field">
+        <label>End date, optional</label>
+        <input type="date" class="comms-post-enddate" data-post-id="${p.id}" value="${p.endDate||''}">
+      </div>
+      <div class="mw-field full">
+        <label>Note</label>
+        <input type="text" class="comms-post-note" data-post-id="${p.id}" value="${(p.note||'').replace(/"/g,'&quot;')}" placeholder="e.g. Instagram carousel, 3 slides">
+      </div>
+    </div>
+    <div class="comms-status-row">
+      ${Object.entries(COMMS_STATUSES).map(([k,v])=>`<button type="button" class="comms-status-btn ${p.status===k?'on':''}" data-post-id="${p.id}" data-status="${k}" style="${p.status===k?'background:'+v.color+';color:#fff;border-color:transparent;':'color:'+v.color+';border-color:'+v.color+';'}">${v.label}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function commsReviewHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
+  const items = commsItemsForRange(rangeStart, rangeEnd);
+  ensureAutoCommsForSundays(items);
+  const visible = items.filter(o=>{
+    const plan = commsPlanFor(o);
+    return !plan || plan.needsComms !== false;
+  });
+  if(!visible.length) return `<div class="empty">Nothing to review this month.</div>`;
+  return visible.map(o=>{
+    const key = commsItemKey(o);
+    const plan = commsPlanFor(o);
+    const type = commsItemType(o.ev);
+    const dateLabel = `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)}`;
+    if(!plan || plan.needsComms==null){
+      return `<div class="comms-item">
+        <div class="comms-item-head">
+          <div>
+            <div class="comms-item-meta">${dateLabel} &middot; ${COMMS_TYPE_LABELS[type]}</div>
+            <div class="comms-item-title">${o.ev.title}</div>
+          </div>
+          <div class="comms-yesno">
+            <button type="button" class="comms-no-btn" data-key="${key}" data-itemtype="${type}">No comms</button>
+            <button type="button" class="comms-yes-btn" data-key="${key}" data-itemtype="${type}" data-anchor="${isoDate(o.date)}">Needs comms</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    const isAuto = !!plan.autoFlowId;
+    const flow = isAuto ? state.commsFlows.find(f=>f.id===plan.autoFlowId) : null;
+    const posts = commsPostsFor(plan.id);
+    return `<div class="comms-item expanded">
+      <div class="comms-item-head">
+        <div>
+          <div class="comms-item-meta">${dateLabel} &middot; ${COMMS_TYPE_LABELS[type]}</div>
+          <div class="comms-item-title">${o.ev.title}</div>
+        </div>
+        <span class="comms-badge ${isAuto?'auto':''}">${isAuto ? 'Auto-applied: '+(flow?flow.name:'flow') : 'Needs comms'}</span>
+      </div>
+      <div class="comms-posts">
+        ${posts.map(p=>commsPostRowHTML(p)).join('')}
+        <button type="button" class="comms-add-post" data-plan-id="${plan.id}" data-anchor="${isoDate(o.date)}">+ Add post</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function commsCalendarHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const byDay = {};
+  state.commsPosts.forEach(p=>{
+    if(!p.postDate) return;
+    const d = parseISO(p.postDate);
+    if(d.getFullYear()!==y || d.getMonth()!==m) return;
+    (byDay[p.postDate] = byDay[p.postDate]||[]).push(p);
+  });
+  let html = `<div class="cal-agenda">`;
+  let any = false;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(y,m,day);
+    const k = isoDate(d);
+    const posts = byDay[k]||[];
+    if(!posts.length) continue;
+    any = true;
+    html += `<div class="agenda-day">
+      <div class="agenda-date"><div class="dow">${DOW[(d.getDay()+6)%7]}</div><div class="num">${day}</div></div>
+      <div class="agenda-events">
+        ${posts.map(p=>{
+          const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
+          const chanLabel = p.channel==='social'
+            ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
+            : (COMMS_CHANNELS[p.channel]?COMMS_CHANNELS[p.channel].label:p.channel);
+          return `<div class="ev-pill" style="background:${st.color};">${chanLabel}${p.note?' — '+p.note:''}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+  if(!any) return `<div class="empty">No comms posts scheduled this month.</div>`;
+  return html;
+}
+
+function commsTabHTML(){
+  return `
+    <div class="comms-subtabs">
+      <button type="button" class="comms-subtab ${state.commsView==='review'?'active':''}" data-commsview="review">Review</button>
+      <button type="button" class="comms-subtab ${state.commsView==='calendar'?'active':''}" data-commsview="calendar">Comms calendar</button>
+    </div>
+    ${state.commsView==='review' ? commsReviewHTML() : commsCalendarHTML()}
+  `;
 }
 
 // ---------- PDF export (per-month, via browser print) ----------
@@ -1044,12 +1431,12 @@ function churchSuiteCSVRows(){
     effectiveMidweek(wk).forEach(m=>{
       const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
       if(!tags.length) return;
-      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.weekCommencing || '', '', tags[0].audience, m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.weekCommencing || '', '', itemAudience(m,tags), m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
     });
     effectivePostService(wk).forEach(m=>{
       const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
       if(!tags.length) return;
-      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.sundayDate || '', '', tags[0].audience, m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
+      rows.push([tags.map(t=>t.name).join(' + '), m.date || wk.sundayDate || '', '', itemAudience(m,tags), m.note||'', CHURCHSUITE_STATUS[m.status||'confirmed']]);
     });
   });
   return rows;
@@ -1305,67 +1692,101 @@ function fmtDate(iso){
 // Shared row markup for both the midweek and post-service activity editors — same
 // classes/behaviour either way; the two sections are told apart by a data-section
 // wrapper, not by different markup.
-function statusPickerHTML(r){
-  const s = r.status || 'confirmed';
-  return `<div class="mw-status-picker" data-mwid="${r.id}">
-    <button type="button" class="status-dot-btn confirmed ${s==='confirmed'?'selected':''}" data-mwid="${r.id}" data-status="confirmed" title="Confirmed"></button>
-    <button type="button" class="status-dot-btn pending ${s==='pending'?'selected':''}" data-mwid="${r.id}" data-status="pending" title="Needs approval"></button>
-    <button type="button" class="status-dot-btn declined ${s==='declined'?'selected':''}" data-mwid="${r.id}" data-status="declined" title="Cancelled"></button>
-    <span class="mw-status-current ${s}">${STATUSES[s].label}</span>
-  </div>`;
-}
-
+// Plain, stacked-field row matching a standard form builder: one labelled control
+// per line, in order Item -> Audience -> Note -> Status -> Comms needed -> Date ->
+// Time -> Repeat. Audience is independent of Item (its own dropdown, not derived
+// from the tag) so the same activity can carry a different audience week to week;
+// when left unset it falls back to the tag's own default audience at render time.
 function activityRowsHTML(rows, dateHint){
+  const sortedTags = state.tags.slice().sort((a,b)=> a.name.localeCompare(b.name));
   return rows.map(r=>{
     const isNewTag = !!r.creatingTag;
-    const tagIds = r.tagIds || [];
-    const hasTags = tagIds.length > 0;
-    const tagsCollapsed = hasTags && !r.tagsExpanded && !isNewTag;
     const showRepeatPicker = !!r.repeatFreq || !!r.showRepeat;
+    const selectedTagId = (r.tagIds||[])[0] || '';
+    const s = r.status || 'confirmed';
+    const allDay = r.allDay !== false;
     return `
     <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
       <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
-      <div class="mw-tags-line">
+      <div class="mw-row-fields">
+
         ${isNewTag ? `
-          <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="New tag name" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
-          <select class="mw-newtag-audience" data-mwid="${r.id}">
-            ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
-          </select>
-          <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking tags">↩ back</button>
-        ` : tagsCollapsed ? `
-          ${tagIds.map(tid=>{
-            const t = tagById(tid);
-            if(!t) return '';
-            return `<button type="button" class="mw-tag-toggle on" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="background:${audienceColor(t.audience)};color:#fff;border-color:transparent;">${t.name}</button>`;
-          }).join('')}
-          ${!r.recurringId ? `<button type="button" class="mw-tags-edit-link" data-mwid="${r.id}">+ Edit tags</button>` : ''}
-        ` : `
-          ${state.tags.map(t=>{
-            const on = tagIds.includes(t.id);
-            return `<button type="button" class="mw-tag-toggle ${on?'on':''}" data-mwid="${r.id}" data-tagid="${t.id}" ${r.recurringId?'disabled':''} style="${on?'background:'+audienceColor(t.audience)+';color:#fff;border-color:transparent;':''}">${t.name}</button>`;
-          }).join('')}
-          ${!r.recurringId ? `<button type="button" class="mw-tag-toggle mw-tag-toggle-new" data-mwid="${r.id}">+ New tag…</button>` : ''}
-          ${hasTags && !r.recurringId ? `<button type="button" class="mw-tags-collapse-link" data-mwid="${r.id}">▲ Done</button>` : ''}
-        `}
-      </div>
-
-      <div class="mw-field full">
-        <label>Note</label>
-        <input class="mw-note" data-mwid="${r.id}" placeholder="Optional — e.g. led by Sarah" value="${(r.note||'').replace(/"/g,'&quot;')}" ${r.recurringId?'disabled':''}>
-      </div>
-
-      ${r.recurringId ? `
-        <span class="busy-flag" style="background:var(--good-soft);color:var(--good);align-self:flex-start;">Recurring${r.date?' · '+fmtDate(r.date):''} — edit in Settings</span>
-      ` : `
-        <div class="mw-field-grid">
-          <div class="mw-field">
-            <label>Status</label>
-            ${statusPickerHTML(r)}
+          <div class="mw-field full">
+            <label>New activity name</label>
+            <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="e.g. Youth Camp" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
           </div>
-          <div class="mw-field">
+          <div class="mw-field full">
+            <label>Default audience for this activity</label>
+            <select class="mw-newtag-audience" data-mwid="${r.id}">
+              ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
+            </select>
+          </div>
+          <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking an activity">↩ back to list</button>
+        ` : r.recurringId ? `
+          <div class="mw-field full">
+            <label>Item</label>
+            ${(r.tagIds||[]).map(tid=>{
+              const t = tagById(tid);
+              return t ? `<span class="mw-recurring-item" style="background:${audienceColor(t.audience)};">${t.name}</span>` : '';
+            }).join('')}
+          </div>
+          <span class="busy-flag" style="background:var(--good-soft);color:var(--good);align-self:flex-start;">Recurring${r.date?' · '+fmtDate(r.date):''} — edit in Settings</span>
+        ` : `
+          <div class="mw-field full">
+            <label>Item</label>
+            <div class="mw-item-row">
+              <select class="mw-item-select" data-mwid="${r.id}">
+                <option value="" ${!selectedTagId?'selected':''}>— Choose an item —</option>
+                ${sortedTags.map(t=>`<option value="${t.id}" ${selectedTagId===t.id?'selected':''}>${t.name}</option>`).join('')}
+                <option value="__new__">+ New activity…</option>
+              </select>
+              ${selectedTagId ? `<button type="button" class="mw-item-delete" data-mwid="${r.id}" data-tagid="${selectedTagId}" title="Delete this item everywhere">✕</button>` : ''}
+            </div>
+          </div>
+
+          <div class="mw-field full">
+            <label>Audience</label>
+            <select class="mw-audience-select" data-mwid="${r.id}">
+              <option value="" ${!r.audience?'selected':''}>— Choose audience —</option>
+              ${state.audiences.map(a=>`<option value="${a.name}" ${r.audience===a.name?'selected':''}>${a.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="mw-field full">
+            <label>Note</label>
+            <input class="mw-note" data-mwid="${r.id}" placeholder="Optional — e.g. led by Sarah" value="${(r.note||'').replace(/"/g,'&quot;')}">
+          </div>
+
+          <div class="mw-field full">
+            <label>Status</label>
+            <select class="mw-status-select" data-mwid="${r.id}">
+              ${Object.entries(STATUSES).map(([k,v])=>`<option value="${k}" ${s===k?'selected':''}>${v.label}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="mw-field full">
+            <label>Comms needed?</label>
+            <div class="mw-radio-group">
+              <label class="mw-radio-option"><input type="radio" name="comms-${r.id}" class="mw-comms-radio" data-mwid="${r.id}" data-choice="yes" ${r.needsComms===true?'checked':''}> Yes</label>
+              <label class="mw-radio-option"><input type="radio" name="comms-${r.id}" class="mw-comms-radio" data-mwid="${r.id}" data-choice="no" ${r.needsComms===false?'checked':''}> No</label>
+            </div>
+          </div>
+
+          <div class="mw-field full">
             <label>Date, if not ${dateHint}</label>
             <input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}">
           </div>
+
+          <div class="mw-field full">
+            <label>Time</label>
+            <label class="mw-allday-label"><input type="checkbox" class="mw-allday" data-mwid="${r.id}" ${allDay?'checked':''}> All day</label>
+            ${!allDay ? `
+              <div class="mw-time-row">
+                <div class="mw-field"><label>Start time</label><input type="time" class="mw-start-time" data-mwid="${r.id}" value="${r.startTime||''}"></div>
+                <div class="mw-field"><label>End time</label><input type="time" class="mw-end-time" data-mwid="${r.id}" value="${r.endTime||''}"></div>
+              </div>` : ''}
+          </div>
+
           <div class="mw-field full">
             ${showRepeatPicker ? `
               <label>Repeats</label>
@@ -1378,8 +1799,8 @@ function activityRowsHTML(rows, dateHint){
               </select>
             ` : `<button type="button" class="mw-repeat-link" data-mwid="${r.id}">+ Make this repeat</button>`}
           </div>
-        </div>
-      `}
+        `}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1438,22 +1859,26 @@ function weekCardHTML(wk, idx){
           ${postServiceItems.map(m=>{
             const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
             if(!tags.length) return '';
-            const dom = tags.some(t=>isDominantAudience(t.audience));
+            const aud = itemAudience(m, tags);
+            const dom = isDominantAudience(aud);
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.sundayDate;
             const statusClass = m.status ? ' status-'+m.status : '';
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
+            const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime+(m.endTime?'–'+m.endTime:'') : '';
+            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(aud)};" title="${aud}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
           }).join('')}
         </div>` : ''}
         <div class="wc-mid">
           ${midweek.map(m=>{
             const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
             if(!tags.length) return '';
-            const dom = tags.some(t=>isDominantAudience(t.audience));
+            const aud = itemAudience(m, tags);
+            const dom = isDominantAudience(aud);
             const label = tags.map(t=>t.name).join(' + ');
             const showDate = m.date && m.date !== wk.weekCommencing;
             const statusClass = m.status ? ' status-'+m.status : '';
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(tags[0].audience)};" title="${tags.map(t=>t.audience).join(', ')}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}</span>`;
+            const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime+(m.endTime?'–'+m.endTime:'') : '';
+            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(aud)};" title="${aud}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
           }).join('')}
           ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
         </div>
@@ -1491,6 +1916,7 @@ function dashboardHTML(){
 
 function mainHTML(){
   const filtersActive = state.catFilters.size > 0;
+  const showFilters = state.view==='calendar' || state.view==='list';
   return `
     <div class="masthead">
       <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
@@ -1503,6 +1929,7 @@ function mainHTML(){
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
         <button data-view="list" class="${state.view==='list'?'active':''}">Look Ahead</button>
+        <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
       </div>
       ${state.view==='calendar'?`
       <div class="nav-group">
@@ -1514,14 +1941,19 @@ function mainHTML(){
         <button id="prev-month">‹</button>
         <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()} +5mo</div>
         <button id="next-month">›</button>
+      </div>`:state.view==='comms'?`
+      <div class="nav-group">
+        <button id="prev-month">‹</button>
+        <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}</div>
+        <button id="next-month">›</button>
       </div>`:''}
-      ${state.view!=='dashboard'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
+      ${state.view!=='dashboard' && state.view!=='comms'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
     </div>
-    ${state.view!=='dashboard'?`<div class="filters">
+    ${showFilters?`<div class="filters">
       ${Object.entries(CATS).map(([k,v])=>`<div class="chip ${state.catFilters.has(k)?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
       ${filtersActive?`<button type="button" class="clear-filters" id="clear-filters">✕ Showing ${state.catFilters.size} of ${Object.keys(CATS).length} types — clear filter</button>`:''}
-    </div>`:filtersActive?`<div class="notice" style="margin:-8px 0 14px;">Note: a category filter is still active from Calendar/List view (${[...state.catFilters].map(c=>CATS[c].label).join(', ')}) — it won't affect the Dashboard, but will hide other types again when you switch views.</div>`:''}
-    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : dashboardHTML()}
+    </div>`:filtersActive && state.view==='dashboard'?`<div class="notice" style="margin:-8px 0 14px;">Note: a category filter is still active from Calendar/List view (${[...state.catFilters].map(c=>CATS[c].label).join(', ')}) — it won't affect the Dashboard, but will hide other types again when you switch views.</div>`:''}
+    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
   `;
@@ -1694,12 +2126,12 @@ function attachMainHandlers(){
   const prevBtn = document.getElementById('prev-month');
   const nextBtn = document.getElementById('next-month');
   if(prevBtn) prevBtn.onclick = ()=>{
-    const step = state.view==='calendar'?1:6;
+    const step = (state.view==='calendar' || state.view==='comms')?1:6;
     state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth()-step, 1);
     render();
   };
   if(nextBtn) nextBtn.onclick = ()=>{
-    const step = state.view==='calendar'?1:6;
+    const step = (state.view==='calendar' || state.view==='comms')?1:6;
     state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth()+step, 1);
     render();
   };
@@ -1726,6 +2158,7 @@ function attachMainHandlers(){
     };
   });
   if(state.view==='dashboard') attachDashboardHandlers();
+  if(state.view==='comms') attachCommsHandlers();
   const exportCsvBtn = document.getElementById('export-churchsuite');
   if(exportCsvBtn) exportCsvBtn.onclick = ()=>{
     const csv = toCSV(churchSuiteCSVRows());
@@ -1939,49 +2372,75 @@ function syncAllActivityRowsFromDOM(){
     if(newNameInp) entry.newTagName = newNameInp.value;
     const newAudSel = row.querySelector('.mw-newtag-audience');
     if(newAudSel) entry.newTagAudience = newAudSel.value;
+    const audSel = row.querySelector('.mw-audience-select');
+    if(audSel) entry.audience = audSel.value;
+    const statusSel = row.querySelector('.mw-status-select');
+    if(statusSel) entry.status = statusSel.value;
     const freqSel = row.querySelector('.mw-repeat-freq');
     if(freqSel) entry.repeatFreq = freqSel.value;
   });
 }
 
 function attachDashboardHandlers(){
-  document.querySelectorAll('.mw-tag-toggle:not(.mw-tag-toggle-new)').forEach(el=>{
-    el.onclick = ()=>{
-      if(el.disabled) return;
+  document.querySelectorAll('.mw-item-select').forEach(el=>{
+    el.onchange = ()=>{
       syncAllActivityRowsFromDOM();
       const {entry} = findEditingRow(el.dataset.mwid);
       if(!entry) return;
-      entry.tagIds = entry.tagIds || [];
-      const tid = el.dataset.tagid;
-      const wasEmpty = entry.tagIds.length === 0;
-      if(entry.tagIds.includes(tid)) entry.tagIds = entry.tagIds.filter(x=>x!==tid);
-      else entry.tagIds.push(tid);
-      if(wasEmpty && entry.tagIds.length>0) entry.tagsExpanded = false; // fold once the first tag is picked
+      if(el.value === '__new__'){ entry.creatingTag = true; }
+      else { entry.tagIds = el.value ? [el.value] : []; }
       render();
     };
   });
-  document.querySelectorAll('.mw-tags-edit-link').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.tagsExpanded = true;
+  document.querySelectorAll('.mw-item-delete').forEach(el=>{
+    el.onclick = async ()=>{
+      const t = tagById(el.dataset.tagid);
+      const name = t ? t.name : 'this item';
+      if(!confirm(`Delete "${name}"? This removes it from every week and recurring rhythm that uses it.`)) return;
+      const id = el.dataset.tagid;
+      await deleteTagRemote(id);
+      state.tags = state.tags.filter(x=>x.id!==id);
+      (state.editingMidweekRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
+      (state.editingPostServiceRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
       render();
     };
   });
-  document.querySelectorAll('.mw-tags-collapse-link').forEach(el=>{
-    el.onclick = ()=>{
+  document.querySelectorAll('.mw-audience-select').forEach(el=>{
+    el.onchange = ()=>{
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.audience = el.value;
+    };
+  });
+  document.querySelectorAll('.mw-status-select').forEach(el=>{
+    el.onchange = ()=>{
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.status = el.value;
+    };
+  });
+  document.querySelectorAll('.mw-comms-radio').forEach(el=>{
+    el.onchange = ()=>{
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.needsComms = el.dataset.choice === 'yes';
+    };
+  });
+  document.querySelectorAll('.mw-allday').forEach(el=>{
+    el.onchange = ()=>{
       syncAllActivityRowsFromDOM();
       const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.tagsExpanded = false;
+      if(entry) entry.allDay = el.checked;
       render();
     };
   });
-  document.querySelectorAll('.mw-tag-toggle-new').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
+  document.querySelectorAll('.mw-start-time').forEach(el=>{
+    el.onchange = ()=>{
       const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.creatingTag = true;
-      render();
+      if(entry) entry.startTime = el.value;
+    };
+  });
+  document.querySelectorAll('.mw-end-time').forEach(el=>{
+    el.onchange = ()=>{
+      const {entry} = findEditingRow(el.dataset.mwid);
+      if(entry) entry.endTime = el.value;
     };
   });
   document.querySelectorAll('.mw-cancel-newtag').forEach(el=>{
@@ -1992,21 +2451,28 @@ function attachDashboardHandlers(){
       render();
     };
   });
-  document.querySelectorAll('.status-dot-btn').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.status = el.dataset.status;
-      render();
-    };
-  });
   document.querySelectorAll('.edit-week').forEach(el=>{
     el.onclick = ()=>{
       const wk = state.weeks.find(w=>w.id===el.dataset.id);
       const mw = wk ? effectiveMidweek(wk) : [];
       const ps = wk ? effectivePostService(wk) : [];
-      state.editingMidweekRows = mw.length ? mw.map(m=>({...m})) : [{id:uid(), tagIds:[], note:''}];
-      state.editingPostServiceRows = ps.length ? ps.map(m=>({...m})) : [{id:uid(), tagIds:[], note:''}];
+      // Pull in any existing Needs comms? decision so the inline picker reflects
+      // what's already been chosen (in this row or previously in the Comms tab),
+      // matching the same item_ref_id scheme eventsForRange/comms use.
+      const wcAnchor = wk && wk.weekCommencing ? parseISO(wk.weekCommencing) : null;
+      const sunAnchor = wk && wk.sundayDate ? parseISO(wk.sundayDate) : null;
+      state.editingMidweekRows = mw.length ? mw.map(m=>{
+        const d = m.date ? parseISO(m.date) : wcAnchor;
+        const key = d ? 'wk-mid-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
+        const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
+        return {...m, needsComms: plan ? plan.needsComms : null, itemPickerOpen:false};
+      }) : [{id:uid(), tagIds:[], note:''}];
+      state.editingPostServiceRows = ps.length ? ps.map(m=>{
+        const d = m.date ? parseISO(m.date) : sunAnchor;
+        const key = d ? 'wk-ps-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
+        const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
+        return {...m, needsComms: plan ? plan.needsComms : null, itemPickerOpen:false};
+      }) : [{id:uid(), tagIds:[], note:''}];
       state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingWeekId = el.dataset.id;
@@ -2078,13 +2544,16 @@ function attachDashboardHandlers(){
 
       // Processes one section's rows (midweek or post-service) — same logic either way,
       // just anchored to a different date and tagged with a different rhythm "slot".
+      // commsDecisions is returned separately (not folded into the item itself) since
+      // needsComms lives in comms_plans, not on the week item.
       function processSection(sectionName, anchorDate){
         const items = [];
+        const commsDecisions = [];
         const stillPresentRecurring = new Set();
         const newRecurringTemplates = [];
         const newTags = [];
         const container = card.querySelector(`.mw-rows[data-section="${sectionName}"]`);
-        if(!container) return {items, stillPresentRecurring, newRecurringTemplates, newTags};
+        if(!container) return {items, commsDecisions, stillPresentRecurring, newRecurringTemplates, newTags};
         container.querySelectorAll('.mw-row').forEach(row=>{
           const mwid = row.dataset.mwid;
           const recurringId = row.dataset.recurringId || '';
@@ -2109,6 +2578,14 @@ function attachDashboardHandlers(){
           const status = (entry && entry.status) || 'confirmed';
           const dateInp = row.querySelector('.mw-date');
           const date = dateInp ? dateInp.value : '';
+          const audSel = row.querySelector('.mw-audience-select');
+          const audience = audSel ? audSel.value : ((entry && entry.audience) || '');
+          const alldayInp = row.querySelector('.mw-allday');
+          const allDay = alldayInp ? alldayInp.checked : true;
+          const startInp = row.querySelector('.mw-start-time');
+          const endInp = row.querySelector('.mw-end-time');
+          const startTime = (!allDay && startInp) ? startInp.value : '';
+          const endTime = (!allDay && endInp) ? endInp.value : '';
           const freqSel = row.querySelector('.mw-repeat-freq');
           const freqVal = freqSel ? freqSel.value : '';
           if(freqVal){
@@ -2119,10 +2596,13 @@ function attachDashboardHandlers(){
               dayOffset:0, slot: sectionName
             });
           } else {
-            items.push({id:mwid, tagIds, note, date: date || null, status});
+            items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience});
+            if(entry && (entry.needsComms===true || entry.needsComms===false)){
+              commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms});
+            }
           }
         });
-        return {items, stillPresentRecurring, newRecurringTemplates, newTags};
+        return {items, commsDecisions, stillPresentRecurring, newRecurringTemplates, newTags};
       }
 
       const mwResult = processSection('midweek', data.weekCommencing || data.sundayDate);
@@ -2159,6 +2639,33 @@ function attachDashboardHandlers(){
         }
       }
       if(savedWeek) await saveWeeks(savedWeek);
+
+      // Write any inline Needs comms? decisions to comms_plans now that the week
+      // and its items have real, final ids — upserting on item_ref_id means this
+      // converges with anything already set from the Comms tab rather than fighting it.
+      if(savedWeek){
+        const anchorMw = savedWeek.weekCommencing ? parseISO(savedWeek.weekCommencing) : null;
+        const anchorPs = savedWeek.sundayDate ? parseISO(savedWeek.sundayDate) : null;
+        const decisions = [
+          ...mwResult.commsDecisions.map(d=>({...d, prefix:'wk-mid-', itemType:'midweek', anchor:anchorMw})),
+          ...psResult.commsDecisions.map(d=>({...d, prefix:'wk-ps-', itemType:'postService', anchor:anchorPs}))
+        ];
+        const newPlans = [];
+        decisions.forEach(d=>{
+          const dt = d.date ? parseISO(d.date) : d.anchor;
+          if(!dt) return;
+          const key = d.prefix + savedWeek.id + '-' + d.mwid + '::' + isoDate(dt);
+          let plan = state.commsPlans.find(p=>p.itemRefId===key);
+          if(plan) plan.needsComms = d.needsComms;
+          else {
+            plan = {id:uid(), itemType:d.itemType, itemRefId:key, needsComms:d.needsComms, autoFlowId:null, notes:''};
+            state.commsPlans.push(plan);
+          }
+          newPlans.push(plan);
+        });
+        if(newPlans.length) await saveCommsPlan(newPlans);
+      }
+
       state.editingWeekId = null;
       state.editingMidweekRows = null; state.editingPostServiceRows = null;
       state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
@@ -2199,6 +2706,101 @@ function attachDashboardHandlers(){
     if(added.length){ await saveWeeks(added); render(); }
     else alert('All Sundays for this term are already on the sheet.');
   };
+}
+
+function attachCommsHandlers(){
+  document.querySelectorAll('.comms-subtab').forEach(el=>{
+    el.onclick = ()=>{ state.commsView = el.dataset.commsview; render(); };
+  });
+  // Needs comms? Yes/No — Yes creates an empty plan the person then adds posts to;
+  // No is permanent and the item drops off the review list from here on.
+  document.querySelectorAll('.comms-yes-btn').forEach(el=>{
+    el.onclick = async ()=>{
+      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:true, autoFlowId:null, notes:''};
+      state.commsPlans.push(plan);
+      await saveCommsPlan(plan);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-no-btn').forEach(el=>{
+    el.onclick = async ()=>{
+      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:false, autoFlowId:null, notes:''};
+      state.commsPlans.push(plan);
+      await saveCommsPlan(plan);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-add-post').forEach(el=>{
+    el.onclick = async ()=>{
+      const post = {id:uid(), commsPlanId:el.dataset.planId, channel:'social', platform:'facebook,instagram', format:'post', postDate:el.dataset.anchor, endDate:null, note:'', status:'planned'};
+      state.commsPosts.push(post);
+      await saveCommsPost(post);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-post-remove').forEach(el=>{
+    el.onclick = async ()=>{
+      await deleteCommsPostRemote(el.dataset.postId);
+      state.commsPosts = state.commsPosts.filter(p=>p.id!==el.dataset.postId);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-post-channel').forEach(el=>{
+    el.onchange = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(!post) return;
+      post.channel = el.value;
+      if(post.channel!=='social'){ post.platform=''; post.format=''; }
+      else if(!post.platform){ post.platform='facebook,instagram'; post.format='post'; }
+      await saveCommsPost(post);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-plat-btn').forEach(el=>{
+    el.onclick = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(!post) return;
+      let plats = (post.platform||'').split(',').filter(Boolean);
+      const plat = el.dataset.plat;
+      if(plats.includes(plat)) plats = plats.filter(x=>x!==plat); else plats.push(plat);
+      post.platform = plats.join(',');
+      await saveCommsPost(post);
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-post-format').forEach(el=>{
+    el.onchange = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post){ post.format = el.value; await saveCommsPost(post); }
+    };
+  });
+  document.querySelectorAll('.comms-post-date').forEach(el=>{
+    el.onchange = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post){ post.postDate = el.value; await saveCommsPost(post); }
+    };
+  });
+  document.querySelectorAll('.comms-post-enddate').forEach(el=>{
+    el.onchange = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post){ post.endDate = el.value || null; await saveCommsPost(post); }
+    };
+  });
+  document.querySelectorAll('.comms-post-note').forEach(el=>{
+    el.onchange = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post){ post.note = el.value; await saveCommsPost(post); }
+    };
+  });
+  document.querySelectorAll('.comms-status-btn').forEach(el=>{
+    el.onclick = async ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(!post) return;
+      post.status = el.dataset.status;
+      await saveCommsPost(post);
+      render();
+    };
+  });
 }
 
 (async ()=>{

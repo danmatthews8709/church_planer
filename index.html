@@ -907,17 +907,23 @@ async function loadData(){
     sb.from('comms_plans').select('*'),
     sb.from('comms_posts').select('*')
   ]);
-  [flowsRes, stepsRes, plansRes, postsRes].forEach(r=>{
-    if(r.error) console.error('Supabase load error:', r.error);
+  const commsLoadErrors = [];
+  [['comms_flows',flowsRes],['comms_flow_steps',stepsRes],['comms_plans',plansRes],['comms_posts',postsRes]].forEach(([name,r])=>{
+    if(r.error){ console.error('Supabase load error ('+name+'):', r.error); commsLoadErrors.push(name+': '+r.error.message); }
   });
+  if(commsLoadErrors.length){
+    alert('Could not load comms data:\n' + commsLoadErrors.join('\n') + '\n\nComms tab may appear empty until this is fixed.');
+  }
 
   state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||''}));
   state.commsFlowSteps = (stepsRes.data||[]).map(s=>({
     id:s.id, flowId:s.flow_id, dayOffset:s.day_offset, channel:s.channel,
     platform:s.platform||'', format:s.format||'', note:s.note||'', sortOrder:s.sort_order||0
   }));
-  if(!state.commsFlows.length){
-    // Seed the default weekly Sunday flow once, the same way default tags/audiences are seeded.
+  if(!state.commsFlows.length && !flowsRes.error){
+    // Seed the default weekly Sunday flow once, the same way default tags/audiences are
+    // seeded — but only when the table genuinely has no rows, not when the read itself
+    // failed (re-seeding on a failed read would create duplicate/orphaned flows every reload).
     const flow = {id:uid(), ...DEFAULT_COMMS_FLOW};
     state.commsFlows = [flow];
     await saveCommsFlow(flow);
@@ -992,7 +998,7 @@ async function deleteEventRemote(id){
 // ---------- Comms Plan save/delete helpers ----------
 async function saveCommsFlow(flow){
   const { error } = await sb.from('comms_flows').upsert({id:flow.id, name:flow.name, description:flow.description||''});
-  if(error) console.error('save comms flow failed', error);
+  if(error){ console.error('save comms flow failed', error); alert('Could not save the default comms flow: '+error.message); }
 }
 async function saveCommsFlowSteps(steps){
   const rows = (Array.isArray(steps)?steps:[steps]).map(s=>({
@@ -1000,7 +1006,7 @@ async function saveCommsFlowSteps(steps){
     platform:s.platform||null, format:s.format||null, note:s.note||'', sort_order:s.sortOrder||0
   }));
   const { error } = await sb.from('comms_flow_steps').upsert(rows);
-  if(error) console.error('save comms flow steps failed', error);
+  if(error){ console.error('save comms flow steps failed', error); alert('Could not save the comms flow steps: '+error.message); }
 }
 // item_ref_id is unique, so upserting on that key means two team members opening the
 // Comms tab for the same week at the same moment converge on one plan rather than

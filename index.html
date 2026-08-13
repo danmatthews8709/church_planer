@@ -461,6 +461,8 @@
     display:flex;justify-content:space-between;align-items:center;gap:8px;
     font-size:11px;padding:5px 9px;border-radius:6px;color:#fff;
   }
+  .comms-cal-pill-main{display:block;}
+  .comms-cal-pill-for{display:block;font-size:9.5px;opacity:.85;margin-top:1px;}
   .comms-cal-pill-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
   .comms-cal-pill-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
   .comms-cal-post-expand{
@@ -926,7 +928,7 @@ async function loadData(){
 
   state.commsPlans = (plansRes.data||[]).map(p=>({
     id:p.id, itemType:p.item_type, itemRefId:p.item_ref_id, needsComms:p.needs_comms,
-    autoFlowId:p.auto_flow_id, notes:p.notes||''
+    autoFlowId:p.auto_flow_id, itemTitle:p.item_title||'', notes:p.notes||''
   }));
   state.commsPosts = (postsRes.data||[]).map(p=>({
     id:p.id, commsPlanId:p.comms_plan_id, channel:p.channel, platform:p.platform||'',
@@ -1006,18 +1008,18 @@ async function saveCommsFlowSteps(steps){
 async function saveCommsPlan(planOrPlans){
   const rows = (Array.isArray(planOrPlans)?planOrPlans:[planOrPlans]).map(p=>({
     id:p.id, item_type:p.itemType, item_ref_id:p.itemRefId, needs_comms:p.needsComms,
-    auto_flow_id:p.autoFlowId||null, notes:p.notes||'', updated_at:new Date().toISOString()
+    auto_flow_id:p.autoFlowId||null, item_title:p.itemTitle||null, notes:p.notes||'', updated_at:new Date().toISOString()
   }));
   const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id'});
-  if(error) console.error('save comms plan failed', error);
+  if(error){ console.error('save comms plan failed', error); alert('Could not save this comms decision: '+error.message); }
 }
 async function saveCommsPost(postOrPosts){
   const rows = (Array.isArray(postOrPosts)?postOrPosts:[postOrPosts]).map(p=>({
     id:p.id, comms_plan_id:p.commsPlanId, channel:p.channel, platform:p.platform||null,
-    format:p.format||null, post_date:p.postDate, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned'
+    format:p.format||null, post_date:p.postDate||null, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned'
   }));
   const { error } = await sb.from('comms_posts').upsert(rows);
-  if(error) console.error('save comms post failed', error);
+  if(error){ console.error('save comms post failed', error); alert('Could not save this comms post: '+error.message); }
 }
 async function deleteCommsPostRemote(id){
   const { error } = await sb.from('comms_posts').delete().eq('id', id);
@@ -1268,7 +1270,7 @@ function ensureAutoCommsForSundays(items){
     if(commsItemType(o.ev)!=='sunday') return;
     const key = commsItemKey(o);
     if(state.commsPlans.some(p=>p.itemRefId===key)) return;
-    const plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, notes:''};
+    const plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, itemTitle:o.ev.title, notes:''};
     state.commsPlans.push(plan);
     newPlans.push(plan);
     steps.forEach(s=>{
@@ -1370,8 +1372,8 @@ function commsReviewHTML(){
           <span class="comms-row-meta">${COMMS_TYPE_LABELS[type]}</span>
         </div>
         <div class="comms-yesno">
-          <button type="button" class="comms-no-btn" data-key="${e.key}" data-itemtype="${type}">No comms</button>
-          <button type="button" class="comms-yes-btn" data-key="${e.key}" data-itemtype="${type}" data-anchor="${isoDate(e.o.date)}">Needs comms</button>
+          <button type="button" class="comms-no-btn" data-key="${e.key}" data-itemtype="${type}" data-title="${e.o.ev.title.replace(/"/g,'&quot;')}">No comms</button>
+          <button type="button" class="comms-yes-btn" data-key="${e.key}" data-itemtype="${type}" data-anchor="${isoDate(e.o.date)}" data-title="${e.o.ev.title.replace(/"/g,'&quot;')}">Needs comms</button>
         </div>
       </div>`;
     }
@@ -1443,9 +1445,14 @@ function commsCalendarHTML(){
           const chanLabel = p.channel==='social'
             ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
             : chan.label;
+          const plan = state.commsPlans.find(pl=>pl.id===p.commsPlanId);
+          const forTitle = plan && plan.itemTitle ? plan.itemTitle : '';
           if(!p.calExpanded){
             return `<div class="comms-cal-pill" style="background:${chan.color};">
-              <span>${chanLabel}${p.note?' — '+p.note:''}</span>
+              <span>
+                <span class="comms-cal-pill-main">${chanLabel}${p.note?' — '+p.note:''}</span>
+                ${forTitle?`<span class="comms-cal-pill-for">for ${forTitle}</span>`:''}
+              </span>
               <span class="comms-cal-pill-right">
                 <span class="comms-cal-pill-status" style="background:${st.soft};color:${st.color};">${st.label}</span>
                 <button type="button" class="comms-cal-post-expand" data-post-id="${p.id}">Edit</button>
@@ -1454,7 +1461,7 @@ function commsCalendarHTML(){
           }
           return `<div class="comms-item expanded">
             <div class="comms-item-head">
-              <div class="comms-item-meta">${chanLabel}</div>
+              <div class="comms-item-meta">${chanLabel}${forTitle?' &middot; for '+forTitle:''}</div>
               <button type="button" class="comms-cal-post-fold" data-post-id="${p.id}">▲ Done</button>
             </div>
             <div class="comms-posts">${commsPostRowHTML(p)}</div>
@@ -2733,7 +2740,8 @@ function attachDashboardHandlers(){
           } else {
             items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience});
             if(entry && (entry.needsComms===true || entry.needsComms===false)){
-              commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms});
+              const itemTitle = tagIds.map(tid=>tagById(tid)).filter(Boolean).map(t=>t.name).join(' + ') || 'Untitled activity';
+              commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms, itemTitle});
             }
           }
         });
@@ -2791,9 +2799,9 @@ function attachDashboardHandlers(){
           if(!dt) return;
           const key = d.prefix + savedWeek.id + '-' + d.mwid + '::' + isoDate(dt);
           let plan = state.commsPlans.find(p=>p.itemRefId===key);
-          if(plan) plan.needsComms = d.needsComms;
+          if(plan){ plan.needsComms = d.needsComms; if(d.itemTitle) plan.itemTitle = d.itemTitle; }
           else {
-            plan = {id:uid(), itemType:d.itemType, itemRefId:key, needsComms:d.needsComms, autoFlowId:null, notes:''};
+            plan = {id:uid(), itemType:d.itemType, itemRefId:key, needsComms:d.needsComms, autoFlowId:null, itemTitle:d.itemTitle||'', notes:''};
             state.commsPlans.push(plan);
           }
           newPlans.push(plan);
@@ -2879,7 +2887,7 @@ function attachCommsHandlers(){
   // No is permanent and the item drops off the review list from here on.
   document.querySelectorAll('.comms-yes-btn').forEach(el=>{
     el.onclick = async ()=>{
-      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:true, autoFlowId:null, notes:''};
+      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:true, autoFlowId:null, itemTitle:el.dataset.title||'', notes:''};
       state.commsPlans.push(plan);
       await saveCommsPlan(plan);
       render();
@@ -2887,7 +2895,7 @@ function attachCommsHandlers(){
   });
   document.querySelectorAll('.comms-no-btn').forEach(el=>{
     el.onclick = async ()=>{
-      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:false, autoFlowId:null, notes:''};
+      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:false, autoFlowId:null, itemTitle:el.dataset.title||'', notes:''};
       state.commsPlans.push(plan);
       await saveCommsPlan(plan);
       render();

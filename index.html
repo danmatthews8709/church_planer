@@ -461,7 +461,13 @@
     display:flex;justify-content:space-between;align-items:center;gap:8px;
     font-size:11px;padding:5px 9px;border-radius:6px;color:#fff;
   }
-  .comms-cal-pill-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex-shrink:0;}
+  .comms-cal-pill-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .comms-cal-pill-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
+  .comms-cal-post-expand{
+    border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.15);color:#fff;
+    border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:'Calibri','Carlito',sans-serif;
+  }
+  .comms-cal-post-expand:hover{background:rgba(255,255,255,.3);}
   .comms-posts{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
   .comms-post-row{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 34px 10px 10px;background:#fff;}
   .comms-post-remove{position:absolute;top:8px;right:8px;border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px;padding:4px 6px;}
@@ -1437,9 +1443,21 @@ function commsCalendarHTML(){
           const chanLabel = p.channel==='social'
             ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
             : chan.label;
-          return `<div class="comms-cal-pill" style="background:${chan.color};">
-            <span>${chanLabel}${p.note?' — '+p.note:''}</span>
-            <span class="comms-cal-pill-status" style="background:${st.soft};color:${st.color};">${st.label}</span>
+          if(!p.calExpanded){
+            return `<div class="comms-cal-pill" style="background:${chan.color};">
+              <span>${chanLabel}${p.note?' — '+p.note:''}</span>
+              <span class="comms-cal-pill-right">
+                <span class="comms-cal-pill-status" style="background:${st.soft};color:${st.color};">${st.label}</span>
+                <button type="button" class="comms-cal-post-expand" data-post-id="${p.id}">Edit</button>
+              </span>
+            </div>`;
+          }
+          return `<div class="comms-item expanded">
+            <div class="comms-item-head">
+              <div class="comms-item-meta">${chanLabel}</div>
+              <button type="button" class="comms-cal-post-fold" data-post-id="${p.id}">▲ Done</button>
+            </div>
+            <div class="comms-posts">${commsPostRowHTML(p)}</div>
           </div>`;
         }).join('')}
       </div>
@@ -2840,6 +2858,20 @@ function attachCommsHandlers(){
     el.onclick = ()=>{
       const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
       if(post) post.reviewExpanded = false;
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-cal-post-expand').forEach(el=>{
+    el.onclick = ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post) post.calExpanded = true;
+      render();
+    };
+  });
+  document.querySelectorAll('.comms-cal-post-fold').forEach(el=>{
+    el.onclick = ()=>{
+      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
+      if(post) post.calExpanded = false;
       render();
     };
   });

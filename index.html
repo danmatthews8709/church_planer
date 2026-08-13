@@ -930,6 +930,18 @@ async function loadData(){
     const steps = DEFAULT_COMMS_FLOW_STEPS.map(s=>({id:uid(), flowId:flow.id, ...s, sortOrder:0}));
     state.commsFlowSteps = steps;
     await saveCommsFlowSteps(steps);
+  } else if(state.commsFlows.length && !stepsRes.error){
+    // Self-heal: a flow can exist with zero steps if an earlier save of the steps
+    // failed (e.g. a permissions issue that's since been fixed) while the flow's own
+    // save succeeded — that combination silently blocks the Sunday rhythm forever
+    // otherwise, since a flow "existing" was the only condition checked above.
+    const flow = state.commsFlows[0];
+    const hasSteps = state.commsFlowSteps.some(s=>s.flowId===flow.id);
+    if(!hasSteps){
+      const steps = DEFAULT_COMMS_FLOW_STEPS.map(s=>({id:uid(), flowId:flow.id, ...s, sortOrder:0}));
+      state.commsFlowSteps = state.commsFlowSteps.concat(steps);
+      await saveCommsFlowSteps(steps);
+    }
   }
 
   state.commsPlans = (plansRes.data||[]).map(p=>({

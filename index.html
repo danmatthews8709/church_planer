@@ -2744,18 +2744,25 @@ function attachDashboardHandlers(){
             }
           }
           if(!tagIds.length) return;
-          const note = row.querySelector('.mw-note') ? row.querySelector('.mw-note').value.trim() : '';
+          // Fields are read from the live DOM input when present. A folded row has
+          // already had its values captured into `entry` by syncAllActivityRowsFromDOM()
+          // (called on every fold/expand/add/remove action) but no longer renders these
+          // inputs at all — so each field falls back to entry's synced value rather than
+          // to '' / true / etc, otherwise folding a row before Save silently wipes its
+          // note, date, time and all-day setting back to defaults.
+          const noteInp = row.querySelector('.mw-note');
+          const note = noteInp ? noteInp.value.trim() : ((entry && entry.note) || '');
           const status = (entry && entry.status) || 'confirmed';
           const dateInp = row.querySelector('.mw-date');
-          const date = dateInp ? dateInp.value : '';
+          const date = dateInp ? dateInp.value : ((entry && entry.date) || '');
           const audSel = row.querySelector('.mw-audience-select');
           const audience = audSel ? audSel.value : ((entry && entry.audience) || '');
           const alldayInp = row.querySelector('.mw-allday');
-          const allDay = alldayInp ? alldayInp.checked : true;
+          const allDay = alldayInp ? alldayInp.checked : !(entry && entry.allDay===false);
           const startInp = row.querySelector('.mw-start-time');
           const endInp = row.querySelector('.mw-end-time');
-          const startTime = (!allDay && startInp) ? startInp.value : '';
-          const endTime = (!allDay && endInp) ? endInp.value : '';
+          const startTime = !allDay ? (startInp ? startInp.value : ((entry && entry.startTime) || '')) : '';
+          const endTime = !allDay ? (endInp ? endInp.value : ((entry && entry.endTime) || '')) : '';
           const freqSel = row.querySelector('.mw-repeat-freq');
           const freqVal = freqSel ? freqSel.value : '';
           if(freqVal){

@@ -584,6 +584,60 @@
   .undo-toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .undo-toast button{background:none;border:none;color:var(--gold);font-weight:700;font-size:15px;cursor:pointer;padding:8px 10px;font-family:inherit;flex-shrink:0;}
 
+  /* ---------- Dashboard: compact status-coloured week cards ---------- */
+  .view-toggle{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .view-toggle button{white-space:nowrap;flex-shrink:0;}
+  .dash-actions{display:flex;gap:8px;align-items:center;position:relative;}
+  .dash-toolbar .dash-menu-btn{flex:0 0 46px;}
+  .dash-menu-btn{border:1px solid var(--line);background:#fff;border-radius:8px;width:42px;height:38px;cursor:pointer;font-size:20px;color:var(--ink-soft);line-height:1;}
+  .dash-menu-btn:hover{background:var(--paper);color:var(--ink);}
+  .dash-menu{position:absolute;right:0;top:44px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.14);z-index:6;min-width:230px;padding:4px;}
+  .dash-menu button{display:block;width:100%;text-align:left;border:none;background:none;padding:12px;font-size:14px;cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;border-radius:7px;}
+  .dash-menu button:hover{background:var(--paper);}
+  .status-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin:0 2px 10px;}
+  .status-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;}
+  .jump-now,.show-earlier{width:100%;border:1px dashed var(--line);background:#fff;border-radius:10px;padding:11px;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;font-family:inherit;margin-bottom:6px;}
+  .jump-now{border-style:solid;}
+  .jump-now:hover,.show-earlier:hover{background:var(--paper);}
+  .dash-month{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 6px;}
+  .dash-month-name{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;}
+  .dash-month-count{font-size:12px;color:var(--ink-soft);}
+  .wk2{display:flex;gap:14px;background:var(--paper-raised);border:1px solid var(--line);border-left:5px solid var(--term-color,var(--navy));border-radius:10px;padding:12px 12px 12px 14px;cursor:pointer;}
+  @media (hover:hover){ .wk2:hover{border-color:var(--ink-soft);border-left-color:var(--term-color,var(--navy));} }
+  .wk2:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
+  .wk2.now{border:2px solid var(--gold);border-left:5px solid var(--gold);}
+  .wk2-date{width:46px;flex-shrink:0;text-align:center;border-right:1px solid var(--line);padding-right:12px;}
+  .wk2-dow{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .wk2-num{font-size:26px;line-height:1.1;}
+  .wk2-now{font-size:9.5px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .wk2-main{flex:1;min-width:0;}
+  .wk2-title{font-size:16px;font-weight:700;line-height:1.25;}
+  .wk2-title.untitled{color:var(--ink-soft);font-style:italic;font-weight:400;}
+  .wk2-occ{display:inline-block;background:var(--gold-soft);color:#7A5A16;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;vertical-align:2px;}
+  .wk2-line{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+  .wk2-label{font-size:11.5px;color:var(--ink-soft);font-weight:700;width:100%;}
+  @media (min-width:641px){ .wk2-label{width:auto;min-width:92px;} }
+  .st-pill{font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+  .st-pill.confirmed{background:var(--tl-green-soft);border-color:var(--tl-green);color:#146B3E;}
+  .st-pill.pending{background:var(--tl-amber-soft);border-color:var(--tl-amber);color:#7A4E00;}
+  .st-pill.declined{background:var(--tl-red-soft);border-color:var(--tl-red);color:#A12C26;text-decoration:line-through;}
+  .wk2-nothing{font-size:12.5px;color:var(--ink-soft);font-style:italic;margin-top:6px;}
+  .wk2-chev{align-self:center;color:var(--ink-soft);font-size:22px;flex-shrink:0;}
+
+  /* ---------- Owners tab ---------- */
+  .own-scope{font-size:12.5px;color:var(--ink-soft);margin:0 2px 10px;}
+  .own-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;padding:12px 14px 4px;margin-bottom:10px;}
+  .own-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .own-av{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .own-name{font-size:16px;font-weight:700;flex:1;min-width:0;}
+  .own-count{font-size:12px;color:var(--ink-soft);text-align:right;}
+  .own-count b{color:#7A4E00;}
+  .own-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer;}
+  @media (hover:hover){ .own-item:hover .own-item-title{text-decoration:underline;} }
+  .own-item-main{flex:1;min-width:0;}
+  .own-item-title{font-size:14px;font-weight:700;}
+  .own-item-meta{font-size:12px;color:var(--ink-soft);margin-top:1px;}
+
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
@@ -876,6 +930,10 @@ let state = {
   sheet: null,
   sheetDraft: null,
   sheetError: '',
+  dashMenuOpen: false,
+  showPastWeeks: false,
+  owners: [],
+  ownersTableMissing: false,
   lastRemoved: null,
   loaded: false
 };
@@ -897,23 +955,37 @@ function uid(){
 function isoDate(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
 
+// Owner columns are only selected if they exist — so the app keeps working if the
+// code is deployed before the owner ALTER TABLE statements have been run.
+function loadWeeksQuery(withOwner){
+  const o = withOwner ? ', owner' : '';
+  return sb.from('weeks').select(`
+      id, occasion, sunday_date, sunday_series, week_commencing, happening,
+      week_midweek_items ( id, note, item_date, status, start_time, end_time, all_day, audience${o}, week_midweek_item_tags ( tag_id ) ),
+      week_post_service_items ( id, note, item_date, status, start_time, end_time, all_day, audience${o}, week_post_service_item_tags ( tag_id ) ),
+      week_excluded_recurring ( recurring_rhythm_id )
+    `).order('sunday_date');
+}
+let ownerColumnsExist = true;
+
 async function loadData(){
-  const [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes] = await Promise.all([
+  let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes] = await Promise.all([
     sb.from('users').select('*'),
     sb.from('audiences').select('*'),
     sb.from('tags').select('*'),
-    sb.from('weeks').select(`
-      id, occasion, sunday_date, sunday_series, week_commencing, happening,
-      week_midweek_items ( id, note, item_date, status, start_time, end_time, all_day, audience, week_midweek_item_tags ( tag_id ) ),
-      week_post_service_items ( id, note, item_date, status, start_time, end_time, all_day, audience, week_post_service_item_tags ( tag_id ) ),
-      week_excluded_recurring ( recurring_rhythm_id )
-    `).order('sunday_date'),
+    loadWeeksQuery(true),
     sb.from('recurring_rhythms').select(`
       id, note, start_date, end_date, freq, interval, end_type, occurrence_count, day_offset, slot,
       recurring_rhythm_tags ( tag_id )
     `),
     sb.from('events').select('*')
   ]);
+
+  if(weeksRes.error && /owner/i.test(weeksRes.error.message||'')){
+    console.warn('owner column missing — loading weeks without owners until the SQL is run');
+    ownerColumnsExist = false;
+    weeksRes = await loadWeeksQuery(false);
+  } else if(!weeksRes.error){ ownerColumnsExist = true; }
 
   [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes].forEach(r=>{
     if(r.error) console.error('Supabase load error:', r.error);
@@ -935,6 +1007,20 @@ async function loadData(){
     }
   });
 
+  const ownersRes = await sb.from('owners').select('*');
+  if(ownersRes.error){
+    console.error('Supabase load error (owners):', ownersRes.error);
+    state.ownersTableMissing = true;
+    state.owners = DEFAULT_OWNERS.map((name,i)=>({name, sortOrder:i}));
+  } else {
+    state.ownersTableMissing = false;
+    state.owners = (ownersRes.data||[]).map(o=>({name:o.name, sortOrder:o.sort_order||0})).sort((a,b)=>a.sortOrder-b.sortOrder);
+    if(!state.owners.length){
+      state.owners = DEFAULT_OWNERS.map((name,i)=>({name, sortOrder:i}));
+      await saveOwners(state.owners);
+    }
+  }
+
   state.tags = (tagsRes.data||[]).map(t=>({id:t.id, name:t.name, audience:t.audience}));
   if(!state.tags.length){
     state.tags = DEFAULT_TAGS.map(t=>({...t, id: uid()}));
@@ -950,12 +1036,12 @@ async function loadData(){
     happening: w.happening || '',
     midweek: (w.week_midweek_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
-      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'',
+      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'', owner: m.owner||'',
       tagIds: (m.week_midweek_item_tags||[]).map(t=>t.tag_id)
     })),
     postService: (w.week_post_service_items||[]).map(m=>({
       id: m.id, note: m.note||'', date: m.item_date, status: m.status||'confirmed',
-      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'',
+      allDay: m.all_day!==false, startTime: m.start_time||'', endTime: m.end_time||'', audience: m.audience||'', owner: m.owner||'',
       tagIds: (m.week_post_service_item_tags||[]).map(t=>t.tag_id)
     })),
     excludedRecurring: (w.week_excluded_recurring||[]).map(e=>e.recurring_rhythm_id)
@@ -1061,6 +1147,17 @@ async function saveAudiences(audOrAuds){
   const { error } = await sb.from('audiences').upsert(payload, {onConflict:'name'});
   if(error) console.error('save audiences failed', error);
 }
+async function saveOwners(ownerOrOwners){
+  if(state.ownersTableMissing) return;
+  const rows = Array.isArray(ownerOrOwners) ? ownerOrOwners : [ownerOrOwners];
+  const { error } = await sb.from('owners').upsert(rows.map(o=>({name:o.name, sort_order:o.sortOrder||0})), {onConflict:'name'});
+  if(error){ console.error('save owners failed', error); alert('Could not save owners: '+error.message); }
+}
+async function deleteOwnerRemote(name){
+  if(state.ownersTableMissing) return;
+  const { error } = await sb.from('owners').delete().eq('name', name);
+  if(error) console.error('delete owner failed', error);
+}
 async function deleteAudienceRemote(name){
   const { error } = await sb.from('audiences').delete().eq('name', name);
   if(error) console.error('delete audience failed', error);
@@ -1160,7 +1257,8 @@ async function saveWeeks(weekOrWeeks){
     if(existingIds.length) await sb.from('week_midweek_items').delete().in('id', existingIds);
     const items = (w.midweek||[]).map(m=>({
       id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed',
-      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null
+      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null,
+      ...(ownerColumnsExist ? {owner: m.owner||null} : {})
     }));
     if(items.length){
       const { error: itemErr } = await sb.from('week_midweek_items').insert(items);
@@ -1178,7 +1276,8 @@ async function saveWeeks(weekOrWeeks){
     if(existingPsIds.length) await sb.from('week_post_service_items').delete().in('id', existingPsIds);
     const psItems = (w.postService||[]).map(m=>({
       id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed',
-      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null
+      all_day: m.allDay!==false, start_time: m.startTime||null, end_time: m.endTime||null, audience: m.audience||null,
+      ...(ownerColumnsExist ? {owner: m.owner||null} : {})
     }));
     if(psItems.length){
       const { error: psItemErr } = await sb.from('week_post_service_items').insert(psItems);
@@ -1219,7 +1318,7 @@ function subscribeRealtime(){
   const tables = [
     'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags',
     'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events',
-    'comms_flows','comms_flow_steps','comms_plans','comms_posts'
+    'comms_flows','comms_flow_steps','comms_plans','comms_posts','owners'
   ];
   const channel = sb.channel('planner-changes');
   tables.forEach(t=>{
@@ -1931,6 +2030,7 @@ function editorRowsHTML(rows, section){
     const statusBit = s!=='confirmed' ? ` · <span class="we-dot" style="background:var(--tl-${s==='pending'?'amber':'red'});"></span>${STATUSES[s].label}` : '';
     const commsBit = r.needsComms===true ? ' · Needs comms' : '';
     const repeatBit = r.repeatFreq ? ' · Will repeat' : '';
+    const ownerBit = r.owner ? ' · Owner: '+escHTML(r.owner) : '';
     const note = r.note ? `<span class="we-note"> — ${escHTML(r.note)}</span>` : '';
     const metaParts = [aud ? escHTML(aud) : '', when + time].filter(Boolean).join(' · ');
     if(r.recurringId){
@@ -1947,7 +2047,7 @@ function editorRowsHTML(rows, section){
       <span class="we-bar" style="background:${color};"></span>
       <div class="we-body">
         <div class="we-name">${escHTML(name)}${note}</div>
-        <div class="we-meta">${metaParts}${statusBit}${commsBit}${repeatBit}</div>
+        <div class="we-meta">${metaParts}${statusBit}${ownerBit}${commsBit}${repeatBit}</div>
       </div>
       <button type="button" class="we-trash" data-mwid="${r.id}" title="Remove" aria-label="Remove ${escHTML(name)}">${TRASH_SVG}</button>
       <span class="we-chev" aria-hidden="true">›</span>
@@ -1995,6 +2095,15 @@ function sheetHTML(){
           ${state.audiences.map(a=>`<button type="button" class="sheet-chip sh-aud ${d.audience===a.name?'on':''}" data-aud="${escHTML(a.name)}"><span class="sw" style="background:${audienceColor(a.name)};"></span>${escHTML(a.name)}</button>`).join('')}
         </div>
         ${(!d.audience && selTag && !d.creatingTag) ? `<div class="sheet-hint">None picked, so it'll use ${escHTML(selTag.name)}'s usual audience (${escHTML(selTag.audience)}).</div>` : ''}
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">Owner</span>
+        <div class="sheet-chips">
+          ${state.owners.map(o=>`<button type="button" class="sheet-chip sh-owner ${d.owner===o.name?'on':''}" data-owner="${escHTML(o.name)}">${escHTML(o.name)}</button>`).join('')}
+          ${(d.owner && !state.owners.some(o=>o.name===d.owner)) ? `<button type="button" class="sheet-chip sh-owner on" data-owner="${escHTML(d.owner)}">${escHTML(d.owner)}</button>` : ''}
+        </div>
+        <div class="sheet-hint">Optional. Shown in the Owners tab only. Add names in ⚙ Settings.</div>
       </div>
 
       <div class="sheet-field">
@@ -2140,47 +2249,48 @@ function weekCardHTML(wk, idx){
     </div>`;
   }
 
+  // Compact, tap-anywhere card. Pills are coloured by status (green confirmed,
+  // amber needs approval, red/struck cancelled) — audience colour stays in the
+  // week editor, Calendar and Look Ahead. Owner is deliberately not shown here.
+  const isNow = isCurrentWeek(wk);
+  const pills = items => items.map(m=>{
+    const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+    if(!tags.length) return '';
+    const s = m.status || 'confirmed';
+    const label = tags.map(t=>t.name).join(' + ');
+    const anchor = m._anchor;
+    const showDate = m.date && m.date !== anchor;
+    const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime : '';
+    return `<span class="st-pill ${s}" title="${escHTML(label)} · ${STATUSES[s].label}">${escHTML(label)}${m.note?': '+escHTML(m.note):''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
+  }).join('');
+  const psList = postServiceItems.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.sundayDate}));
+  const mwList = midweek.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.weekCommencing}));
+  const sd = wk.sundayDate ? parseISO(wk.sundayDate) : null;
   return `
-    <div class="week-card" style="--term-color:${termVar};" data-id="${wk.id}">
-      <div class="wc-left">
-        <div class="wc-week">Week ${idx+1}</div>
-        <div class="wc-date">${fmtDate(wk.sundayDate) || 'No date'}</div>
-        ${wk.occasion?`<div class="wc-occasion">${wk.occasion}</div>`:''}
+    <div class="wk2 edit-week ${isNow?'now':''}" id="wk-${wk.id}" style="--term-color:${termVar};" data-id="${wk.id}" role="button" tabindex="0" aria-label="Edit week of ${fmtDate(wk.sundayDate)}">
+      <div class="wk2-date">
+        <div class="wk2-dow">Sun</div>
+        <div class="wk2-num">${sd ? sd.getDate() : '?'}</div>
+        ${isNow ? '<div class="wk2-now">This week</div>' : ''}
       </div>
-      <div class="wc-main">
-        <div class="wc-series ${wk.sundaySeries?'':'empty'}">${wk.sundaySeries || 'Untitled Sunday'}</div>
-        ${postServiceItems.length ? `<div class="wc-mid" style="margin-bottom:8px;">
-          ${postServiceItems.map(m=>{
-            const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
-            if(!tags.length) return '';
-            const aud = itemAudience(m, tags);
-            const dom = isDominantAudience(aud);
-            const label = tags.map(t=>t.name).join(' + ');
-            const showDate = m.date && m.date !== wk.sundayDate;
-            const statusClass = m.status ? ' status-'+m.status : '';
-            const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime+(m.endTime?'–'+m.endTime:'') : '';
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(aud)};" title="${aud}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
-          }).join('')}
-        </div>` : ''}
-        <div class="wc-mid">
-          ${midweek.map(m=>{
-            const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
-            if(!tags.length) return '';
-            const aud = itemAudience(m, tags);
-            const dom = isDominantAudience(aud);
-            const label = tags.map(t=>t.name).join(' + ');
-            const showDate = m.date && m.date !== wk.weekCommencing;
-            const statusClass = m.status ? ' status-'+m.status : '';
-            const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime+(m.endTime?'–'+m.endTime:'') : '';
-            return `<span class="wc-rhythm-pill${dom?' dominant':''}${statusClass}" style="background:${audienceColor(aud)};" title="${aud}${m.recurringId?' · recurring':''}">${label}${m.note?': '+m.note:''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
-          }).join('')}
-          ${wk.weekCommencing?`<span class="wc-commencing">w/c ${fmtDate(wk.weekCommencing)}</span>`:''}
-        </div>
+      <div class="wk2-main">
+        <div class="wk2-title ${wk.sundaySeries?'':'untitled'}">${escHTML(wk.sundaySeries || 'Untitled Sunday')}${wk.occasion?`<span class="wk2-occ">${escHTML(wk.occasion)}</span>`:''}</div>
+        ${psList.length ? `<div class="wk2-line"><span class="wk2-label">After service</span>${pills(psList)}</div>` : ''}
+        ${mwList.length ? `<div class="wk2-line"><span class="wk2-label">Wk of ${wk.weekCommencing ? fmtDate(wk.weekCommencing) : 'Monday'}</span>${pills(mwList)}</div>` : ''}
+        ${!psList.length && !mwList.length ? '<div class="wk2-nothing">Nothing planned yet</div>' : ''}
       </div>
-      <div class="wc-actions">
-        <button class="edit-week" data-id="${wk.id}">Edit</button>
-      </div>
+      <span class="wk2-chev" aria-hidden="true">›</span>
     </div>`;
+}
+
+// A week "is now" from its Sunday through the following Saturday.
+function isCurrentWeek(wk){
+  if(!wk.sundayDate) return false;
+  const today = isoDate(new Date());
+  return wk.sundayDate <= today && today <= addDaysISO(wk.sundayDate, 6);
+}
+function isPastWeek(wk){
+  return !!wk.sundayDate && addDaysISO(wk.sundayDate, 6) < isoDate(new Date());
 }
 
 function dashboardHTML(){
@@ -2192,20 +2302,102 @@ function dashboardHTML(){
     return isoDate(start);
   })();
   const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:draftDate,sundaySeries:'',weekCommencing:'',happening:'',midweek:[],postService:[],excludedRecurring:[]}, ws.length) : '';
+
+  // Past weeks fold away in the current church year only (a past year would fold
+  // everything). The week being edited always stays visible.
+  const isCurrentYear = state.churchYear === churchYearOf(new Date());
+  const past = isCurrentYear ? ws.filter(w=> isPastWeek(w) && w.id!==state.editingWeekId) : [];
+  const shown = (past.length && !state.showPastWeeks) ? ws.filter(w=> !past.includes(w)) : ws;
+  const nowWeek = ws.find(isCurrentWeek);
+
+  let cards = '', lastMonth = '';
+  shown.forEach(w=>{
+    const i = ws.indexOf(w);
+    const d = parseISO(w.sundayDate);
+    const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+    if(mKey !== lastMonth){
+      const count = shown.filter(x=>{ const xd = parseISO(x.sundayDate); return xd.getFullYear()===d.getFullYear() && xd.getMonth()===d.getMonth(); }).length;
+      cards += `<div class="dash-month"><span class="dash-month-name">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="dash-month-count">${count} Sunday${count===1?'':'s'}</span></div>`;
+      lastMonth = mKey;
+    }
+    cards += weekCardHTML(w, i);
+  });
+
   return `
     <div class="dash-toolbar">
       <div class="term-label">${ws.length} week${ws.length===1?'':'s'}${state.termFilter?' · '+state.termFilter:' · all terms'} · ${churchYearLabel(state.churchYear)}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn" id="fill-weeks">Fill ${state.termFilter?state.termFilter+' '+churchYearLabel(state.churchYear):'term'}'s Sundays</button>
-        <button class="btn" id="export-churchsuite" title="Download a CSV formatted for ChurchSuite's Calendar &gt; Import events">Export ChurchSuite CSV</button>
+      <div class="dash-actions">
+        <button type="button" class="dash-menu-btn" id="dash-menu-btn" aria-label="More options" aria-expanded="${state.dashMenuOpen?'true':'false'}">⋯</button>
+        ${state.dashMenuOpen ? `<div class="dash-menu">
+          <button type="button" id="fill-weeks">Fill ${state.termFilter?state.termFilter+' '+churchYearLabel(state.churchYear):'term'}'s Sundays</button>
+          <button type="button" id="export-churchsuite">Export ChurchSuite CSV</button>
+        </div>` : ''}
         <button class="add-btn" id="add-week">+ Add week</button>
       </div>
     </div>
+    <div class="status-legend"><span><i style="background:var(--tl-green)"></i>Confirmed</span><span><i style="background:var(--tl-amber)"></i>Needs approval</span><span><i style="background:var(--tl-red)"></i>Cancelled</span></div>
+    ${nowWeek && !state.editingWeekId ? `<button type="button" class="jump-now" id="jump-now" data-id="${nowWeek.id}">↓ Jump to this week</button>` : ''}
+    ${past.length ? `<button type="button" class="show-earlier" id="toggle-past">${state.showPastWeeks ? 'Hide earlier weeks' : `Show ${past.length} earlier week${past.length===1?'':'s'}`}</button>` : ''}
     <div class="weeks-timeline">
-      ${ws.length ? ws.map((w,i)=>weekCardHTML(w,i)).join('') : (state.editingWeekId!=='new' ? `<div class="empty">No weeks on the rhythm yet.<br>Tap "Fill ${state.termFilter||'current'} term's Sundays" to auto-create them, or "+ Add week" for just one.</div>` : '')}
+      ${ws.length ? cards : (state.editingWeekId!=='new' ? `<div class="empty">No weeks on the rhythm yet.<br>Use ⋯ → "Fill term's Sundays" to auto-create them, or "+ Add week" for just one.</div>` : '')}
       ${newDraft}
     </div>
   `;
+}
+
+// ---------- Owners ----------
+const DEFAULT_OWNERS = ['Jonny','Amy','Ed','Marvelous','Dan','Dimeji','Becky','Stanley'];
+function ownerInitials(name){
+  const parts = String(name).trim().split(/\s+/);
+  return ((parts[0]||'')[0]||'').toUpperCase() + ((parts[1]||parts[0]||'')[parts[1]?0:1]||'').toUpperCase();
+}
+// Every after-service/midweek item in the current year + term scope that has an
+// owner, grouped by owner. Recurring-rhythm items have no owner, so never appear.
+function ownersTabHTML(){
+  const ws = visibleWeeks();
+  const byOwner = {};
+  ws.forEach(wk=>{
+    const add = (m, kind, anchor)=>{
+      if(!m.owner || m.recurringId) return;
+      const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
+      if(!tags.length) return;
+      (byOwner[m.owner] = byOwner[m.owner]||[]).push({
+        weekId: wk.id, date: m.date || anchor, kind, status: m.status||'confirmed',
+        title: tags.map(t=>t.name).join(' + ') + (m.note ? ' — '+m.note : ''),
+        audience: itemAudience(m, tags)
+      });
+    };
+    effectivePostService(wk).forEach(m=> add(m, 'After service', wk.sundayDate));
+    effectiveMidweek(wk).forEach(m=> add(m, 'Midweek', wk.weekCommencing || wk.sundayDate));
+  });
+  const scope = `${state.termFilter ? state.termFilter[0].toUpperCase()+state.termFilter.slice(1) : 'All terms'} · ${churchYearLabel(state.churchYear)} · items with no owner aren't listed`;
+  const order = state.owners.map(o=>o.name);
+  const names = Object.keys(byOwner).sort((a,b)=>{
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if(ia>-1 && ib>-1) return ia-ib;
+    if(ia>-1) return -1; if(ib>-1) return 1;
+    return a.localeCompare(b);
+  });
+  if(!names.length) return `<div class="own-scope">${scope}</div><div class="empty">No owners set yet.<br>Open a week, tap an activity and pick an owner.</div>`;
+  return `<div class="own-scope">${scope}</div>` + names.map(n=>{
+    const items = byOwner[n].sort((a,b)=> (a.date||'') < (b.date||'') ? -1 : 1);
+    const pending = items.filter(i=>i.status==='pending').length;
+    return `<div class="own-card">
+      <div class="own-head">
+        <span class="own-av">${escHTML(ownerInitials(n))}</span>
+        <span class="own-name">${escHTML(n)}</span>
+        <span class="own-count">${items.length} item${items.length===1?'':'s'}${pending?` · <b>${pending} need${pending===1?'s':''} approval</b>`:''}</span>
+      </div>
+      ${items.map(i=>`
+        <div class="own-item" data-week-id="${i.weekId}" role="button" tabindex="0">
+          <div class="own-item-main">
+            <div class="own-item-title">${escHTML(i.title)}</div>
+            <div class="own-item-meta">${i.date ? fmtDate(i.date) : ''} · ${i.kind}${i.audience ? ' · '+escHTML(i.audience) : ''}</div>
+          </div>
+          <span class="st-pill ${i.status}">${STATUSES[i.status].label}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
 function mainHTML(){
@@ -2214,7 +2406,7 @@ function mainHTML(){
   return `
     <div class="masthead">
       <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
-      <div class="who">Planning as <strong>${state.currentUser.name}</strong> <button id="open-settings" class="settings-btn">⚙ Tags</button> <button id="switch-user">Switch</button></div>
+      <div class="who">Planning as <strong>${state.currentUser.name}</strong> <button id="open-settings" class="settings-btn">⚙ Settings</button> <button id="switch-user">Switch</button></div>
     </div>
     ${yearSwitcherHTML()}
     ${ribbonHTML()}
@@ -2224,6 +2416,7 @@ function mainHTML(){
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
         <button data-view="list" class="${state.view==='list'?'active':''}">Look Ahead</button>
         <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
+        <button data-view="owners" class="${state.view==='owners'?'active':''}">Owners</button>
       </div>
       ${state.view==='calendar'?`
       <div class="nav-group">
@@ -2241,13 +2434,13 @@ function mainHTML(){
         <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}</div>
         <button id="next-month">›</button>
       </div>`:''}
-      ${state.view!=='dashboard' && state.view!=='comms'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
+      ${state.view!=='dashboard' && state.view!=='comms' && state.view!=='owners'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
     </div>
     ${showFilters?`<div class="filters">
       ${Object.entries(CATS).map(([k,v])=>`<div class="chip ${state.catFilters.has(k)?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
       ${filtersActive?`<button type="button" class="clear-filters" id="clear-filters">✕ Showing ${state.catFilters.size} of ${Object.keys(CATS).length} types — clear filter</button>`:''}
     </div>`:filtersActive && state.view==='dashboard'?`<div class="notice" style="margin:-8px 0 14px;">Note: a category filter is still active from Calendar/List view (${[...state.catFilters].map(c=>CATS[c].label).join(', ')}) — it won't affect the Dashboard, but will hide other types again when you switch views.</div>`:''}
-    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : dashboardHTML()}
+    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
     ${state.view==='dashboard' ? sheetHTML() : ''}
@@ -2315,7 +2508,7 @@ function settingsHTML(){
   return `
   <div class="overlay" id="settings-overlay">
     <div class="modal" style="max-width:480px;">
-      <h2>Tags &amp; audiences</h2>
+      <h2>Settings</h2>
       <div class="settings-section">
         <h4>Midweek tags</h4>
         ${state.tags.map(t=>`
@@ -2343,6 +2536,21 @@ function settingsHTML(){
           <button class="mw-add" id="add-audience" type="button">+ Add</button>
         </div>
         <div class="notice" style="margin-top:6px;">"Whole Church" keeps the church's own brand colour so it always reads as the dominant tag. Every other audience gets its own colour — tap the swatch to pick a different one.</div>
+      </div>
+      <div class="settings-section">
+        <h4>Owners</h4>
+        ${state.ownersTableMissing ? `<div class="notice" style="color:var(--bad);margin:0 0 8px;">The owners table isn't set up in Supabase yet, so changes here won't save.</div>` : ''}
+        ${state.owners.map(o=>`
+          <div class="tag-row">
+            <span class="own-av" style="width:28px;height:28px;font-size:11px;">${escHTML(ownerInitials(o.name))}</span>
+            <input type="text" value="${escHTML(o.name)}" readonly style="background:var(--paper);">
+            <button class="owner-remove" data-owner="${escHTML(o.name)}" title="Remove owner">✕</button>
+          </div>`).join('')}
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="new-owner-name" placeholder="New owner name" style="flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
+          <button class="mw-add" id="add-owner" type="button">+ Add</button>
+        </div>
+        <div class="notice" style="margin-top:6px;">Owners are offered on every after-service and midweek activity, and listed in the Owners tab.</div>
       </div>
       <div class="settings-section">
         <h4>Recurring rhythms</h4>
@@ -2455,6 +2663,13 @@ function attachMainHandlers(){
   });
   if(state.view==='dashboard') attachDashboardHandlers();
   if(state.view==='comms') attachCommsHandlers();
+  if(state.view==='owners'){
+    document.querySelectorAll('.own-item').forEach(el=>{
+      const go = ()=>{ state.view = 'dashboard'; openWeekEditor(el.dataset.weekId); };
+      el.onclick = go;
+      el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); go(); } };
+    });
+  }
   const exportCsvBtn = document.getElementById('export-churchsuite');
   if(exportCsvBtn) exportCsvBtn.onclick = ()=>{
     const csv = toCSV(churchSuiteCSVRows());
@@ -2465,6 +2680,7 @@ function attachMainHandlers(){
     a.download = `churchsuite-import-${state.termFilter||'all-terms'}-${churchYearLabel(state.churchYear)}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    state.dashMenuOpen = false; render();
   };
   document.querySelectorAll('.export-pdf-month').forEach(el=>{
     el.onclick = (e)=>{
@@ -2519,6 +2735,29 @@ function attachMainHandlers(){
       el.onchange = async ()=>{
         const a = audienceObj(el.dataset.audience);
         if(a){ a.color = el.value; await saveAudiences(a); render(); }
+      };
+    });
+    const addOwnerBtn = document.getElementById('add-owner');
+    if(addOwnerBtn) addOwnerBtn.onclick = async ()=>{
+      const val = document.getElementById('new-owner-name').value.trim();
+      if(!val) return;
+      if(state.owners.some(o=>o.name.toLowerCase()===val.toLowerCase())){ alert(val+' is already on the list.'); return; }
+      const o = {name:val, sortOrder: state.owners.reduce((m,x)=>Math.max(m,x.sortOrder||0),0)+1};
+      state.owners.push(o);
+      await saveOwners(o); render();
+    };
+    document.querySelectorAll('.owner-remove').forEach(el=>{
+      el.onclick = async ()=>{
+        const name = el.dataset.owner;
+        let inUse = 0;
+        state.weeks.forEach(w=>{ [...(w.midweek||[]), ...(w.postService||[])].forEach(m=>{ if(m.owner===name) inUse++; }); });
+        const msg = inUse
+          ? `${name} owns ${inUse} item${inUse===1?'':'s'}. Remove them from the list anyway? Those items keep ${name} as owner until you change them.`
+          : `Remove ${name} from the owners list?`;
+        if(!confirm(msg)) return;
+        await deleteOwnerRemote(name);
+        state.owners = state.owners.filter(o=>o.name!==name);
+        render();
       };
     });
     const addAudienceBtn = document.getElementById('add-audience');
@@ -2654,6 +2893,37 @@ function findEditingRow(id){
   return {entry:null, section:null};
 }
 
+function openWeekEditor(weekId){
+  const wk = state.weeks.find(w=>w.id===weekId);
+  const mw = wk ? effectiveMidweek(wk) : [];
+  const ps = wk ? effectivePostService(wk) : [];
+  // Pull in any existing Needs comms? decision so the sheet reflects what's
+  // already been chosen (here or in the Comms tab), using the same item_ref_id
+  // scheme eventsForRange/comms use.
+  const wcAnchor = wk && wk.weekCommencing ? parseISO(wk.weekCommencing) : null;
+  const sunAnchor = wk && wk.sundayDate ? parseISO(wk.sundayDate) : null;
+  state.editingMidweekRows = mw.map(m=>{
+    const d = m.date ? parseISO(m.date) : wcAnchor;
+    const key = d ? 'wk-mid-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
+    const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
+    return {...m, needsComms: plan ? plan.needsComms : null};
+  });
+  state.editingPostServiceRows = ps.map(m=>{
+    const d = m.date ? parseISO(m.date) : sunAnchor;
+    const key = d ? 'wk-ps-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
+    const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
+    return {...m, needsComms: plan ? plan.needsComms : null};
+  });
+  state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
+  state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
+  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.dashMenuOpen = false; closeSheet();
+  state.editingWeekId = weekId;
+  if(wk && isPastWeek(wk)) state.showPastWeeks = true;
+  render();
+  const card = document.querySelector('.week-card.editing');
+  if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function attachDashboardHandlers(){
   // ----- Week header fields: kept in a draft so re-renders never lose typing -----
   document.querySelectorAll('.week-card.editing [data-field]').forEach(el=>{
@@ -2710,7 +2980,7 @@ function attachDashboardHandlers(){
   };
   document.querySelectorAll('.we-add').forEach(el=>{
     el.onclick = ()=>{
-      const blank = {id:uid(), tagIds:[], note:'', status:'confirmed', allDay:true, audience:'', date:'', needsComms:null};
+      const blank = {id:uid(), tagIds:[], note:'', status:'confirmed', allDay:true, audience:'', owner:'', date:'', needsComms:null};
       state.sheet = {rowId:blank.id, section:el.dataset.section, isNew:true};
       state.sheetDraft = blank;
       state.sheetError = ''; state.lastRemoved = null;
@@ -2751,6 +3021,9 @@ function attachDashboardHandlers(){
     };
     document.querySelectorAll('.sh-aud').forEach(el=>{
       el.onclick = ()=>{ syncSheetFromDOM(); d.audience = d.audience===el.dataset.aud ? '' : el.dataset.aud; render(); };
+    });
+    document.querySelectorAll('.sh-owner').forEach(el=>{
+      el.onclick = ()=>{ syncSheetFromDOM(); d.owner = d.owner===el.dataset.owner ? '' : el.dataset.owner; render(); };
     });
     document.querySelectorAll('.sh-status').forEach(el=>{
       el.onclick = ()=>{ syncSheetFromDOM(); d.status = el.dataset.status; render(); };
@@ -2798,34 +3071,18 @@ function attachDashboardHandlers(){
   }
 
   document.querySelectorAll('.edit-week').forEach(el=>{
-    el.onclick = ()=>{
-      const wk = state.weeks.find(w=>w.id===el.dataset.id);
-      const mw = wk ? effectiveMidweek(wk) : [];
-      const ps = wk ? effectivePostService(wk) : [];
-      // Pull in any existing Needs comms? decision so the inline picker reflects
-      // what's already been chosen (in this row or previously in the Comms tab),
-      // matching the same item_ref_id scheme eventsForRange/comms use.
-      const wcAnchor = wk && wk.weekCommencing ? parseISO(wk.weekCommencing) : null;
-      const sunAnchor = wk && wk.sundayDate ? parseISO(wk.sundayDate) : null;
-      state.editingMidweekRows = mw.map(m=>{
-        const d = m.date ? parseISO(m.date) : wcAnchor;
-        const key = d ? 'wk-mid-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
-        const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
-        return {...m, needsComms: plan ? plan.needsComms : null, rowExpanded:false};
-      });
-      state.editingPostServiceRows = ps.map(m=>{
-        const d = m.date ? parseISO(m.date) : sunAnchor;
-        const key = d ? 'wk-ps-'+wk.id+'-'+m.id+'::'+isoDate(d) : null;
-        const plan = key ? state.commsPlans.find(p=>p.itemRefId===key) : null;
-        return {...m, needsComms: plan ? plan.needsComms : null, rowExpanded:false};
-      });
-      state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
-      state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
-      state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; closeSheet();
-      state.editingWeekId = el.dataset.id;
-      render();
-    };
+    el.onclick = ()=> openWeekEditor(el.dataset.id);
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openWeekEditor(el.dataset.id); } };
   });
+  const dashMenuBtn = document.getElementById('dash-menu-btn');
+  if(dashMenuBtn) dashMenuBtn.onclick = ()=>{ state.dashMenuOpen = !state.dashMenuOpen; render(); };
+  const jumpNow = document.getElementById('jump-now');
+  if(jumpNow) jumpNow.onclick = ()=>{
+    const c = document.getElementById('wk-'+jumpNow.dataset.id);
+    if(c){ c.scrollIntoView({behavior:'smooth', block:'center'}); c.focus({preventScroll:true}); }
+  };
+  const togglePast = document.getElementById('toggle-past');
+  if(togglePast) togglePast.onclick = ()=>{ state.showPastWeeks = !state.showPastWeeks; render(); };
   document.querySelectorAll('.cancel-week').forEach(el=>{
     el.onclick = ()=>{ clearWeekEditing(); render(); };
   });
@@ -2891,7 +3148,7 @@ function attachDashboardHandlers(){
               dayOffset:0, slot: sectionName
             });
           } else {
-            items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience});
+            items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience, owner: entry.owner || ''});
             if(entry.needsComms===true || entry.needsComms===false){
               const itemTitle = tagIds.map(tid=>tagById(tid)).filter(Boolean).map(t=>t.name).join(' + ') || 'Untitled activity';
               commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms, itemTitle});
@@ -2980,6 +3237,7 @@ function attachDashboardHandlers(){
   };
   const fillBtn = document.getElementById('fill-weeks');
   if(fillBtn) fillBtn.onclick = async ()=>{
+    state.dashMenuOpen = false;
     if(!state.termFilter){
       alert('Pick a term tab first (Autumn/Spring/Summer) so we know which Sundays to fill for '+churchYearLabel(state.churchYear)+'.');
       return;

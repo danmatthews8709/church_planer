@@ -638,6 +638,22 @@
   .own-item-title{font-size:14px;font-weight:700;}
   .own-item-meta{font-size:12px;color:var(--ink-soft);margin-top:1px;}
 
+  /* ---------- Week editor declutter ---------- */
+  .we-head{align-items:center;}
+  .we-head .btn{flex-shrink:0;padding:9px 14px;font-size:14px;}
+  .we-sub{font-size:14px;color:var(--ink-soft);margin-top:2px;}
+  .we-sub.untitled{font-style:italic;}
+  .we-details{border-top:1px solid var(--line);padding-top:12px;}
+  .we-sdot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+  .we-rec{font-size:13px;color:var(--good);font-weight:700;}
+  .we-section-title{font-size:12px;}
+  .sheet-facts{display:grid;gap:10px;margin-top:14px;font-size:15px;}
+  .sheet-facts .sheet-label{margin-bottom:2px;}
+  .sheet-remove{width:100%;padding:12px;font-size:15px;}
+  .act-row{flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:8px;}
+  .act-row .tag-name{flex:1 1 calc(100% - 40px);font-weight:700;}
+  .act-row select{flex:1 1 40%;min-width:0;}
+
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
@@ -930,6 +946,7 @@ let state = {
   sheet: null,
   sheetDraft: null,
   sheetError: '',
+  detailsOpen: false,
   dashMenuOpen: false,
   showPastWeeks: false,
   owners: [],
@@ -967,6 +984,7 @@ function loadWeeksQuery(withOwner){
     `).order('sunday_date');
 }
 let ownerColumnsExist = true;
+let tagOwnerColumnExists = true;
 
 async function loadData(){
   let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes] = await Promise.all([
@@ -1021,7 +1039,9 @@ async function loadData(){
     }
   }
 
-  state.tags = (tagsRes.data||[]).map(t=>({id:t.id, name:t.name, audience:t.audience}));
+  state.tags = (tagsRes.data||[]).map(t=>({id:t.id, name:t.name, audience:t.audience, defaultOwner:t.default_owner||''}));
+  const tagOwnerCheck = await sb.from('tags').select('default_owner').limit(1);
+  tagOwnerColumnExists = !tagOwnerCheck.error;
   if(!state.tags.length){
     state.tags = DEFAULT_TAGS.map(t=>({...t, id: uid()}));
     await saveTags(state.tags);
@@ -1132,7 +1152,7 @@ async function saveUsers(userOrUsers){
 
 async function saveTags(tagOrTags){
   const rows = tagOrTags ? (Array.isArray(tagOrTags)?tagOrTags:[tagOrTags]) : state.tags;
-  const payload = rows.map(t=>({id:t.id, name:t.name, audience:t.audience}));
+  const payload = rows.map(t=>({id:t.id, name:t.name, audience:t.audience, ...(tagOwnerColumnExists ? {default_owner: t.defaultOwner||null} : {})}));
   const { error } = await sb.from('tags').upsert(payload);
   if(error) console.error('save tags failed', error);
 }
@@ -2015,49 +2035,81 @@ function editorDefaultDate(section){
   return section==='postService' ? sun : addDaysISO(sun, 1);
 }
 
+// Owner shown/used for an item: its own pick for that week, else the activity's
+// default owner from Settings (which is how recurring items get an owner too).
+function effectiveOwner(m, tags){
+  if(m.owner) return m.owner;
+  const t = (tags||[])[0];
+  return (t && t.defaultOwner) || '';
+}
+// Notes often repeat the activity name ("Creative - 30th Sep") — strip that so
+// only the useful part shows.
+function cleanNote(note, name){
+  let n = (note||'').trim();
+  if(!n) return '';
+  if(name && n.toLowerCase().startsWith(name.toLowerCase())) n = n.slice(name.length).replace(/^[\s\-–—:,]+/, '');
+  return n;
+}
+const STATUS_COLOR = {confirmed:'var(--tl-green)', pending:'var(--tl-amber)', declined:'var(--tl-red)'};
+
 function editorRowsHTML(rows, section){
-  if(!rows.length) return `<div class="we-empty">Nothing added yet</div>`;
+  if(!rows.length) return `<div class="we-empty">Nothing yet</div>`;
   const defaultDate = editorDefaultDate(section);
   return rows.map(r=>{
     const tags = (r.tagIds||[]).map(tagById).filter(Boolean);
     const name = tags.length ? tags.map(t=>t.name).join(' + ') : 'Untitled activity';
     const aud = itemAudience(r, tags) || '';
-    const color = aud ? audienceColor(aud) : 'var(--line)';
-    const whenIso = r.date || defaultDate;
-    const when = whenIso ? fmtDate(whenIso) : '';
-    const time = (r.allDay===false && r.startTime) ? ' '+r.startTime+(r.endTime?'–'+r.endTime:'') : '';
     const s = r.status || 'confirmed';
-    const statusBit = s!=='confirmed' ? ` · <span class="we-dot" style="background:var(--tl-${s==='pending'?'amber':'red'});"></span>${STATUSES[s].label}` : '';
-    const commsBit = r.needsComms===true ? ' · Needs comms' : '';
-    const repeatBit = r.repeatFreq ? ' · Will repeat' : '';
-    const ownerBit = r.owner ? ' · Owner: '+escHTML(r.owner) : '';
-    const note = r.note ? `<span class="we-note"> — ${escHTML(r.note)}</span>` : '';
-    const metaParts = [aud ? escHTML(aud) : '', when + time].filter(Boolean).join(' · ');
-    if(r.recurringId){
-      return `<div class="we-row recurring" data-mwid="${r.id}">
-        <span class="we-bar" style="background:${color};"></span>
-        <div class="we-body">
-          <div class="we-name">${escHTML(name)}${note}<span class="we-rec-badge">Recurring</span></div>
-          <div class="we-meta">${metaParts} · pattern edited in ⚙ Tags</div>
-        </div>
-        <button type="button" class="we-trash" data-mwid="${r.id}" title="Remove for this week only" aria-label="Remove for this week only">${TRASH_SVG}</button>
-      </div>`;
-    }
-    return `<div class="we-row" data-mwid="${r.id}" data-section="${section}" role="button" tabindex="0" aria-label="Edit ${escHTML(name)}">
-      <span class="we-bar" style="background:${color};"></span>
+    const whenIso = r.date || defaultDate;
+    const isDefaultDay = !r.date || r.date === defaultDate;
+    const when = whenIso ? (isDefaultDay ? DOW[(parseISO(whenIso).getDay()+6)%7] : fmtDate(whenIso)) : '';
+    const time = (r.allDay===false && r.startTime) ? ' '+r.startTime+(r.endTime?'–'+r.endTime:'') : '';
+    const owner = effectiveOwner(r, tags);
+    const note = cleanNote(r.note, name);
+    const meta = [
+      when + time, aud, owner,
+      s!=='confirmed' ? `<span style="color:${STATUS_COLOR[s]};font-weight:700;">${STATUSES[s].label}</span>` : '',
+      r.needsComms===true ? 'Needs comms' : '',
+      r.repeatFreq ? 'Will repeat' : ''
+    ].filter(Boolean).map(x=> x.startsWith('<span') ? x : escHTML(x)).join(' · ');
+    return `<div class="we-row${r.recurringId?' recurring':''}" data-mwid="${r.id}" data-section="${section}" role="button" tabindex="0" aria-label="${escHTML(name)}, ${STATUSES[s].label}">
+      <span class="we-sdot" style="background:${STATUS_COLOR[s]};" title="${STATUSES[s].label}"></span>
       <div class="we-body">
-        <div class="we-name">${escHTML(name)}${note}</div>
-        <div class="we-meta">${metaParts}${statusBit}${ownerBit}${commsBit}${repeatBit}</div>
+        <div class="we-name">${escHTML(name)}${r.recurringId?'<span class="we-rec"> ↻</span>':''}${note?`<span class="we-note"> — ${escHTML(note)}</span>`:''}</div>
+        <div class="we-meta">${meta}</div>
       </div>
-      <button type="button" class="we-trash" data-mwid="${r.id}" title="Remove" aria-label="Remove ${escHTML(name)}">${TRASH_SVG}</button>
       <span class="we-chev" aria-hidden="true">›</span>
     </div>`;
   }).join('');
 }
 
+// Recurring items can't be edited per week (the pattern lives in Settings), so
+// their sheet is read-only with a single "skip this week" action.
+function recurringSheetHTML(d){
+  const tags = (d.tagIds||[]).map(tagById).filter(Boolean);
+  const name = tags.length ? tags.map(t=>t.name).join(' + ') : 'Recurring activity';
+  const owner = effectiveOwner(d, tags);
+  return `
+  <div class="sheet-overlay" id="sheet-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-grip"></div>
+      <h3 id="sheet-title">${escHTML(name)} <span class="we-rec">↻</span></h3>
+      <div class="sheet-hint" style="margin-top:2px;">Repeating activity. Its pattern and default owner are set in ⚙ Settings.</div>
+      <div class="sheet-facts">
+        <div><span class="sheet-label">When</span>${d.date ? fmtDate(d.date) : '—'}</div>
+        <div><span class="sheet-label">Who's it for</span>${escHTML(itemAudience(d, tags) || '—')}</div>
+        <div><span class="sheet-label">Owner</span>${escHTML(owner || 'No default owner')}</div>
+      </div>
+      <div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="sh-remove">Skip it this week only</button></div>
+      <div class="sheet-actions"><button type="button" class="btn primary" id="sh-cancel">Close</button></div>
+    </div>
+  </div>`;
+}
+
 function sheetHTML(){
   const d = state.sheetDraft;
   if(!state.sheet || !d) return '';
+  if(d.recurringId) return recurringSheetHTML(d);
   const sec = state.sheet.section;
   const isNew = state.sheet.isNew;
   const sortedTags = state.tags.slice().sort((a,b)=> a.name.localeCompare(b.name));
@@ -2103,7 +2155,7 @@ function sheetHTML(){
           ${state.owners.map(o=>`<button type="button" class="sheet-chip sh-owner ${d.owner===o.name?'on':''}" data-owner="${escHTML(o.name)}">${escHTML(o.name)}</button>`).join('')}
           ${(d.owner && !state.owners.some(o=>o.name===d.owner)) ? `<button type="button" class="sheet-chip sh-owner on" data-owner="${escHTML(d.owner)}">${escHTML(d.owner)}</button>` : ''}
         </div>
-        <div class="sheet-hint">Optional. Shown in the Owners tab only. Add names in ⚙ Settings.</div>
+        <div class="sheet-hint">${(!d.owner && selTag && selTag.defaultOwner) ? `None picked, so it'll use ${escHTML(selTag.defaultOwner)} (${escHTML(selTag.name)}'s default owner).` : 'Optional. Shown in the Owners tab only. Add names in ⚙ Settings.'}</div>
       </div>
 
       <div class="sheet-field">
@@ -2152,6 +2204,7 @@ function sheetHTML(){
         ` : `<button type="button" class="sheet-link" id="sh-show-repeat">+ Make this repeat</button>`}
       </div>
 
+      ${!isNew ? `<div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="sh-remove">Remove from this week</button></div>` : ''}
       ${(selTag && !d.creatingTag) ? `<div class="sheet-field"><button type="button" class="sheet-link danger" id="sh-delete-tag" data-tagid="${selTag.id}">Delete "${escHTML(selTag.name)}" from the activity list everywhere</button></div>` : ''}
 
       <div class="sheet-actions">
@@ -2179,11 +2232,25 @@ function syncSheetFromDOM(){
 
 function closeSheet(){ state.sheet = null; state.sheetDraft = null; state.sheetError = ''; }
 
+function removeEditorRow(id){
+  const {entry, section} = findEditingRow(id);
+  if(!entry) return;
+  const arrName = section==='midweek' ? 'editingMidweekRows' : 'editingPostServiceRows';
+  const idx = state[arrName].findIndex(r=>r.id===id);
+  state[arrName].splice(idx, 1);
+  state.lastRemoved = {arrName, idx, entry};
+  clearTimeout(window.__undoTimer);
+  window.__undoTimer = setTimeout(()=>{
+    state.lastRemoved = null;
+    const t = document.getElementById('undo-toast'); if(t) t.remove();
+  }, 7000);
+}
+
 function clearWeekEditing(){
   state.editingWeekId = null;
   state.editingMidweekRows = null; state.editingPostServiceRows = null;
   state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
-  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null;
+  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.detailsOpen = false;
   closeSheet();
 }
 
@@ -2210,37 +2277,36 @@ function weekCardHTML(wk, idx){
     const rows = state.editingMidweekRows || [];
     const psRows = state.editingPostServiceRows || [];
     const wc = draft.sundayDate ? addDaysISO(draft.sundayDate, 1) : '';
+    const open = !!state.detailsOpen;
     return `
     <div class="week-card editing" style="--term-color:${termVar};" data-id="${wk.id}">
       <div class="we-head">
-        <div>
-          <div class="wc-week">Week ${idx+1} · editing</div>
-          <div class="wc-date" id="we-title">${draft.sundayDate ? fmtDate(draft.sundayDate) : 'New week'}</div>
+        <div style="min-width:0;">
+          <div class="wc-date" id="we-title">${draft.sundayDate ? fmtDate(draft.sundayDate) : 'New week'}${(!open && draft.occasion) ? ` <span class="wk2-occ">${escHTML(draft.occasion)}</span>` : ''}</div>
+          ${!open ? `<div class="we-sub ${draft.sundaySeries?'':'untitled'}">${escHTML(draft.sundaySeries || 'No series set')}</div>` : ''}
         </div>
-        ${wk.id!=='new' ? `
-        <div class="we-menu-wrap">
-          <button type="button" class="we-menu-btn" id="we-menu-btn" aria-label="More options" aria-expanded="${state.weekMenuOpen?'true':'false'}">⋯</button>
-          ${state.weekMenuOpen ? `<div class="we-menu"><button type="button" class="delete-week" data-id="${wk.id}">Delete this week</button></div>` : ''}
-        </div>` : ''}
+        <button type="button" class="btn" id="we-details-toggle" aria-expanded="${open?'true':'false'}">${open?'Done':'Edit details'}</button>
       </div>
-      <div class="wc-edit-grid">
+      ${open ? `
+      <div class="wc-edit-grid we-details">
         <div><label>Sunday date</label><input type="date" data-field="sundayDate" value="${draft.sundayDate||''}"></div>
         <div><label>Occasion</label><input data-field="occasion" value="${escHTML(draft.occasion)}" placeholder="Baptism Sunday"></div>
         <div class="full"><label>Sunday series</label><input data-field="sundaySeries" value="${escHTML(draft.sundaySeries)}" placeholder="Sermon series title"></div>
-        <div class="full we-section">
-          <div class="we-section-head">
-            <span class="we-section-title">After the service · ${psRows.length}</span>
-            <button type="button" class="we-add" data-section="postService">+ Add</button>
-          </div>
-          <div class="we-rows">${editorRowsHTML(psRows, 'postService')}</div>
+        ${wk.id!=='new' ? `<div class="full"><button type="button" class="sheet-link danger delete-week" data-id="${wk.id}">Delete this week</button></div>` : ''}
+      </div>` : ''}
+      <div class="we-section">
+        <div class="we-section-head">
+          <span class="we-section-title">After the service</span>
+          <button type="button" class="we-add" data-section="postService">+ Add</button>
         </div>
-        <div class="full we-section">
-          <div class="we-section-head">
-            <span class="we-section-title">Week of <span id="we-wc-label">${wc ? fmtDate(wc) : 'Monday'}</span> · ${rows.length}</span>
-            <button type="button" class="we-add" data-section="midweek">+ Add</button>
-          </div>
-          <div class="we-rows">${editorRowsHTML(rows, 'midweek')}</div>
+        <div class="we-rows">${editorRowsHTML(psRows, 'postService')}</div>
+      </div>
+      <div class="we-section">
+        <div class="we-section-head">
+          <span class="we-section-title">Week of <span id="we-wc-label">${wc ? fmtDate(wc) : 'Monday'}</span></span>
+          <button type="button" class="we-add" data-section="midweek">+ Add</button>
         </div>
+        <div class="we-rows">${editorRowsHTML(rows, 'midweek')}</div>
       </div>
       <div class="we-footer">
         <button type="button" class="btn cancel-week" data-id="${wk.id}">Cancel</button>
@@ -2261,7 +2327,7 @@ function weekCardHTML(wk, idx){
     const anchor = m._anchor;
     const showDate = m.date && m.date !== anchor;
     const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime : '';
-    return `<span class="st-pill ${s}" title="${escHTML(label)} · ${STATUSES[s].label}">${escHTML(label)}${m.note?': '+escHTML(m.note):''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
+    return `<span class="st-pill ${s}" title="${escHTML(label)} · ${STATUSES[s].label}">${escHTML(label)}${cleanNote(m.note,label)?': '+escHTML(cleanNote(m.note,label)):''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
   }).join('');
   const psList = postServiceItems.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.sundayDate}));
   const mwList = midweek.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.weekCommencing}));
@@ -2352,18 +2418,19 @@ function ownerInitials(name){
   return ((parts[0]||'')[0]||'').toUpperCase() + ((parts[1]||parts[0]||'')[parts[1]?0:1]||'').toUpperCase();
 }
 // Every after-service/midweek item in the current year + term scope that has an
-// owner, grouped by owner. Recurring-rhythm items have no owner, so never appear.
+// owner (its own, or its activity's default), grouped by owner.
 function ownersTabHTML(){
   const ws = visibleWeeks();
   const byOwner = {};
   ws.forEach(wk=>{
     const add = (m, kind, anchor)=>{
-      if(!m.owner || m.recurringId) return;
       const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
       if(!tags.length) return;
-      (byOwner[m.owner] = byOwner[m.owner]||[]).push({
+      const owner = effectiveOwner(m, tags);
+      if(!owner) return;
+      (byOwner[owner] = byOwner[owner]||[]).push({
         weekId: wk.id, date: m.date || anchor, kind, status: m.status||'confirmed',
-        title: tags.map(t=>t.name).join(' + ') + (m.note ? ' — '+m.note : ''),
+        title: (()=>{ const nm = tags.map(t=>t.name).join(' + '); const n = cleanNote(m.note, nm); return nm + (n ? ' — '+n : '') + (m.recurringId ? ' ↻' : ''); })(),
         audience: itemAudience(m, tags)
       });
     };
@@ -2510,17 +2577,23 @@ function settingsHTML(){
     <div class="modal" style="max-width:480px;">
       <h2>Settings</h2>
       <div class="settings-section">
-        <h4>Midweek tags</h4>
+        <h4>Activities</h4>
+        <div class="notice" style="margin:-4px 0 10px;">Each activity's usual audience and default owner. The owner applies wherever it appears, including recurring weeks, unless a week picks someone else.</div>
         ${state.tags.map(t=>`
-          <div class="tag-row" data-id="${t.id}">
+          <div class="tag-row act-row" data-id="${t.id}">
             <span class="aud-swatch" style="background:${audienceColor(t.audience)};"></span>
             <input type="text" class="tag-name" data-id="${t.id}" value="${t.name.replace(/"/g,'&quot;')}">
             <select class="tag-audience" data-id="${t.id}">
               ${state.audiences.map(a=>`<option value="${a.name}" ${t.audience===a.name?'selected':''}>${a.name}</option>`).join('')}
             </select>
+            <select class="tag-owner" data-id="${t.id}" aria-label="Default owner for ${escHTML(t.name)}" ${tagOwnerColumnExists?'':'disabled'}>
+              <option value="" ${!t.defaultOwner?'selected':''}>No owner</option>
+              ${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${t.defaultOwner===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}
+              ${(t.defaultOwner && !state.owners.some(o=>o.name===t.defaultOwner)) ? `<option selected>${escHTML(t.defaultOwner)}</option>` : ''}
+            </select>
             <button class="tag-remove" data-id="${t.id}" title="Remove tag">✕</button>
           </div>`).join('')}
-        <button class="mw-add" id="add-tag" type="button">+ Add tag</button>
+        <button class="mw-add" id="add-tag" type="button">+ Add activity</button>
       </div>
       <div class="settings-section">
         <h4>Audiences &amp; colours</h4>
@@ -2701,6 +2774,12 @@ function attachMainHandlers(){
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
         if(tag){ tag.name = el.value.trim() || tag.name; await saveTags(tag); }
+      };
+    });
+    document.querySelectorAll('.tag-owner').forEach(el=>{
+      el.onchange = async ()=>{
+        const tag = tagById(el.dataset.id);
+        if(tag){ tag.defaultOwner = el.value; await saveTags(tag); }
       };
     });
     document.querySelectorAll('.tag-audience').forEach(el=>{
@@ -2916,7 +2995,7 @@ function openWeekEditor(weekId){
   });
   state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
   state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
-  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.dashMenuOpen = false; closeSheet();
+  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.dashMenuOpen = false; state.detailsOpen = false; closeSheet();
   state.editingWeekId = weekId;
   if(wk && isPastWeek(wk)) state.showPastWeeks = true;
   render();
@@ -2941,7 +3020,7 @@ function attachDashboardHandlers(){
   });
 
   // ----- Compact rows -----
-  document.querySelectorAll('.we-row:not(.recurring)').forEach(el=>{
+  document.querySelectorAll('.we-row').forEach(el=>{
     const open = ()=>{
       const {entry, section} = findEditingRow(el.dataset.mwid);
       if(!entry) return;
@@ -2953,24 +3032,8 @@ function attachDashboardHandlers(){
     el.onclick = open;
     el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
   });
-  document.querySelectorAll('.we-trash').forEach(el=>{
-    el.onclick = (e)=>{
-      e.stopPropagation();
-      const id = el.dataset.mwid;
-      const {entry, section} = findEditingRow(id);
-      if(!entry) return;
-      const arrName = section==='midweek' ? 'editingMidweekRows' : 'editingPostServiceRows';
-      const idx = state[arrName].findIndex(r=>r.id===id);
-      state[arrName].splice(idx, 1);
-      state.lastRemoved = {arrName, idx, entry};
-      clearTimeout(window.__undoTimer);
-      window.__undoTimer = setTimeout(()=>{
-        state.lastRemoved = null;
-        const t = document.getElementById('undo-toast'); if(t) t.remove();
-      }, 7000);
-      render();
-    };
-  });
+  const detailsToggle = document.getElementById('we-details-toggle');
+  if(detailsToggle) detailsToggle.onclick = ()=>{ state.detailsOpen = !state.detailsOpen; render(); };
   const undoBtn = document.getElementById('undo-remove');
   if(undoBtn) undoBtn.onclick = ()=>{
     const lr = state.lastRemoved;
@@ -3041,7 +3104,10 @@ function attachDashboardHandlers(){
     const showRepeat = document.getElementById('sh-show-repeat');
     if(showRepeat) showRepeat.onclick = ()=>{ syncSheetFromDOM(); d.showRepeat = true; render(); };
     document.getElementById('sh-cancel').onclick = ()=>{ closeSheet(); render(); };
-    document.getElementById('sh-done').onclick = async ()=>{
+    const shRemove = document.getElementById('sh-remove');
+    if(shRemove) shRemove.onclick = ()=>{ const id = state.sheet.rowId; closeSheet(); removeEditorRow(id); render(); };
+    const shDone = document.getElementById('sh-done');
+    if(shDone) shDone.onclick = async ()=>{
       syncSheetFromDOM();
       if(d.creatingTag){
         const name = (d.newTagName||'').trim();
@@ -3110,7 +3176,8 @@ function attachDashboardHandlers(){
         happening: existingWeek ? (existingWeek.happening||'') : ''
       };
       if(!data.sundayDate){
-        const inp = card.querySelector('[data-field="sundayDate"]');
+        state.detailsOpen = true; render();
+        const inp = document.querySelector('.week-card.editing [data-field="sundayDate"]');
         if(inp){ inp.style.boxShadow = '0 0 0 2px var(--bad)'; inp.scrollIntoView({behavior:'smooth', block:'center'}); }
         return;
       }
@@ -3227,6 +3294,7 @@ function attachDashboardHandlers(){
   if(addWeekBtn) addWeekBtn.onclick = ()=>{
     clearWeekEditing();
     state.editingWeekId = 'new';
+    state.detailsOpen = true;
     state.editingMidweekRows = [];
     state.editingPostServiceRows = [];
     state.editingOriginalRecurringIds = new Set();

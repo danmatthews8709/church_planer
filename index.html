@@ -654,6 +654,87 @@
   .act-row .tag-name{flex:1 1 calc(100% - 40px);font-weight:700;}
   .act-row select{flex:1 1 40%;min-width:0;}
 
+  /* ---------- Calendar + Look Ahead ---------- */
+  .cal-wrap{max-width:820px;}
+  .cal-filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .cal-chip{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .cal-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .cal-filters select{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:20px;background:#fff;color:var(--ink);max-width:180px;}
+  .cal-clear{border:none;background:none;color:var(--bad);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;padding:6px;}
+  .cal-sun{background:var(--paper-raised);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:10px;padding:12px 14px;margin:14px 0 6px;}
+  .cal-sun.today,.cal-day.today{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);}
+  .cal-sun-head{cursor:pointer;}
+  .cal-sun-date{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .cal-sun-title{font-size:16px;font-weight:700;margin-top:1px;}
+  .cal-sun .cal-items{margin-top:6px;border-top:1px solid var(--line);padding-top:4px;}
+  .cal-day{display:flex;gap:14px;padding:8px 14px;border-radius:10px;}
+  .cal-date{width:40px;flex-shrink:0;text-align:center;}
+  .cal-date .dow{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .cal-date .num{font-size:20px;line-height:1.15;}
+  .cal-today{font-size:9.5px;font-weight:700;color:var(--gold);text-transform:uppercase;}
+  .cal-items{flex:1;min-width:0;}
+  .cal-item{display:flex;gap:10px;align-items:flex-start;padding:6px 4px;border-radius:6px;cursor:pointer;}
+  @media (hover:hover){ .cal-item:hover,.la-sun:hover{background:var(--paper);} }
+  .cal-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:6px;display:inline-block;}
+  .cal-chip .cal-dot{margin-top:0;}
+  .cal-item-main{flex:1;min-width:0;display:flex;flex-wrap:wrap;column-gap:10px;row-gap:1px;align-items:baseline;}
+  .cal-item-name{font-size:14.5px;font-weight:700;}
+  .cal-item.declined .cal-item-name{text-decoration:line-through;color:var(--ink-soft);}
+  .cal-flag{font-size:12px;font-weight:700;color:#8A5A00;}
+  .cal-flag.red{color:var(--tl-red);}
+  .cal-item-meta{font-size:12.5px;color:var(--ink-soft);}
+  @media (min-width:641px){ .cal-item-meta{margin-left:auto;text-align:right;} }
+  @media (max-width:640px){ .cal-item-meta{width:100%;} }
+  .cal-none{font-size:12.5px;color:var(--ink-soft);font-style:italic;padding:6px 4px 2px;}
+  .la-list{display:flex;flex-direction:column;}
+  .la-sun{display:flex;gap:10px;align-items:baseline;background:var(--paper-raised);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:8px;padding:9px 12px;margin-top:10px;cursor:pointer;}
+  .la-sun-title{font-weight:700;font-size:14.5px;min-width:0;}
+  .la-row{display:flex;gap:10px;align-items:flex-start;padding:0 12px 0 16px;border-bottom:1px solid var(--line);}
+  .la-row .cal-item{flex:1;min-width:0;}
+  .la-date{width:52px;flex-shrink:0;font-size:12.5px;color:var(--ink-soft);padding-top:7px;}
+  .la-sun .la-date{padding-top:0;color:var(--ink);font-weight:700;}
+  .la-row.today .la-date,.la-sun.today .la-date{color:var(--gold);font-weight:700;}
+
+  /* ---------- Month grid calendar ---------- */
+  .mg-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .mg-top .btn{padding:7px 14px;}
+  .mg-filtnote{font-size:12.5px;color:var(--ink-soft);font-style:italic;}
+  .mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .mg-dow{background:var(--paper-raised);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);padding:7px 8px;text-align:right;}
+  .mg-cell{background:#fff;min-height:122px;padding:4px 5px 6px;min-width:0;}
+  .mg-cell.sun{background:#F6F4FB;}
+  .mg-cell.out{background:var(--paper);}
+  .mg-cell.out .mg-num{color:#B5B1C2;}
+  .mg-cell.out .mg-ev,.mg-cell.out .mg-sun{opacity:.55;}
+  .mg-num{font-size:13px;text-align:right;margin-bottom:3px;padding-right:2px;}
+  .mg-num.today span{background:var(--gold);color:#fff;border-radius:20px;padding:1px 8px;font-weight:700;}
+  .mg-sun{font-size:11.5px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin:0 2px 2px;}
+  .mg-ev{display:flex;align-items:center;gap:5px;font-size:12px;line-height:1.6;min-width:0;cursor:pointer;border-radius:4px;padding:0 2px;}
+  @media (hover:hover){ .mg-ev:hover,.mg-sun:hover{background:var(--paper);} }
+  .mg-bar{width:3px;height:13px;border-radius:2px;flex-shrink:0;}
+  .mg-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mg-ev.declined .mg-name{text-decoration:line-through;color:var(--ink-soft);}
+  .mg-time{font-size:10.5px;color:var(--ink-soft);flex-shrink:0;}
+  .mg-more{border:none;background:none;font-size:11.5px;color:var(--ink-soft);font-weight:700;cursor:pointer;padding:1px 2px;font-family:inherit;}
+  .mg-more:hover{color:var(--ink);}
+  .mg-mob{display:none;}
+  .mg-mcell{background:#fff;min-height:54px;padding:5px 0 4px;text-align:center;cursor:pointer;}
+  .mg-mcell.sun{background:#F6F4FB;}
+  .mg-mcell.out{background:var(--paper);}
+  .mg-mcell.out .mg-mnum{color:#B5B1C2;}
+  .mg-mnum{width:30px;height:30px;line-height:30px;margin:0 auto;border-radius:50%;font-size:15px;}
+  .mg-mcell.today .mg-mnum{color:#9A7420;font-weight:700;box-shadow:inset 0 0 0 1.5px var(--gold);}
+  .mg-mcell.sel .mg-mnum{background:var(--navy);color:#fff;box-shadow:none;font-weight:700;}
+  .mg-dots{display:flex;gap:3px;justify-content:center;margin-top:3px;height:6px;}
+  .mg-dots i{width:6px;height:6px;border-radius:50%;}
+  .mg-daylist{margin-top:14px;}
+  .mg-dayhead{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
+  @media (max-width:640px){
+    .mg-desk{display:none;}
+    .mg-mob{display:block;}
+    .mg-dow{text-align:center;padding:6px 0;}
+  }
+
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
@@ -682,6 +763,36 @@
     .list-title{font-size:15px;}
     .list-meta{font-size:11.5px;}
     .list-month-head{flex-wrap:wrap;gap:8px;}
+  }
+
+  /* ---------- Look Ahead: week cards ---------- */
+  .la-month{margin-bottom:24px;}
+  .la-month-head{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 10px;}
+  .la-month-head h3{font-size:19px;margin:0;}
+  .la-week{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+  .la-week.now{border:2px solid var(--gold);}
+  .la-whead{display:flex;gap:14px;align-items:center;padding:12px 14px;cursor:pointer;}
+  @media (hover:hover){ .la-whead[data-week]:hover{background:var(--paper);} }
+  .la-wdate{width:44px;flex-shrink:0;text-align:center;border-right:1px solid var(--line);padding-right:12px;}
+  .la-wdate span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .la-wdate b{display:block;font-size:24px;font-weight:400;line-height:1.1;}
+  .la-wdate.cont b{color:var(--ink-soft);}
+  .la-whead-main{flex:1;min-width:0;}
+  .la-wtitle{font-size:16px;font-weight:700;line-height:1.3;}
+  .la-wtitle.untitled{font-style:italic;font-weight:400;color:var(--ink-soft);}
+  .la-wsum{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .la-amber{color:#8A5A00;} .la-red{color:var(--tl-red);} .la-now{color:#9A7420;}
+  .la-items{border-top:1px solid var(--line);padding:4px 14px 6px;}
+  .la-items .la-row{display:flex;gap:12px;align-items:flex-start;padding:0;border-bottom:none;}
+  .la-items .la-row + .la-row{border-top:1px solid var(--paper);}
+  .la-items .la-date{width:84px;flex-shrink:0;font-size:12.5px;color:var(--ink-soft);padding-top:7px;}
+  .la-items .la-row .cal-item{flex:1;min-width:0;}
+  .la-items .la-row.today .la-date{color:#9A7420;font-weight:700;}
+  .la-empty{border-top:1px solid var(--line);padding:8px 14px 10px 72px;font-size:12.5px;color:var(--ink-soft);font-style:italic;}
+  @media (max-width:640px){
+    .la-items{padding:2px 12px 4px;}
+    .la-items .la-date{width:62px;font-size:11.5px;}
+    .la-empty{padding-left:14px;}
   }
 </style>
 </head>
@@ -946,6 +1057,10 @@ let state = {
   sheet: null,
   sheetDraft: null,
   sheetError: '',
+  statusFilter: 'all',
+  calSelected: null,
+  calExpanded: null,
+  audFilter: '',
   detailsOpen: false,
   dashMenuOpen: false,
   showPastWeeks: false,
@@ -1391,7 +1506,7 @@ function eventsForRange(rangeStart, rangeEnd){
       if(d >= rangeStart && d <= rangeEnd && (!state.termFilter || termOf(d)===state.termFilter)){
         const cat = 'service';
         if(!state.catFilters.size || state.catFilters.has(cat)){
-          items.push({ev:{id:'wk-sun-'+wk.id, title:(wk.occasion||wk.sundaySeries||'Sunday'), category:cat, recurrence:'none', synthetic:true, weekId:wk.id}, date:d});
+          items.push({ev:{id:'wk-sun-'+wk.id, title:(wk.occasion||wk.sundaySeries||'Sunday'), category:cat, recurrence:'none', synthetic:true, weekId:wk.id, series:wk.sundaySeries||'', occasion:wk.occasion||''}, date:d});
         }
       }
     }
@@ -1410,7 +1525,10 @@ function eventsForRange(rangeStart, rangeEnd){
           category:'tag', color:audienceColor(aud), dominant:isDominantAudience(aud),
           tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
           audience: aud, recurrence:'none',
-          synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
+          synthetic:true, weekId:wk.id, status: m.status || 'confirmed',
+          kind:'mid', name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
+          owner: effectiveOwner(m, tags),
+          time: (m.allDay===false && m.startTime) ? m.startTime+(m.endTime?'–'+m.endTime:'') : ''
         }, date:itemDate});
       });
     }
@@ -1429,7 +1547,10 @@ function eventsForRange(rangeStart, rangeEnd){
           category:'tag', color:audienceColor(aud), dominant:isDominantAudience(aud),
           tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
           audience: aud, recurrence:'none',
-          synthetic:true, weekId:wk.id, status: m.status || 'confirmed'
+          synthetic:true, weekId:wk.id, status: m.status || 'confirmed',
+          kind:'ps', name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
+          owner: effectiveOwner(m, tags),
+          time: (m.allDay===false && m.startTime) ? m.startTime+(m.endTime?'–'+m.endTime:'') : ''
         }, date:itemDate});
       });
     }
@@ -1925,83 +2046,220 @@ function ribbonHTML(){
   </div><div class="ribbon-bar"></div>`;
 }
 
-// Mobile agenda: only days that fall within the displayed month, one row per day,
-// blank days collapsed to a thin empty row rather than a full grid cell — reads
-// top-to-bottom like a list, no squeezed 7-column grid to fight with on a phone.
-function calendarAgendaHTML(y, m, byDay, today){
-  const daysInMonth = new Date(y, m+1, 0).getDate();
-  let html = `<div class="cal-agenda">`;
-  for(let day=1; day<=daysInMonth; day++){
-    const d = new Date(y, m, day);
-    const k = isoDate(d);
-    const dayEvents = byDay[k]||[];
-    const isSunday = d.getDay()===0;
-    const isToday = k===today;
-    if(!dayEvents.length && !isSunday && !isToday){
-      // Collapse ordinary empty weekdays to keep the agenda scannable —
-      // Sundays and today always get a full row even with nothing on them.
-      continue;
-    }
-    html += `<div class="agenda-day ${isToday?'today':''} ${isSunday?'sunday':''} ${!dayEvents.length?'empty-day':''}">
-      <div class="agenda-date">
-        <div class="dow">${DOW[(d.getDay()+6)%7]}</div>
-        <div class="num">${day}</div>
-      </div>
-      <div class="agenda-events">
-        ${dayEvents.length ? dayEvents.map(o=>`<div class="ev-pill ${o.ev.color?'tag':o.ev.category}${o.ev.dominant?' dominant':''}${o.ev.status?' status-'+o.ev.status:''}" data-id="${o.ev.id}" style="${o.ev.color?'background:'+o.ev.color+';':''}">${o.ev.title}</div>`).join('') : `<div class="agenda-none">Nothing on the sheet</div>`}
-      </div>
-    </div>`;
-  }
-  html += `</div>`;
-  return html;
+// ---------- Calendar + Look Ahead ----------
+// Both views share one item row: status dot, name (+ cleaned note, ↻ for
+// recurring), "Needs approval" spelled out only when it applies, and a quiet meta
+// line (time · audience · owner). Sundays are headings for their week, not pills.
+// Tapping a week item opens that week in the editor.
+function calPasses(o){
+  if(o.ev.id && o.ev.id.startsWith('wk-sun-')) return true;
+  if(state.statusFilter && state.statusFilter!=='all' && o.ev.status !== state.statusFilter) return false;
+  if(state.audFilter && o.ev.audience !== state.audFilter) return false;
+  return true;
+}
+function calFiltering(){ return (state.statusFilter && state.statusFilter!=='all') || !!state.audFilter; }
+
+function calItemHTML(o, opts){
+  const ev = o.ev;
+  const isWeekItem = !!ev.weekId;
+  const s = ev.status || '';
+  const dot = s ? STATUS_COLOR[s] : 'var(--ink-soft)';
+  const name = ev.name || ev.title;
+  const note = ev.name ? cleanNote(ev.note, ev.name) : '';
+  const metaParts = [
+    (opts && opts.showKind && ev.kind==='ps') ? 'After service' : '',
+    ev.time || '', ev.audience || (!isWeekItem && CATS[ev.category] ? CATS[ev.category].label : ''), ev.owner || ''
+  ].filter(Boolean);
+  return `<div class="cal-item${s==='declined'?' declined':''}" data-id="${ev.id}" data-week="${ev.weekId||''}" role="button" tabindex="0">
+    <span class="cal-dot" style="background:${dot};"></span>
+    <div class="cal-item-main">
+      <span class="cal-item-name">${escHTML(name)}${ev.recurring?' <span class="we-rec">↻</span>':''}${note?`<span class="we-note"> — ${escHTML(note)}</span>`:''}</span>${s==='pending'?' <span class="cal-flag">Needs approval</span>':''}${s==='declined'?' <span class="cal-flag red">Cancelled</span>':''}
+      ${metaParts.length ? `<span class="cal-item-meta">${metaParts.map(escHTML).join(' · ')}</span>` : ''}
+    </div>
+  </div>`;
 }
 
+// Month grid (Mon–Sun). Desktop/tablet: one line per item with a status-coloured
+// bar, the name truncated with "…" and the start time — fixed equal columns via
+// minmax(0,1fr) so long titles can never stretch the grid. Phone: compact grid
+// with status dots; tapping a day lists its items underneath.
+const MG_MAX = 4;
 function calendarHTML(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
-  const first = new Date(y,m,1);
-  const startOffset = (first.getDay()+6)%7; // Mon=0
-  const gridStart = new Date(y,m,1-startOffset);
+  const first = new Date(y, m, 1);
+  const offset = (first.getDay()+6)%7;
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const weeks = Math.ceil((offset + daysInMonth)/7);
+  const gridStart = new Date(y, m, 1-offset);
   const cells = [];
-  for(let i=0;i<42;i++){ cells.push(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i)); }
-  const rangeStart = cells[0], rangeEnd = cells[41];
-  const occ = eventsForRange(rangeStart, rangeEnd);
+  for(let i=0;i<weeks*7;i++) cells.push(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i));
+  const occ = eventsForRange(cells[0], cells[cells.length-1]);
   const byDay = {};
   occ.forEach(o=>{ const k=isoDate(o.date); (byDay[k]=byDay[k]||[]).push(o); });
   const today = isoDate(new Date());
+  const dayData = k=>{
+    const all = byDay[k] || [];
+    const sunday = all.find(o=> o.ev.id.startsWith('wk-sun-'));
+    const items = all.filter(o=> !o.ev.id.startsWith('wk-sun-') && calPasses(o));
+    const wk = sunday ? state.weeks.find(w=>w.id===sunday.ev.weekId) : null;
+    return {sunday, items, wk};
+  };
+  const inMonth = k=> k.slice(0,7) === `${y}-${String(m+1).padStart(2,'0')}`;
+  if(!state.calSelected || !inMonth(state.calSelected)) state.calSelected = inMonth(today) ? today : isoDate(first);
 
-  // Agenda list is now the calendar view everywhere — desktop included — rather than
-  // the old 7-column grid, which this replaced after the grid's fixed-width columns
-  // proved unreliable with long, un-wrapping event titles.
-  return calendarAgendaHTML(y, m, byDay, today);
+  const evLine = o=>{
+    const ev = o.ev, s = ev.status||'';
+    const name = (ev.name || ev.title) + (ev.recurring ? ' ↻' : '');
+    const t = (ev.time||'').split('–')[0];
+    const tip = [ev.name||ev.title, s?STATUSES[s].label:'', ev.audience||'', ev.owner||''].filter(Boolean).join(' · ');
+    return `<div class="mg-ev${s==='declined'?' declined':''}" data-id="${ev.id}" data-week="${ev.weekId||''}" role="button" tabindex="0" title="${escHTML(tip)}">
+      <span class="mg-bar" style="background:${s?STATUS_COLOR[s]:'var(--ink-soft)'};"></span>
+      <span class="mg-name">${escHTML(name)}</span>${t?`<span class="mg-time">${t}</span>`:''}
+    </div>`;
+  };
+
+  const dows = DOW.map(d=>`<div class="mg-dow">${d}</div>`).join('');
+  const desk = cells.map(d=>{
+    const k = isoDate(d), {sunday, items, wk} = dayData(k);
+    const expanded = state.calExpanded === k;
+    const shown = expanded ? items : items.slice(0, MG_MAX - (sunday?1:0));
+    const extra = items.length - shown.length;
+    return `<div class="mg-cell${inMonth(k)?'':' out'}${d.getDay()===0?' sun':''}">
+      <div class="mg-num${k===today?' today':''}"><span>${d.getDate()===1?d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3):d.getDate()}</span></div>
+      ${sunday ? `<div class="mg-sun" data-week="${sunday.ev.weekId}" role="button" tabindex="0" title="${escHTML((wk&&wk.sundaySeries)||'')}">${escHTML((wk && (wk.occasion || wk.sundaySeries)) || 'Sunday')}</div>` : ''}
+      ${shown.map(evLine).join('')}
+      ${extra>0 ? `<button type="button" class="mg-more" data-day="${k}">+${extra} more</button>` : ''}
+      ${(expanded && items.length > MG_MAX-(sunday?1:0)) ? `<button type="button" class="mg-more" data-day="">Show less</button>` : ''}
+    </div>`;
+  }).join('');
+
+  const mob = cells.map(d=>{
+    const k = isoDate(d), {sunday, items} = dayData(k);
+    return `<div class="mg-mcell${inMonth(k)?'':' out'}${d.getDay()===0?' sun':''}${k===today?' today':''}${k===state.calSelected?' sel':''}" data-date="${k}" role="button" tabindex="0" aria-label="${fmtDate(k)}, ${items.length} item${items.length===1?'':'s'}">
+      <div class="mg-mnum">${d.getDate()}</div>
+      <div class="mg-dots">${items.slice(0,3).map(o=>`<i style="background:${o.ev.status?STATUS_COLOR[o.ev.status]:'var(--ink-soft)'};"></i>`).join('')}${(!items.length && sunday)?'<i style="background:var(--navy);opacity:.35;"></i>':''}</div>
+    </div>`;
+  }).join('');
+
+  const sel = dayData(state.calSelected);
+  const selDate = parseISO(state.calSelected);
+  const dayList = `<div class="mg-daylist">
+    <div class="mg-dayhead">${DOW[(selDate.getDay()+6)%7]} ${selDate.getDate()} ${MONTHS[selDate.getMonth()]}${state.calSelected===today?' · Today':''}</div>
+    ${sel.sunday ? `<div class="cal-sun" style="margin-top:6px;">
+        <div class="cal-sun-head" data-week="${sel.sunday.ev.weekId}" role="button" tabindex="0">
+          <div class="cal-sun-title">${escHTML((sel.wk && sel.wk.sundaySeries) || 'Untitled Sunday')}${sel.wk && sel.wk.occasion ? ` <span class="wk2-occ">${escHTML(sel.wk.occasion)}</span>` : ''}</div>
+        </div>
+        ${sel.items.length ? `<div class="cal-items">${sel.items.map(o=>calItemHTML(o)).join('')}</div>` : `<div class="cal-none">Nothing after the service</div>`}
+      </div>`
+      : (sel.items.length ? `<div class="cal-items">${sel.items.map(o=>calItemHTML(o)).join('')}</div>` : `<div class="cal-none">Nothing planned${calFiltering()?' that matches the filter':''}</div>`)}
+  </div>`;
+
+  return `
+    <div class="mg-top">
+      ${calFiltering() ? `<span class="mg-filtnote">Showing filtered items only</span>` : '<span></span>'}
+      <button type="button" class="btn" id="cal-today">Today</button>
+    </div>
+    <div class="mg-desk"><div class="mg">${dows}${desk}</div></div>
+    <div class="mg-mob"><div class="mg">${DOW.map(d=>`<div class="mg-dow">${d[0]}</div>`).join('')}${mob}</div>${dayList}</div>`;
 }
 
+// Look Ahead: six months as a stack of week cards. Each card is one Sunday
+// (date block, series, occasion, a one-line summary of what needs chasing) with
+// that week's items listed inside — after-service items labelled as such, the
+// rest by day. Items whose Sunday falls in the previous month carry on under a
+// "continued" card so nothing is orphaned.
 function listHTML(){
   const rangeStart = new Date(state.cursor.getFullYear(), state.cursor.getMonth(), 1);
   const rangeEnd = new Date(state.cursor.getFullYear(), state.cursor.getMonth()+6, 0);
   const occ = eventsForRange(rangeStart, rangeEnd);
-  if(occ.length===0) return `<div class="empty">No dates on the sheet yet.<br>Tap "Add to planner" to pin your first one.</div>`;
-  const byMonth = {};
+  const filtering = calFiltering();
+  const today = isoDate(new Date());
+  const thisWeek = state.weeks.find(isCurrentWeek);
+
+  // month -> ordered list of cards
+  const months = {};
+  const cardFor = (mKey, key, make)=>{
+    const m = months[mKey] = months[mKey] || {cards:[], byKey:{}};
+    if(!m.byKey[key]){ m.byKey[key] = make(); m.cards.push(m.byKey[key]); }
+    return m.byKey[key];
+  };
   occ.forEach(o=>{
-    const key = `${o.date.getFullYear()}-${o.date.getMonth()}`;
-    (byMonth[key]=byMonth[key]||[]).push(o);
+    const mKey = `${o.date.getFullYear()}-${String(o.date.getMonth()).padStart(2,'0')}`;
+    const isSun = o.ev.id.startsWith('wk-sun-');
+    if(isSun){
+      cardFor(mKey, 'wk:'+o.ev.weekId, ()=>({weekId:o.ev.weekId, sunDate:o.date, items:[]}));
+      return;
+    }
+    if(!calPasses(o)) return;
+    const key = o.ev.weekId ? 'wk:'+o.ev.weekId : 'day:'+isoDate(o.date);
+    const card = cardFor(mKey, key, ()=>({weekId:o.ev.weekId||null, sunDate:null, firstDate:o.date, items:[]}));
+    card.items.push(o);
   });
-  return Object.entries(byMonth).map(([key, items])=>{
-    const [y,m] = key.split('-').map(Number);
-    return `<div class="list-month">
-      <div class="list-month-head">
+
+  const cardHTML = c=>{
+    const wk = c.weekId ? state.weeks.find(w=>w.id===c.weekId) : null;
+    const pending = c.items.filter(o=>o.ev.status==='pending').length;
+    const cancelled = c.items.filter(o=>o.ev.status==='declined').length;
+    const isNow = wk && thisWeek && wk.id===thisWeek.id;
+    const summary = [
+      `${c.items.length} item${c.items.length===1?'':'s'}`,
+      pending ? `<b class="la-amber">${pending} need${pending===1?'s':''} approval</b>` : '',
+      cancelled ? `<b class="la-red">${cancelled} cancelled</b>` : ''
+    ].filter(Boolean).join(' · ');
+    let head;
+    if(c.sunDate){
+      head = `<div class="la-wdate"><span>Sun</span><b>${c.sunDate.getDate()}</b></div>
+        <div class="la-whead-main">
+          <div class="la-wtitle${wk && wk.sundaySeries?'':' untitled'}">${escHTML((wk && wk.sundaySeries) || 'Untitled Sunday')}${wk && wk.occasion ? ` <span class="wk2-occ">${escHTML(wk.occasion)}</span>` : ''}</div>
+          <div class="la-wsum">${isNow?'<b class="la-now">This week</b> · ':''}${summary}</div>
+        </div>`;
+    } else {
+      const sd = wk && wk.sundayDate ? fmtDate(wk.sundayDate) : '';
+      head = `<div class="la-wdate cont"><span>${DOW[(c.firstDate.getDay()+6)%7]}</span><b>${c.firstDate.getDate()}</b></div>
+        <div class="la-whead-main">
+          <div class="la-wtitle">${wk ? 'Continued from '+sd : 'Other dates'}</div>
+          <div class="la-wsum">${summary}</div>
+        </div>`;
+    }
+    const rows = c.items.map(o=>{
+      const isPs = o.ev.kind==='ps' && wk && isoDate(o.date)===wk.sundayDate;
+      const lbl = isPs ? 'After service' : `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}`;
+      return `<div class="la-row${isoDate(o.date)===today?' today':''}"><span class="la-date">${lbl}</span>${calItemHTML(o)}</div>`;
+    }).join('');
+    return `<div class="la-week${isNow?' now':''}">
+      <div class="la-whead" ${c.weekId?`data-week="${c.weekId}" role="button" tabindex="0"`:''}>${head}<span class="wk2-chev" aria-hidden="true">›</span></div>
+      ${rows ? `<div class="la-items">${rows}</div>` : `<div class="la-empty">Nothing planned</div>`}
+    </div>`;
+  };
+
+  const out = Object.keys(months).sort().map(mKey=>{
+    const [y,m] = mKey.split('-').map(Number);
+    let cards = months[mKey].cards;
+    if(filtering) cards = cards.filter(c=>c.items.length);
+    if(!cards.length) return '';
+    return `<div class="la-month">
+      <div class="la-month-head">
         <h3>${MONTHS[m]} ${y}</h3>
         <button class="export-pdf-month" type="button" data-year="${y}" data-month="${m}">Export PDF</button>
       </div>
-      ${items.map(o=>`
-        <div class="list-row${o.ev.category==='tag'?' indented':''}" data-id="${o.ev.id}">
-          <div class="list-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}</div>
-          <div class="list-dot${o.ev.status ? ' status-'+o.ev.status : (o.ev.color?'':' '+o.ev.category)}" style="${(!o.ev.status && o.ev.color)?'background:'+o.ev.color+';':''}"></div>
-          <div class="list-title">${o.ev.title}</div>
-          ${o.ev.status ? `<span class="status-badge ${o.ev.status}">${STATUSES[o.ev.status].label}</span>` : ''}
-          <div class="list-meta">${o.ev.audience || (CATS[o.ev.category]?CATS[o.ev.category].label:'')}${o.ev.recurrence!=='none'?' · '+o.ev.recurrence:''}</div>
-        </div>`).join('')}
+      ${cards.map(cardHTML).join('')}
     </div>`;
   }).join('');
+  if(!out.trim()) return `<div class="empty">${filtering ? 'Nothing matches this filter.' : 'Nothing planned in these six months yet.'}</div>`;
+  return `<div class="cal-wrap">${out}</div>`;
+}
+
+function calFiltersHTML(){
+  const f = state.statusFilter || 'all';
+  const auds = state.audiences.map(a=>a.name);
+  return `<div class="cal-filters">
+    ${[['all','All'],['pending','Needs approval'],['declined','Cancelled']].map(([k,l])=>`<button type="button" class="cal-chip ${f===k?'on':''}" data-status="${k}">${k!=='all'?`<span class="cal-dot" style="background:${STATUS_COLOR[k]};"></span>`:''}${l}</button>`).join('')}
+    <select id="cal-aud" aria-label="Filter by audience">
+      <option value="">All audiences</option>
+      ${auds.map(a=>`<option value="${escHTML(a)}" ${state.audFilter===a?'selected':''}>${escHTML(a)}</option>`).join('')}
+    </select>
+    ${calFiltering() ? `<button type="button" class="cal-clear" id="cal-clear">Clear</button>` : ''}
+  </div>`;
 }
 
 const RHYTHM_SUGGESTIONS = ['Small Group','Prayer','Margin Week','Team Development','Meetings Week','Alpha'];
@@ -2468,7 +2726,7 @@ function ownersTabHTML(){
 }
 
 function mainHTML(){
-  const filtersActive = state.catFilters.size > 0;
+  const filtersActive = false;
   const showFilters = state.view==='calendar' || state.view==='list';
   return `
     <div class="masthead">
@@ -2482,8 +2740,8 @@ function mainHTML(){
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
         <button data-view="list" class="${state.view==='list'?'active':''}">Look Ahead</button>
-        <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
         <button data-view="owners" class="${state.view==='owners'?'active':''}">Owners</button>
+        <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
       </div>
       ${state.view==='calendar'?`
       <div class="nav-group">
@@ -2503,10 +2761,7 @@ function mainHTML(){
       </div>`:''}
       ${state.view!=='dashboard' && state.view!=='comms' && state.view!=='owners'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
     </div>
-    ${showFilters?`<div class="filters">
-      ${Object.entries(CATS).map(([k,v])=>`<div class="chip ${state.catFilters.has(k)?'on':''}" data-cat="${k}">${v.label}</div>`).join('')}
-      ${filtersActive?`<button type="button" class="clear-filters" id="clear-filters">✕ Showing ${state.catFilters.size} of ${Object.keys(CATS).length} types — clear filter</button>`:''}
-    </div>`:filtersActive && state.view==='dashboard'?`<div class="notice" style="margin:-8px 0 14px;">Note: a category filter is still active from Calendar/List view (${[...state.catFilters].map(c=>CATS[c].label).join(', ')}) — it won't affect the Dashboard, but will hide other types again when you switch views.</div>`:''}
+    ${showFilters ? calFiltersHTML() : ''}
     ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
@@ -2712,27 +2967,47 @@ function attachMainHandlers(){
     state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth()+step, 1);
     render();
   };
-  document.querySelectorAll('.chip').forEach(el=>{
-    el.onclick = ()=>{
-      const c = el.dataset.cat;
-      if(state.catFilters.has(c)) state.catFilters.delete(c); else state.catFilters.add(c);
+  document.querySelectorAll('.cal-chip').forEach(el=>{
+    el.onclick = ()=>{ state.statusFilter = el.dataset.status; render(); };
+  });
+  const calAud = document.getElementById('cal-aud');
+  if(calAud) calAud.onchange = ()=>{ state.audFilter = calAud.value; render(); };
+  document.querySelectorAll('.mg-more').forEach(el=>{
+    el.onclick = ()=>{ state.calExpanded = el.dataset.day || null; render(); };
+  });
+  document.querySelectorAll('.mg-mcell').forEach(el=>{
+    const pick = ()=>{
+      const k = el.dataset.date, d = parseISO(k);
+      state.calSelected = k;
+      if(d.getMonth()!==state.cursor.getMonth() || d.getFullYear()!==state.cursor.getFullYear()) state.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
       render();
     };
+    el.onclick = pick;
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); pick(); } };
   });
-  const clearFiltersBtn = document.getElementById('clear-filters');
-  if(clearFiltersBtn) clearFiltersBtn.onclick = ()=>{ state.catFilters.clear(); render(); };
+  const calToday = document.getElementById('cal-today');
+  if(calToday) calToday.onclick = ()=>{
+    const t = new Date();
+    state.cursor = new Date(t.getFullYear(), t.getMonth(), 1);
+    state.calSelected = isoDate(t); state.calExpanded = null;
+    render();
+  };
+  const calClear = document.getElementById('cal-clear');
+  if(calClear) calClear.onclick = ()=>{ state.statusFilter = 'all'; state.audFilter = ''; render(); };
   const openAdd = document.getElementById('open-add');
   if(openAdd) openAdd.onclick = ()=>{
     state.editingEvent = null; state.showModal = true; render();
   };
-  document.querySelectorAll('.ev-pill, .list-row').forEach(el=>{
-    el.onclick = ()=>{
-      if(el.dataset.id && el.dataset.id.startsWith('wk-')){
-        state.view = 'dashboard'; render(); return;
-      }
+  // Week items and Sunday headings open that week in the editor; standalone
+  // planner events still open their own modal.
+  document.querySelectorAll('.cal-item, .cal-sun-head, .la-sun, .la-whead[data-week], .mg-ev, .mg-sun').forEach(el=>{
+    const go = ()=>{
+      if(el.dataset.week){ state.view = 'dashboard'; openWeekEditor(el.dataset.week); return; }
       const ev = state.events.find(e=>e.id===el.dataset.id);
       if(ev){ state.editingEvent = {...ev}; state.showModal = true; render(); }
     };
+    el.onclick = go;
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); go(); } };
   });
   if(state.view==='dashboard') attachDashboardHandlers();
   if(state.view==='comms') attachCommsHandlers();
@@ -2998,6 +3273,12 @@ function openWeekEditor(weekId){
   state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.dashMenuOpen = false; state.detailsOpen = false; closeSheet();
   state.editingWeekId = weekId;
   if(wk && isPastWeek(wk)) state.showPastWeeks = true;
+  // make sure the week is inside the dashboard's year/term scope so it's visible
+  if(wk && wk.sundayDate){
+    const sd = parseISO(wk.sundayDate);
+    state.churchYear = churchYearOf(sd);
+    if(state.termFilter && termOf(sd)!==state.termFilter) state.termFilter = null;
+  }
   render();
   const card = document.querySelector('.week-card.editing');
   if(card) card.scrollIntoView({behavior:'smooth', block:'start'});

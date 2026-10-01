@@ -376,7 +376,7 @@
   }
   .wc-actions button:hover{background:var(--paper);color:var(--ink);}
   .wc-actions button.danger{color:var(--autumn);border-color:var(--autumn);}
-  .wc-edit-grid{flex:1;min-width:260px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+  .wc-edit-grid{flex:1;min-width:260px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 14px;}
   .wc-edit-grid .full{grid-column:1/3;}
   .wc-edit-grid label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
   .wc-edit-grid input,.wc-edit-grid textarea{
@@ -515,6 +515,75 @@
     .print-footer{margin-top:16px;font-size:9px;color:var(--ink-soft);}
   }
 
+  /* ---------- Week editor: compact rows, bottom-sheet add/edit, undo ---------- */
+  .week-card.editing{flex-direction:column;gap:14px;}
+  .week-card.editing .wc-edit-grid{width:100%;}
+  .wc-edit-grid > div{min-width:0;}
+  .wc-edit-grid input{font-size:16px;}
+  .wc-edit-grid input[type="date"],.sheet input[type="date"],.sheet input[type="time"]{
+    -webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;text-align:left;min-height:42px;
+  }
+  .wc-edit-grid input[type="date"]::-webkit-date-and-time-value,.sheet input::-webkit-date-and-time-value{text-align:left;}
+  .we-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%;}
+  .we-menu-wrap{position:relative;flex-shrink:0;}
+  .we-menu-btn{border:1px solid var(--line);background:#fff;border-radius:8px;width:40px;height:40px;cursor:pointer;font-size:20px;color:var(--ink-soft);line-height:1;}
+  .we-menu-btn:hover{background:var(--paper);color:var(--ink);}
+  .we-menu{position:absolute;right:0;top:46px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.14);z-index:6;min-width:190px;padding:4px;}
+  .we-menu button{display:block;width:100%;text-align:left;border:none;background:none;padding:12px 12px;font-size:14px;cursor:pointer;color:var(--bad);font-family:inherit;font-weight:700;border-radius:7px;}
+  .we-menu button:hover{background:var(--bad-soft);}
+  .we-section{border-top:1px solid var(--line);padding-top:8px;}
+  .we-section-head{display:flex;justify-content:space-between;align-items:center;}
+  .we-section-title{font-size:11.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+  .we-add{border:none;background:none;color:var(--navy);font-weight:700;font-size:15px;cursor:pointer;padding:10px 4px;font-family:inherit;}
+  .we-add:hover{text-decoration:underline;}
+  .we-empty{font-size:13px;color:var(--ink-soft);font-style:italic;padding:2px 0 6px;}
+  .we-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer;min-height:54px;}
+  .we-rows .we-row:first-child{border-top:none;}
+  @media (hover:hover){ .we-row:hover{background:var(--paper);} }
+  .we-row.recurring{cursor:default;}
+  @media (hover:hover){ .we-row.recurring:hover{background:none;} }
+  .we-bar{width:5px;align-self:stretch;border-radius:3px;flex-shrink:0;}
+  .we-body{flex:1;min-width:0;}
+  .we-name{font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .we-note{font-weight:400;color:var(--ink-soft);}
+  .we-meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .we-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 4px 0 1px;}
+  .we-rec-badge{font-size:10px;font-weight:700;color:var(--good);background:var(--good-soft);padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:2px;}
+  .we-trash{border:none;background:none;color:var(--ink-soft);cursor:pointer;padding:10px;border-radius:8px;flex-shrink:0;display:flex;}
+  .we-trash:hover{color:var(--bad);background:var(--bad-soft);}
+  .we-chev{color:var(--ink-soft);font-size:20px;flex-shrink:0;line-height:1;}
+  .we-footer{position:sticky;bottom:0;display:flex;gap:8px;background:#fff;border-top:1px solid var(--line);padding:10px 0 calc(6px + env(safe-area-inset-bottom));z-index:3;width:100%;}
+  .we-footer .btn{flex:1;padding:13px 16px;font-size:15px;}
+  .we-footer .btn.primary{flex:2;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(22,15,61,.45);z-index:60;display:flex;align-items:flex-end;justify-content:center;}
+  .sheet{background:#fff;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:10px 18px 0;-webkit-overflow-scrolling:touch;}
+  @media (min-width:641px){ .sheet-overlay{align-items:center;padding:20px;} .sheet{border-radius:14px;} }
+  .sheet-grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px;}
+  .sheet h3{font-size:19px;margin:0 0 4px;}
+  .sheet-field{margin-top:16px;}
+  .sheet-label{display:block;font-size:11.5px;color:var(--ink-soft);font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+  .sheet input[type="text"],.sheet select,.sheet input[type="date"],.sheet input[type="time"]{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:16px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .sheet-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .sheet-chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 13px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
+  .sheet-chip .sw{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .sheet-chip.on{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .sheet-2col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px;}
+  .sheet-hint{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
+  .sheet-link{border:none;background:none;padding:8px 0 0;color:var(--navy);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;}
+  .sheet-link.danger{color:var(--bad);font-weight:600;font-size:12.5px;}
+  .sheet-error{color:var(--bad);font-size:13.5px;margin-top:6px;font-weight:600;}
+  .sheet-actions{display:flex;gap:8px;margin-top:20px;position:sticky;bottom:0;background:#fff;padding:10px 0 calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);}
+  .sheet-actions .btn{flex:1;padding:13px;font-size:15px;}
+  .sheet-actions .btn.primary{flex:2;}
+  .toggle-row{display:flex;align-items:center;gap:8px;font-size:15px;margin-top:12px;cursor:pointer;}
+  .toggle-row input{width:20px;height:20px;}
+  .undo-toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top));background:var(--ink);color:#fff;border-radius:10px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:14px;z-index:70;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 6px 18px rgba(0,0,0,.2);}
+  .undo-toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .undo-toast button{background:none;border:none;color:var(--gold);font-weight:700;font-size:15px;cursor:pointer;padding:8px 10px;font-family:inherit;flex-shrink:0;}
+
   @media (max-width:640px){
     .mw-field-grid{grid-template-columns:1fr;}
     .mw-field-grid .full{grid-column:1;}
@@ -524,7 +593,7 @@
     .tab .label{font-size:14px;}
     .week-card{flex-direction:column;}
     .wc-actions{flex-direction:row;}
-    .wc-edit-grid{grid-template-columns:1fr;}
+    .wc-edit-grid{grid-template-columns:minmax(0,1fr);}
     .wc-edit-grid .full{grid-column:1;}
     .month-label{min-width:0;font-size:16px;}
     .toolbar{gap:10px;}
@@ -802,6 +871,12 @@ let state = {
   editingPostServiceRows: null,
   editingOriginalPostServiceRecurringIds: null,
   showSettings: false,
+  editingWeekDraft: null,
+  weekMenuOpen: false,
+  sheet: null,
+  sheetDraft: null,
+  sheetError: '',
+  lastRemoved: null,
   loaded: false
 };
 
@@ -1584,6 +1659,8 @@ function toCSV(rows){
 
 // ---------- Rendering ----------
 function render(){
+  syncSheetFromDOM();
+  document.body.style.overflow = state.sheet ? 'hidden' : '';
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
   if(!state.currentUser){ app.className='app'; app.innerHTML = loginHTML(); attachLoginHandlers(); return; }
@@ -1823,143 +1900,190 @@ function fmtDate(iso){
   return `${DOW[(d.getDay()+6)%7]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`;
 }
 
-// Shared row markup for both the midweek and post-service activity editors — same
-// classes/behaviour either way; the two sections are told apart by a data-section
-// wrapper, not by different markup.
-// Plain, stacked-field row matching a standard form builder: one labelled control
-// per line, in order Item -> Audience -> Note -> Status -> Comms needed -> Date ->
-// Time -> Repeat. Audience is independent of Item (its own dropdown, not derived
-// from the tag) so the same activity can carry a different audience week to week;
-// when left unset it falls back to the tag's own default audience at render time.
-function activityRowsHTML(rows, dateHint){
-  const sortedTags = state.tags.slice().sort((a,b)=> a.name.localeCompare(b.name));
-  return rows.map(r=>{
-    const isNewTag = !!r.creatingTag;
-    const showRepeatPicker = !!r.repeatFreq || !!r.showRepeat;
-    const selectedTagId = (r.tagIds||[])[0] || '';
-    const t = selectedTagId ? tagById(selectedTagId) : null;
-    const s = r.status || 'confirmed';
-    const allDay = r.allDay !== false;
-    // Rows carried over from an already-saved week arrive folded (rowExpanded===false,
-    // set when populating state.editingMidweekRows/editingPostServiceRows) — a
-    // freshly added row has no tag yet so there's nothing to summarise, and always
-    // shows the full form regardless of that flag.
-    const folded = !isNewTag && !r.recurringId && t && r.rowExpanded===false;
+// ---------- Week editor: compact rows + bottom-sheet add/edit ----------
+// Every activity in the week editor is a single tappable line (audience colour bar,
+// name, day/time, and status only when it isn't the default "Confirmed"). Adding or
+// editing happens in one focused bottom sheet that works on a draft copy, so nothing
+// in the week changes until "Add"/"Done" is pressed — and nothing is saved to
+// Supabase until "Save week", exactly as before.
+function escHTML(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function addDaysISO(iso, n){ const d = parseISO(iso); return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate()+n)); }
+const TRASH_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 
-    if(folded){
-      const aud = r.audience || t.audience;
-      const timeLabel = allDay ? 'All day' : (r.startTime ? r.startTime+(r.endTime?'–'+r.endTime:'') : '');
-      const dateLabel = r.date ? fmtDate(r.date) : `w/c ${dateHint}`;
-      return `
-      <div class="mw-row mw-row-folded" data-mwid="${r.id}">
-        <div class="mw-row-summary" style="background:${audienceColor(aud)};">
-          <span class="mw-row-summary-name">${t.name}</span>
-          <span class="mw-row-summary-meta">${aud} · ${STATUSES[s].label} · ${dateLabel}${timeLabel?' · '+timeLabel:''}${r.needsComms===true?' · Needs comms':''}</span>
+function editorDefaultDate(section){
+  const sun = state.editingWeekDraft && state.editingWeekDraft.sundayDate;
+  if(!sun) return '';
+  return section==='postService' ? sun : addDaysISO(sun, 1);
+}
+
+function editorRowsHTML(rows, section){
+  if(!rows.length) return `<div class="we-empty">Nothing added yet</div>`;
+  const defaultDate = editorDefaultDate(section);
+  return rows.map(r=>{
+    const tags = (r.tagIds||[]).map(tagById).filter(Boolean);
+    const name = tags.length ? tags.map(t=>t.name).join(' + ') : 'Untitled activity';
+    const aud = itemAudience(r, tags) || '';
+    const color = aud ? audienceColor(aud) : 'var(--line)';
+    const whenIso = r.date || defaultDate;
+    const when = whenIso ? fmtDate(whenIso) : '';
+    const time = (r.allDay===false && r.startTime) ? ' '+r.startTime+(r.endTime?'–'+r.endTime:'') : '';
+    const s = r.status || 'confirmed';
+    const statusBit = s!=='confirmed' ? ` · <span class="we-dot" style="background:var(--tl-${s==='pending'?'amber':'red'});"></span>${STATUSES[s].label}` : '';
+    const commsBit = r.needsComms===true ? ' · Needs comms' : '';
+    const repeatBit = r.repeatFreq ? ' · Will repeat' : '';
+    const note = r.note ? `<span class="we-note"> — ${escHTML(r.note)}</span>` : '';
+    const metaParts = [aud ? escHTML(aud) : '', when + time].filter(Boolean).join(' · ');
+    if(r.recurringId){
+      return `<div class="we-row recurring" data-mwid="${r.id}">
+        <span class="we-bar" style="background:${color};"></span>
+        <div class="we-body">
+          <div class="we-name">${escHTML(name)}${note}<span class="we-rec-badge">Recurring</span></div>
+          <div class="we-meta">${metaParts} · pattern edited in ⚙ Tags</div>
         </div>
-        <button type="button" class="mw-row-edit" data-mwid="${r.id}">Edit</button>
-        <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="Remove">✕</button>
+        <button type="button" class="we-trash" data-mwid="${r.id}" title="Remove for this week only" aria-label="Remove for this week only">${TRASH_SVG}</button>
       </div>`;
     }
-
-    return `
-    <div class="mw-row" data-mwid="${r.id}" data-recurring-id="${r.recurringId||''}" data-newtag="${isNewTag?'1':'0'}">
-      <button type="button" class="mw-row-remove" data-mwid="${r.id}" title="${r.recurringId?'Remove for this week only':'Remove'}">✕</button>
-      ${(!isNewTag && !r.recurringId && t) ? `<button type="button" class="mw-row-fold" data-mwid="${r.id}">▲ Done</button>` : ''}
-      <div class="mw-row-fields">
-
-        ${isNewTag ? `
-          <div class="mw-field full">
-            <label>New activity name</label>
-            <input class="mw-newtag-name" data-mwid="${r.id}" placeholder="e.g. Youth Camp" value="${(r.newTagName||'').replace(/"/g,'&quot;')}">
-          </div>
-          <div class="mw-field full">
-            <label>Default audience for this activity</label>
-            <select class="mw-newtag-audience" data-mwid="${r.id}">
-              ${state.audiences.map(a=>`<option value="${a.name}" ${(r.newTagAudience||state.audiences[0].name)===a.name?'selected':''}>${a.name}</option>`).join('')}
-            </select>
-          </div>
-          <button class="mw-cancel-newtag" data-mwid="${r.id}" type="button" title="Back to picking an activity">↩ back to list</button>
-        ` : r.recurringId ? `
-          <div class="mw-field full">
-            <label>Item</label>
-            ${(r.tagIds||[]).map(tid=>{
-              const rt = tagById(tid);
-              return rt ? `<span class="mw-recurring-item" style="background:${audienceColor(rt.audience)};">${rt.name}</span>` : '';
-            }).join('')}
-          </div>
-          <span class="busy-flag" style="background:var(--good-soft);color:var(--good);align-self:flex-start;">Recurring${r.date?' · '+fmtDate(r.date):''} — edit in Settings</span>
-        ` : `
-          <div class="mw-field full">
-            <label>Item</label>
-            <div class="mw-item-row">
-              <select class="mw-item-select" data-mwid="${r.id}">
-                <option value="" ${!selectedTagId?'selected':''}>— Choose an item —</option>
-                ${sortedTags.map(tg=>`<option value="${tg.id}" ${selectedTagId===tg.id?'selected':''}>${tg.name}</option>`).join('')}
-                <option value="__new__">+ New activity…</option>
-              </select>
-              ${selectedTagId ? `<button type="button" class="mw-item-delete" data-mwid="${r.id}" data-tagid="${selectedTagId}" title="Delete this item everywhere">✕</button>` : ''}
-            </div>
-          </div>
-
-          <div class="mw-field full">
-            <label>Audience</label>
-            <select class="mw-audience-select" data-mwid="${r.id}">
-              <option value="" ${!r.audience?'selected':''}>— Choose audience —</option>
-              ${state.audiences.map(a=>`<option value="${a.name}" ${r.audience===a.name?'selected':''}>${a.name}</option>`).join('')}
-            </select>
-          </div>
-
-          <div class="mw-field full">
-            <label>Note</label>
-            <input class="mw-note" data-mwid="${r.id}" placeholder="Optional — e.g. led by Sarah" value="${(r.note||'').replace(/"/g,'&quot;')}">
-          </div>
-
-          <div class="mw-field full">
-            <label>Status</label>
-            <select class="mw-status-select" data-mwid="${r.id}">
-              ${Object.entries(STATUSES).map(([k,v])=>`<option value="${k}" ${s===k?'selected':''}>${v.label}</option>`).join('')}
-            </select>
-          </div>
-
-          <div class="mw-field full">
-            <label>Comms needed?</label>
-            <div class="mw-radio-group">
-              <label class="mw-radio-option"><input type="radio" name="comms-${r.id}" class="mw-comms-radio" data-mwid="${r.id}" data-choice="yes" ${r.needsComms===true?'checked':''}> Yes</label>
-              <label class="mw-radio-option"><input type="radio" name="comms-${r.id}" class="mw-comms-radio" data-mwid="${r.id}" data-choice="no" ${r.needsComms===false?'checked':''}> No</label>
-            </div>
-          </div>
-
-          <div class="mw-field full">
-            <label>Date, if not ${dateHint}</label>
-            <input type="date" class="mw-date" data-mwid="${r.id}" value="${r.date||''}">
-          </div>
-
-          <div class="mw-field full">
-            <label>Time</label>
-            <label class="mw-allday-label"><input type="checkbox" class="mw-allday" data-mwid="${r.id}" ${allDay?'checked':''}> All day</label>
-            ${!allDay ? `
-              <div class="mw-time-row">
-                <div class="mw-field"><label>Start time</label><input type="time" class="mw-start-time" data-mwid="${r.id}" value="${r.startTime||''}"></div>
-                <div class="mw-field"><label>End time</label><input type="time" class="mw-end-time" data-mwid="${r.id}" value="${r.endTime||''}"></div>
-              </div>` : ''}
-          </div>
-
-          <div class="mw-field full">
-            ${showRepeatPicker ? `
-              <label>Repeats</label>
-              <select class="mw-repeat-freq" data-mwid="${r.id}">
-                <option value="" ${!r.repeatFreq?'selected':''}>Doesn't repeat</option>
-                <option value="weekly:1" ${r.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
-                <option value="weekly:2" ${r.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
-                <option value="weekly:4" ${r.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
-                <option value="monthly:1" ${r.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
-              </select>
-            ` : `<button type="button" class="mw-repeat-link" data-mwid="${r.id}">+ Make this repeat</button>`}
-          </div>
-        `}
+    return `<div class="we-row" data-mwid="${r.id}" data-section="${section}" role="button" tabindex="0" aria-label="Edit ${escHTML(name)}">
+      <span class="we-bar" style="background:${color};"></span>
+      <div class="we-body">
+        <div class="we-name">${escHTML(name)}${note}</div>
+        <div class="we-meta">${metaParts}${statusBit}${commsBit}${repeatBit}</div>
       </div>
+      <button type="button" class="we-trash" data-mwid="${r.id}" title="Remove" aria-label="Remove ${escHTML(name)}">${TRASH_SVG}</button>
+      <span class="we-chev" aria-hidden="true">›</span>
     </div>`;
   }).join('');
+}
+
+function sheetHTML(){
+  const d = state.sheetDraft;
+  if(!state.sheet || !d) return '';
+  const sec = state.sheet.section;
+  const isNew = state.sheet.isNew;
+  const sortedTags = state.tags.slice().sort((a,b)=> a.name.localeCompare(b.name));
+  const selectedTagId = (d.tagIds||[])[0] || '';
+  const selTag = selectedTagId ? tagById(selectedTagId) : null;
+  const s = d.status || 'confirmed';
+  const allDay = d.allDay !== false;
+  const defaultDate = editorDefaultDate(sec);
+  const defaultLabel = sec==='postService' ? 'the Sunday' : 'the Monday';
+  const statusColor = {confirmed:'var(--tl-green)', pending:'var(--tl-amber)', declined:'var(--tl-red)'};
+  return `
+  <div class="sheet-overlay" id="sheet-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-grip"></div>
+      <h3 id="sheet-title">${isNew?'Add':'Edit'} ${sec==='postService'?'after-service':'midweek'} activity</h3>
+
+      <div class="sheet-field">
+        <span class="sheet-label">What's happening</span>
+        ${d.creatingTag ? `
+          <input type="text" id="sh-newtag-name" placeholder="New activity name, e.g. Youth Camp" value="${escHTML(d.newTagName||'')}">
+          <button type="button" class="sheet-link" id="sh-back-to-list">Pick from the list instead</button>
+        ` : `
+          <select id="sh-item">
+            <option value="" ${!selectedTagId?'selected':''}>Choose an activity…</option>
+            ${sortedTags.map(tg=>`<option value="${tg.id}" ${selectedTagId===tg.id?'selected':''}>${escHTML(tg.name)}</option>`).join('')}
+            <option value="__new__">+ New activity…</option>
+          </select>
+        `}
+        ${state.sheetError ? `<div class="sheet-error">${escHTML(state.sheetError)}</div>` : ''}
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">Who's it for</span>
+        <div class="sheet-chips">
+          ${state.audiences.map(a=>`<button type="button" class="sheet-chip sh-aud ${d.audience===a.name?'on':''}" data-aud="${escHTML(a.name)}"><span class="sw" style="background:${audienceColor(a.name)};"></span>${escHTML(a.name)}</button>`).join('')}
+        </div>
+        ${(!d.audience && selTag && !d.creatingTag) ? `<div class="sheet-hint">None picked, so it'll use ${escHTML(selTag.name)}'s usual audience (${escHTML(selTag.audience)}).</div>` : ''}
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">Status</span>
+        <div class="sheet-chips">
+          ${Object.entries(STATUSES).map(([k,v])=>`<button type="button" class="sheet-chip sh-status ${s===k?'on':''}" data-status="${k}"><span class="sw" style="background:${statusColor[k]};"></span>${v.label}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">When</span>
+        <input type="date" id="sh-date" value="${d.date||''}">
+        <div class="sheet-hint">Leave blank for ${defaultLabel}${defaultDate?' ('+fmtDate(defaultDate)+')':''}.</div>
+        <label class="toggle-row"><input type="checkbox" id="sh-allday" ${allDay?'checked':''}> All day</label>
+        ${!allDay ? `
+          <div class="sheet-2col">
+            <div><span class="sheet-label">Start</span><input type="time" id="sh-start" value="${d.startTime||''}"></div>
+            <div><span class="sheet-label">End</span><input type="time" id="sh-end" value="${d.endTime||''}"></div>
+          </div>` : ''}
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">Note</span>
+        <input type="text" id="sh-note" placeholder="Optional, e.g. led by Sarah" value="${escHTML(d.note||'')}">
+      </div>
+
+      <div class="sheet-field">
+        <span class="sheet-label">Comms needed?</span>
+        <div class="sheet-chips">
+          <button type="button" class="sheet-chip sh-comms ${d.needsComms===true?'on':''}" data-choice="yes">Yes</button>
+          <button type="button" class="sheet-chip sh-comms ${d.needsComms===false?'on':''}" data-choice="no">No</button>
+        </div>
+      </div>
+
+      <div class="sheet-field">
+        ${(d.repeatFreq || d.showRepeat) ? `
+          <span class="sheet-label">Repeats</span>
+          <select id="sh-repeat">
+            <option value="" ${!d.repeatFreq?'selected':''}>Doesn't repeat</option>
+            <option value="weekly:1" ${d.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
+            <option value="weekly:2" ${d.repeatFreq==='weekly:2'?'selected':''}>Every 2 weeks</option>
+            <option value="weekly:4" ${d.repeatFreq==='weekly:4'?'selected':''}>Every 4 weeks</option>
+            <option value="monthly:1" ${d.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
+          </select>
+          <div class="sheet-hint">A repeating activity becomes a recurring rhythm when you save the week.</div>
+        ` : `<button type="button" class="sheet-link" id="sh-show-repeat">+ Make this repeat</button>`}
+      </div>
+
+      ${(selTag && !d.creatingTag) ? `<div class="sheet-field"><button type="button" class="sheet-link danger" id="sh-delete-tag" data-tagid="${selTag.id}">Delete "${escHTML(selTag.name)}" from the activity list everywhere</button></div>` : ''}
+
+      <div class="sheet-actions">
+        <button type="button" class="btn" id="sh-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="sh-done">${isNew?'Add':'Done'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Captures anything typed in the open sheet into its draft before a re-render,
+// so a chip tap or a realtime refresh never wipes what's been typed.
+function syncSheetFromDOM(){
+  const d = state.sheetDraft;
+  if(!state.sheet || !d) return;
+  const v = id => document.getElementById(id);
+  if(v('sh-newtag-name')) d.newTagName = v('sh-newtag-name').value;
+  if(v('sh-date')) d.date = v('sh-date').value;
+  if(v('sh-allday')) d.allDay = v('sh-allday').checked;
+  if(v('sh-start')) d.startTime = v('sh-start').value;
+  if(v('sh-end')) d.endTime = v('sh-end').value;
+  if(v('sh-note')) d.note = v('sh-note').value;
+  if(v('sh-repeat')) d.repeatFreq = v('sh-repeat').value;
+}
+
+function closeSheet(){ state.sheet = null; state.sheetDraft = null; state.sheetError = ''; }
+
+function clearWeekEditing(){
+  state.editingWeekId = null;
+  state.editingMidweekRows = null; state.editingPostServiceRows = null;
+  state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
+  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null;
+  closeSheet();
+}
+
+function undoToastHTML(){
+  if(!state.lastRemoved || !state.editingWeekId) return '';
+  const r = state.lastRemoved.entry;
+  const tags = (r.tagIds||[]).map(tagById).filter(Boolean);
+  const name = tags.length ? tags.map(t=>t.name).join(' + ') : 'activity';
+  return `<div class="undo-toast" id="undo-toast" role="status"><span>Removed "${escHTML(name)}"</span><button type="button" id="undo-remove">Undo</button></div>`;
 }
 
 function weekCardHTML(wk, idx){
@@ -1970,35 +2094,48 @@ function weekCardHTML(wk, idx){
   const postServiceItems = effectivePostService(wk);
 
   if(editing){
+    if(!state.editingWeekDraft){
+      state.editingWeekDraft = {occasion:wk.occasion||'', sundayDate:wk.sundayDate||'', sundaySeries:wk.sundaySeries||''};
+    }
+    const draft = state.editingWeekDraft;
     const rows = state.editingMidweekRows || [];
     const psRows = state.editingPostServiceRows || [];
+    const wc = draft.sundayDate ? addDaysISO(draft.sundayDate, 1) : '';
     return `
     <div class="week-card editing" style="--term-color:${termVar};" data-id="${wk.id}">
-      <div class="wc-left">
-        <div class="wc-week">Week ${idx+1}</div>
+      <div class="we-head">
+        <div>
+          <div class="wc-week">Week ${idx+1} · editing</div>
+          <div class="wc-date" id="we-title">${draft.sundayDate ? fmtDate(draft.sundayDate) : 'New week'}</div>
+        </div>
+        ${wk.id!=='new' ? `
+        <div class="we-menu-wrap">
+          <button type="button" class="we-menu-btn" id="we-menu-btn" aria-label="More options" aria-expanded="${state.weekMenuOpen?'true':'false'}">⋯</button>
+          ${state.weekMenuOpen ? `<div class="we-menu"><button type="button" class="delete-week" data-id="${wk.id}">Delete this week</button></div>` : ''}
+        </div>` : ''}
       </div>
       <div class="wc-edit-grid">
-        <div><label>Occasion</label><input data-field="occasion" value="${(wk.occasion||'').replace(/"/g,'&quot;')}" placeholder="e.g. Baptism Sunday"></div>
-        <div><label>Sunday date</label><input type="date" data-field="sundayDate" value="${wk.sundayDate||''}"></div>
-        <div class="full"><label>Sunday series</label><input data-field="sundaySeries" value="${(wk.sundaySeries||'').replace(/"/g,'&quot;')}" placeholder="Sermon series title"></div>
-        <div class="full">
-          <label>Sunday post service</label>
-          <div class="mw-rows" data-section="postService">${activityRowsHTML(psRows, 'Sunday')}</div>
-          <button class="mw-add" id="ps-add-row" type="button">+ Add post-service activity</button>
-          <div class="notice" style="margin-top:6px;">Use "+ Add post-service activity" for each thing happening — a saved item folds up, tap "Edit" to change it. Add a date only if it's not the Sunday itself.</div>
+        <div><label>Sunday date</label><input type="date" data-field="sundayDate" value="${draft.sundayDate||''}"></div>
+        <div><label>Occasion</label><input data-field="occasion" value="${escHTML(draft.occasion)}" placeholder="Baptism Sunday"></div>
+        <div class="full"><label>Sunday series</label><input data-field="sundaySeries" value="${escHTML(draft.sundaySeries)}" placeholder="Sermon series title"></div>
+        <div class="full we-section">
+          <div class="we-section-head">
+            <span class="we-section-title">After the service · ${psRows.length}</span>
+            <button type="button" class="we-add" data-section="postService">+ Add</button>
+          </div>
+          <div class="we-rows">${editorRowsHTML(psRows, 'postService')}</div>
         </div>
-        <div><label>Week commencing</label><input type="date" data-field="weekCommencing" value="${wk.weekCommencing||''}"></div>
-        <div class="full">
-          <label>Midweek activity</label>
-          <div class="mw-rows" data-section="midweek">${activityRowsHTML(rows, 'week commencing')}</div>
-          <button class="mw-add" id="mw-add-row" type="button">+ Add midweek activity</button>
-          <div class="notice" style="margin-top:6px;">Use "+ Add midweek activity" for each thing happening — a saved item folds up, tap "Edit" to change it. Add a date only if it's not the week-commencing Monday. Green "Recurring" items are edited in Settings.</div>
+        <div class="full we-section">
+          <div class="we-section-head">
+            <span class="we-section-title">Week of <span id="we-wc-label">${wc ? fmtDate(wc) : 'Monday'}</span> · ${rows.length}</span>
+            <button type="button" class="we-add" data-section="midweek">+ Add</button>
+          </div>
+          <div class="we-rows">${editorRowsHTML(rows, 'midweek')}</div>
         </div>
       </div>
-      <div class="wc-actions">
-        <button class="save-week" data-id="${wk.id}">Save</button>
-        <button class="cancel-week" data-id="${wk.id}">Cancel</button>
-        <button class="danger delete-week" data-id="${wk.id}">Delete</button>
+      <div class="we-footer">
+        <button type="button" class="btn cancel-week" data-id="${wk.id}">Cancel</button>
+        <button type="button" class="btn primary save-week" data-id="${wk.id}">Save week</button>
       </div>
     </div>`;
   }
@@ -2113,6 +2250,8 @@ function mainHTML(){
     ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
+    ${state.view==='dashboard' ? sheetHTML() : ''}
+    ${state.view==='dashboard' ? undoToastHTML() : ''}
   `;
 }
 
@@ -2515,114 +2654,149 @@ function findEditingRow(id){
   return {entry:null, section:null};
 }
 
-function syncAllActivityRowsFromDOM(){
-  const card = document.querySelector('.week-card.editing');
-  if(!card) return;
-  card.querySelectorAll('.mw-row').forEach(row=>{
-    const {entry} = findEditingRow(row.dataset.mwid);
-    if(!entry) return;
-    const noteInp = row.querySelector('.mw-note');
-    if(noteInp && !noteInp.disabled) entry.note = noteInp.value;
-    const dateInp = row.querySelector('.mw-date');
-    if(dateInp) entry.date = dateInp.value;
-    const newNameInp = row.querySelector('.mw-newtag-name');
-    if(newNameInp) entry.newTagName = newNameInp.value;
-    const newAudSel = row.querySelector('.mw-newtag-audience');
-    if(newAudSel) entry.newTagAudience = newAudSel.value;
-    const audSel = row.querySelector('.mw-audience-select');
-    if(audSel) entry.audience = audSel.value;
-    const statusSel = row.querySelector('.mw-status-select');
-    if(statusSel) entry.status = statusSel.value;
-    const freqSel = row.querySelector('.mw-repeat-freq');
-    if(freqSel) entry.repeatFreq = freqSel.value;
-  });
-}
-
 function attachDashboardHandlers(){
-  document.querySelectorAll('.mw-item-select').forEach(el=>{
-    el.onchange = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
+  // ----- Week header fields: kept in a draft so re-renders never lose typing -----
+  document.querySelectorAll('.week-card.editing [data-field]').forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if(!state.editingWeekDraft) return;
+      state.editingWeekDraft[el.dataset.field] = el.value;
+      if(el.dataset.field==='sundayDate'){
+        el.style.boxShadow = '';
+        const title = document.getElementById('we-title');
+        if(title) title.textContent = el.value ? fmtDate(el.value) : 'New week';
+        const wcLabel = document.getElementById('we-wc-label');
+        if(wcLabel) wcLabel.textContent = el.value ? fmtDate(addDaysISO(el.value,1)) : 'Monday';
+      }
+    });
+  });
+
+  // ----- Compact rows -----
+  document.querySelectorAll('.we-row:not(.recurring)').forEach(el=>{
+    const open = ()=>{
+      const {entry, section} = findEditingRow(el.dataset.mwid);
       if(!entry) return;
-      if(el.value === '__new__'){ entry.creatingTag = true; }
-      else { entry.tagIds = el.value ? [el.value] : []; }
+      state.sheet = {rowId:entry.id, section, isNew:false};
+      state.sheetDraft = JSON.parse(JSON.stringify(entry));
+      state.sheetError = ''; state.lastRemoved = null;
+      render();
+    };
+    el.onclick = open;
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
+  });
+  document.querySelectorAll('.we-trash').forEach(el=>{
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      const id = el.dataset.mwid;
+      const {entry, section} = findEditingRow(id);
+      if(!entry) return;
+      const arrName = section==='midweek' ? 'editingMidweekRows' : 'editingPostServiceRows';
+      const idx = state[arrName].findIndex(r=>r.id===id);
+      state[arrName].splice(idx, 1);
+      state.lastRemoved = {arrName, idx, entry};
+      clearTimeout(window.__undoTimer);
+      window.__undoTimer = setTimeout(()=>{
+        state.lastRemoved = null;
+        const t = document.getElementById('undo-toast'); if(t) t.remove();
+      }, 7000);
       render();
     };
   });
-  document.querySelectorAll('.mw-item-delete').forEach(el=>{
-    el.onclick = async ()=>{
-      const t = tagById(el.dataset.tagid);
-      const name = t ? t.name : 'this item';
-      if(!confirm(`Delete "${name}"? This removes it from every week and recurring rhythm that uses it.`)) return;
-      const id = el.dataset.tagid;
+  const undoBtn = document.getElementById('undo-remove');
+  if(undoBtn) undoBtn.onclick = ()=>{
+    const lr = state.lastRemoved;
+    if(lr && state[lr.arrName]) state[lr.arrName].splice(lr.idx, 0, lr.entry);
+    state.lastRemoved = null; clearTimeout(window.__undoTimer);
+    render();
+  };
+  document.querySelectorAll('.we-add').forEach(el=>{
+    el.onclick = ()=>{
+      const blank = {id:uid(), tagIds:[], note:'', status:'confirmed', allDay:true, audience:'', date:'', needsComms:null};
+      state.sheet = {rowId:blank.id, section:el.dataset.section, isNew:true};
+      state.sheetDraft = blank;
+      state.sheetError = ''; state.lastRemoved = null;
+      render();
+    };
+  });
+  const menuBtn = document.getElementById('we-menu-btn');
+  if(menuBtn) menuBtn.onclick = (e)=>{ e.stopPropagation(); state.weekMenuOpen = !state.weekMenuOpen; render(); };
+
+  // ----- Bottom sheet -----
+  const overlay = document.getElementById('sheet-overlay');
+  if(overlay && state.sheetDraft){
+    const d = state.sheetDraft;
+    overlay.onclick = (e)=>{ if(e.target===overlay){ closeSheet(); render(); } };
+    const itemSel = document.getElementById('sh-item');
+    if(itemSel) itemSel.onchange = ()=>{
+      syncSheetFromDOM();
+      if(itemSel.value==='__new__'){ d.creatingTag = true; d.tagIds = []; }
+      else d.tagIds = itemSel.value ? [itemSel.value] : [];
+      state.sheetError = '';
+      render();
+      if(d.creatingTag){ const n = document.getElementById('sh-newtag-name'); if(n) n.focus(); }
+    };
+    const backBtn = document.getElementById('sh-back-to-list');
+    if(backBtn) backBtn.onclick = ()=>{ syncSheetFromDOM(); d.creatingTag = false; d.newTagName = ''; render(); };
+    const delTag = document.getElementById('sh-delete-tag');
+    if(delTag) delTag.onclick = async ()=>{
+      const id = delTag.dataset.tagid;
+      const t = tagById(id);
+      if(!confirm(`Delete "${t?t.name:'this activity'}"? This removes it from every week and recurring rhythm that uses it.`)) return;
+      syncSheetFromDOM();
       await deleteTagRemote(id);
       state.tags = state.tags.filter(x=>x.id!==id);
       (state.editingMidweekRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
       (state.editingPostServiceRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
+      d.tagIds = (d.tagIds||[]).filter(x=>x!==id);
       render();
     };
-  });
-  document.querySelectorAll('.mw-audience-select').forEach(el=>{
-    el.onchange = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.audience = el.value;
-    };
-  });
-  document.querySelectorAll('.mw-status-select').forEach(el=>{
-    el.onchange = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.status = el.value;
-    };
-  });
-  document.querySelectorAll('.mw-comms-radio').forEach(el=>{
-    el.onchange = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.needsComms = el.dataset.choice === 'yes';
-    };
-  });
-  document.querySelectorAll('.mw-allday').forEach(el=>{
-    el.onchange = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.allDay = el.checked;
+    document.querySelectorAll('.sh-aud').forEach(el=>{
+      el.onclick = ()=>{ syncSheetFromDOM(); d.audience = d.audience===el.dataset.aud ? '' : el.dataset.aud; render(); };
+    });
+    document.querySelectorAll('.sh-status').forEach(el=>{
+      el.onclick = ()=>{ syncSheetFromDOM(); d.status = el.dataset.status; render(); };
+    });
+    document.querySelectorAll('.sh-comms').forEach(el=>{
+      el.onclick = ()=>{
+        syncSheetFromDOM();
+        const val = el.dataset.choice==='yes';
+        d.needsComms = d.needsComms===val ? null : val;
+        render();
+      };
+    });
+    const allDayInp = document.getElementById('sh-allday');
+    if(allDayInp) allDayInp.onchange = ()=>{ syncSheetFromDOM(); render(); };
+    const showRepeat = document.getElementById('sh-show-repeat');
+    if(showRepeat) showRepeat.onclick = ()=>{ syncSheetFromDOM(); d.showRepeat = true; render(); };
+    document.getElementById('sh-cancel').onclick = ()=>{ closeSheet(); render(); };
+    document.getElementById('sh-done').onclick = async ()=>{
+      syncSheetFromDOM();
+      if(d.creatingTag){
+        const name = (d.newTagName||'').trim();
+        if(!name){ state.sheetError = 'Give the new activity a name first.'; render(); return; }
+        const existing = state.tags.find(t=>t.name.toLowerCase()===name.toLowerCase());
+        if(existing){ d.tagIds = [existing.id]; }
+        else {
+          const audience = d.audience || ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
+          const newTag = {id:uid(), name, audience};
+          state.tags.push(newTag);
+          await saveTags(newTag);
+          d.tagIds = [newTag.id];
+        }
+        d.creatingTag = false; d.newTagName = '';
+      }
+      if(!(d.tagIds||[]).length){ state.sheetError = 'Choose an activity first.'; render(); return; }
+      if(d.allDay===false && !d.startTime){ d.allDay = true; }
+      const arrName = state.sheet.section==='midweek' ? 'editingMidweekRows' : 'editingPostServiceRows';
+      if(state.sheet.isNew) state[arrName].push(d);
+      else {
+        const idx = state[arrName].findIndex(r=>r.id===state.sheet.rowId);
+        if(idx>-1) state[arrName][idx] = d;
+      }
+      closeSheet();
       render();
     };
-  });
-  document.querySelectorAll('.mw-start-time').forEach(el=>{
-    el.onchange = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.startTime = el.value;
-    };
-  });
-  document.querySelectorAll('.mw-end-time').forEach(el=>{
-    el.onchange = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.endTime = el.value;
-    };
-  });
-  document.querySelectorAll('.mw-cancel-newtag').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry){ entry.creatingTag=false; entry.newTagName=''; }
-      render();
-    };
-  });
-  document.querySelectorAll('.mw-row-edit').forEach(el=>{
-    el.onclick = ()=>{
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.rowExpanded = true;
-      render();
-    };
-  });
-  document.querySelectorAll('.mw-row-fold').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.rowExpanded = false;
-      render();
-    };
-  });
+  }
+
   document.querySelectorAll('.edit-week').forEach(el=>{
     el.onclick = ()=>{
       const wk = state.weeks.find(w=>w.id===el.dataset.id);
@@ -2647,124 +2821,68 @@ function attachDashboardHandlers(){
       });
       state.editingOriginalRecurringIds = new Set(mw.filter(m=>m.recurringId).map(m=>m.recurringId));
       state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
+      state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; closeSheet();
       state.editingWeekId = el.dataset.id;
       render();
     };
   });
   document.querySelectorAll('.cancel-week').forEach(el=>{
-    el.onclick = ()=>{
-      state.editingWeekId = null; state.editingMidweekRows = null; state.editingPostServiceRows = null;
-      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
-      render();
-    };
+    el.onclick = ()=>{ clearWeekEditing(); render(); };
   });
   document.querySelectorAll('.delete-week').forEach(el=>{
     el.onclick = async ()=>{
       if(el.dataset.id!=='new'){
+        if(!confirm('Delete this whole week, including everything planned in it? This can\'t be undone.')) return;
         await deleteWeekRemote(el.dataset.id);
         state.weeks = state.weeks.filter(w=>w.id!==el.dataset.id);
       }
-      state.editingWeekId = null; state.editingMidweekRows = null; state.editingPostServiceRows = null;
-      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
+      clearWeekEditing();
       render();
     };
   });
-  document.querySelectorAll('.mw-row-remove').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const id = el.dataset.mwid;
-      const {section} = findEditingRow(id);
-      if(section==='midweek'){
-        state.editingMidweekRows = state.editingMidweekRows.filter(r=>r.id!==id);
-      } else if(section==='postService'){
-        state.editingPostServiceRows = state.editingPostServiceRows.filter(r=>r.id!==id);
-      }
-      render();
-    };
-  });
-  document.querySelectorAll('.mw-repeat-link').forEach(el=>{
-    el.onclick = ()=>{
-      syncAllActivityRowsFromDOM();
-      const {entry} = findEditingRow(el.dataset.mwid);
-      if(entry) entry.showRepeat = true;
-      render();
-    };
-  });
-  const mwAddBtn = document.getElementById('mw-add-row');
-  if(mwAddBtn) mwAddBtn.onclick = ()=>{
-    syncAllActivityRowsFromDOM();
-    state.editingMidweekRows.push({id:uid(), tagIds:[], note:'', rowExpanded:true});
-    render();
-  };
-  const psAddBtn = document.getElementById('ps-add-row');
-  if(psAddBtn) psAddBtn.onclick = ()=>{
-    syncAllActivityRowsFromDOM();
-    state.editingPostServiceRows.push({id:uid(), tagIds:[], note:'', rowExpanded:true});
-    render();
-  };
   document.querySelectorAll('.save-week').forEach(el=>{
     el.onclick = async ()=>{
       const card = el.closest('.week-card');
-      const get = f => card.querySelector(`[data-field="${f}"]`)?.value.trim() || '';
+      const draft = state.editingWeekDraft || {};
+      const existingWeek = state.weeks.find(w=>w.id===el.dataset.id);
+      const sundayDate = (draft.sundayDate||'').trim();
+      // Week commencing is always the Monday after the Sunday — derived, not typed.
       const data = {
-        occasion: get('occasion'), sundayDate: get('sundayDate'), sundaySeries: get('sundaySeries'),
-        weekCommencing: get('weekCommencing'), happening: get('happening')
+        occasion: (draft.occasion||'').trim(), sundayDate, sundaySeries: (draft.sundaySeries||'').trim(),
+        weekCommencing: sundayDate ? addDaysISO(sundayDate, 1) : '',
+        happening: existingWeek ? (existingWeek.happening||'') : ''
       };
-      if(!data.sundayDate){ card.querySelector('[data-field="sundayDate"]').style.boxShadow = '0 0 0 2px var(--bad)'; return; }
+      if(!data.sundayDate){
+        const inp = card.querySelector('[data-field="sundayDate"]');
+        if(inp){ inp.style.boxShadow = '0 0 0 2px var(--bad)'; inp.scrollIntoView({behavior:'smooth', block:'center'}); }
+        return;
+      }
+      el.disabled = true; el.textContent = 'Saving…';
 
-      // Processes one section's rows (midweek or post-service) — same logic either way,
-      // just anchored to a different date and tagged with a different rhythm "slot".
-      // commsDecisions is returned separately (not folded into the item itself) since
-      // needsComms lives in comms_plans, not on the week item.
+      // Processes one section's rows (midweek or post-service) straight from the
+      // editing arrays — the sheet writes every field into the entry on "Done", so
+      // there's no DOM to read and nothing can be lost by rows being collapsed.
+      // commsDecisions is returned separately since needsComms lives in comms_plans.
       function processSection(sectionName, anchorDate){
         const items = [];
         const commsDecisions = [];
         const stillPresentRecurring = new Set();
         const newRecurringTemplates = [];
         const newTags = [];
-        const container = card.querySelector(`.mw-rows[data-section="${sectionName}"]`);
-        if(!container) return {items, commsDecisions, stillPresentRecurring, newRecurringTemplates, newTags};
-        container.querySelectorAll('.mw-row').forEach(row=>{
-          const mwid = row.dataset.mwid;
-          const recurringId = row.dataset.recurringId || '';
-          if(recurringId){ stillPresentRecurring.add(recurringId); return; }
-          const {entry} = findEditingRow(mwid);
-          let tagIds = ((entry && entry.tagIds) || []).slice();
-          const isNewTag = row.dataset.newtag === '1';
-          if(isNewTag){
-            const nameInp = row.querySelector('.mw-newtag-name');
-            const name = nameInp ? nameInp.value.trim() : '';
-            if(name){
-              const audSel = row.querySelector('.mw-newtag-audience');
-              const audience = audSel ? audSel.value : ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
-              const newTag = {id:uid(), name, audience};
-              state.tags.push(newTag);
-              newTags.push(newTag);
-              tagIds.push(newTag.id);
-            }
-          }
+        const rows = sectionName==='midweek' ? (state.editingMidweekRows||[]) : (state.editingPostServiceRows||[]);
+        rows.forEach(entry=>{
+          if(entry.recurringId){ stillPresentRecurring.add(entry.recurringId); return; }
+          const mwid = entry.id;
+          const tagIds = (entry.tagIds||[]).slice();
           if(!tagIds.length) return;
-          // Fields are read from the live DOM input when present. A folded row has
-          // already had its values captured into `entry` by syncAllActivityRowsFromDOM()
-          // (called on every fold/expand/add/remove action) but no longer renders these
-          // inputs at all — so each field falls back to entry's synced value rather than
-          // to '' / true / etc, otherwise folding a row before Save silently wipes its
-          // note, date, time and all-day setting back to defaults.
-          const noteInp = row.querySelector('.mw-note');
-          const note = noteInp ? noteInp.value.trim() : ((entry && entry.note) || '');
-          const status = (entry && entry.status) || 'confirmed';
-          const dateInp = row.querySelector('.mw-date');
-          const date = dateInp ? dateInp.value : ((entry && entry.date) || '');
-          const audSel = row.querySelector('.mw-audience-select');
-          const audience = audSel ? audSel.value : ((entry && entry.audience) || '');
-          const alldayInp = row.querySelector('.mw-allday');
-          const allDay = alldayInp ? alldayInp.checked : !(entry && entry.allDay===false);
-          const startInp = row.querySelector('.mw-start-time');
-          const endInp = row.querySelector('.mw-end-time');
-          const startTime = !allDay ? (startInp ? startInp.value : ((entry && entry.startTime) || '')) : '';
-          const endTime = !allDay ? (endInp ? endInp.value : ((entry && entry.endTime) || '')) : '';
-          const freqSel = row.querySelector('.mw-repeat-freq');
-          const freqVal = freqSel ? freqSel.value : '';
+          const note = (entry.note||'').trim();
+          const status = entry.status || 'confirmed';
+          const date = entry.date || '';
+          const audience = entry.audience || '';
+          const allDay = entry.allDay !== false;
+          const startTime = !allDay ? (entry.startTime||'') : '';
+          const endTime = !allDay ? (entry.endTime||'') : '';
+          const freqVal = entry.repeatFreq || '';
           if(freqVal){
             const [freq, intervalStr] = freqVal.split(':');
             newRecurringTemplates.push({
@@ -2774,7 +2892,7 @@ function attachDashboardHandlers(){
             });
           } else {
             items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience});
-            if(entry && (entry.needsComms===true || entry.needsComms===false)){
+            if(entry.needsComms===true || entry.needsComms===false){
               const itemTitle = tagIds.map(tid=>tagById(tid)).filter(Boolean).map(t=>t.name).join(' + ') || 'Untitled activity';
               commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms, itemTitle});
             }
@@ -2844,14 +2962,13 @@ function attachDashboardHandlers(){
         if(newPlans.length) await saveCommsPlan(newPlans);
       }
 
-      state.editingWeekId = null;
-      state.editingMidweekRows = null; state.editingPostServiceRows = null;
-      state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
+      clearWeekEditing();
       render();
     };
   });
   const addWeekBtn = document.getElementById('add-week');
   if(addWeekBtn) addWeekBtn.onclick = ()=>{
+    clearWeekEditing();
     state.editingWeekId = 'new';
     state.editingMidweekRows = [];
     state.editingPostServiceRows = [];
@@ -3013,6 +3130,9 @@ function attachCommsHandlers(){
   await loadData();
   render();
   subscribeRealtime();
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
+  });
 })();
 </script>
 </body>

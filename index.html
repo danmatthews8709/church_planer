@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="app-version" content="2026-10-02a">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -794,6 +795,22 @@
     .la-items .la-date{width:62px;font-size:11.5px;}
     .la-empty{padding-left:14px;}
   }
+
+  /* ---------- Activity sheet v2 ---------- */
+  .sheet-label-soft{text-transform:none;letter-spacing:0;font-weight:400;}
+  .day-chip{flex-direction:column;gap:0;min-width:54px;padding:6px 10px;border-radius:12px;line-height:1.2;}
+  .day-chip small{font-size:11px;opacity:.75;}
+  .day-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;}
+  .day-grid .day-chip{min-width:0;padding:6px 2px;font-size:13.5px;}
+  .day-grid .day-chip small{font-size:10.5px;white-space:nowrap;}
+  .sheet-rows{margin-top:16px;border-bottom:1px solid var(--line);}
+  .sheet-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:15px;width:100%;background:none;border-left:none;border-right:none;border-bottom:none;font-family:inherit;color:var(--ink);cursor:pointer;min-height:48px;text-align:left;}
+  .sheet-row > span:first-child{color:var(--ink-soft);font-weight:600;flex-shrink:0;}
+  .sheet .sheet-row select{width:auto;max-width:65%;border:none;background:transparent;font-weight:700;text-align:right;text-align-last:right;padding:8px 0;color:var(--navy);}
+  .sheet-more-sum{font-size:13px;color:var(--ink-soft);}
+  .sheet-more{padding:4px 0 14px;}
+  .update-banner{position:sticky;top:0;z-index:40;background:var(--gold-soft);color:#5C4512;border-bottom:1px solid var(--gold);padding:10px 16px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:0 -20px;}
+  .update-banner button{border:1px solid #5C4512;background:#fff;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-family:inherit;}
 </style>
 </head>
 <body>
@@ -1451,7 +1468,7 @@ function scheduleRefresh(){
 }
 function subscribeRealtime(){
   const tables = [
-    'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags',
+    'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags','week_post_service_items','week_post_service_item_tags',
     'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events',
     'comms_flows','comms_flow_steps','comms_plans','comms_posts','owners'
   ];
@@ -2374,10 +2391,14 @@ function sheetHTML(){
   const selectedTagId = (d.tagIds||[])[0] || '';
   const selTag = selectedTagId ? tagById(selectedTagId) : null;
   const s = d.status || 'confirmed';
-  const allDay = d.allDay !== false;
   const defaultDate = editorDefaultDate(sec);
-  const defaultLabel = sec==='postService' ? 'the Sunday' : 'the Monday';
-  const statusColor = {confirmed:'var(--tl-green)', pending:'var(--tl-amber)', declined:'var(--tl-red)'};
+  // Day chips are the days of the week being edited (Mon–Sat for midweek, the
+  // Sunday for after-service), so the date can never jump to "today".
+  const chipDates = !defaultDate ? [] : (sec==='postService' ? [defaultDate] : [0,1,2,3,4,5].map(i=>addDaysISO(defaultDate, i)));
+  const current = d.date || defaultDate;
+  const onChip = !d.otherDate && chipDates.includes(current);
+  const tagDefaultOwner = selTag && selTag.defaultOwner;
+  const moreSummary = [d.needsComms===true?'Comms: yes':d.needsComms===false?'Comms: no':'', d.repeatFreq?'Repeats':''].filter(Boolean).join(' · ') || 'Comms · Repeat';
   return `
   <div class="sheet-overlay" id="sheet-overlay">
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -2400,57 +2421,57 @@ function sheetHTML(){
       </div>
 
       <div class="sheet-field">
-        <span class="sheet-label">Who's it for</span>
-        <div class="sheet-chips">
-          ${state.audiences.map(a=>`<button type="button" class="sheet-chip sh-aud ${d.audience===a.name?'on':''}" data-aud="${escHTML(a.name)}"><span class="sw" style="background:${audienceColor(a.name)};"></span>${escHTML(a.name)}</button>`).join('')}
+        <span class="sheet-label">Day${sec==='midweek' && defaultDate ? ' · week of '+fmtDate(defaultDate) : ''}</span>
+        <div class="sheet-chips${sec==='midweek'?' day-grid':''}">
+          ${chipDates.map(iso=>{ const dt = parseISO(iso); return `<button type="button" class="sheet-chip day-chip sh-day ${onChip && current===iso?'on':''}" data-date="${iso}">${sec==='postService'?'Sunday':DOW[(dt.getDay()+6)%7]}<small>${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0,3)}</small></button>`; }).join('')}
+          <button type="button" class="sheet-chip day-chip ${!onChip?'on':''}" id="sh-other-day">Other<small>${!onChip && current ? fmtDate(current) : 'date'}</small></button>
         </div>
-        ${(!d.audience && selTag && !d.creatingTag) ? `<div class="sheet-hint">None picked, so it'll use ${escHTML(selTag.name)}'s usual audience (${escHTML(selTag.audience)}).</div>` : ''}
+        ${!onChip ? `<input type="date" id="sh-date" value="${current||''}" style="margin-top:8px;">` : ''}
       </div>
 
       <div class="sheet-field">
-        <span class="sheet-label">Owner</span>
-        <div class="sheet-chips">
-          ${state.owners.map(o=>`<button type="button" class="sheet-chip sh-owner ${d.owner===o.name?'on':''}" data-owner="${escHTML(o.name)}">${escHTML(o.name)}</button>`).join('')}
-          ${(d.owner && !state.owners.some(o=>o.name===d.owner)) ? `<button type="button" class="sheet-chip sh-owner on" data-owner="${escHTML(d.owner)}">${escHTML(d.owner)}</button>` : ''}
+        <span class="sheet-label">Time <span class="sheet-label-soft">· leave blank for all day</span></span>
+        <div class="sheet-2col" style="margin-top:0;">
+          <input type="time" id="sh-start" value="${d.allDay===false ? (d.startTime||'').slice(0,5) : ''}" aria-label="Start time">
+          <input type="time" id="sh-end" value="${d.allDay===false ? (d.endTime||'').slice(0,5) : ''}" aria-label="End time">
         </div>
-        <div class="sheet-hint">${(!d.owner && selTag && selTag.defaultOwner) ? `None picked, so it'll use ${escHTML(selTag.defaultOwner)} (${escHTML(selTag.name)}'s default owner).` : 'Optional. Shown in the Owners tab only. Add names in ⚙ Settings.'}</div>
       </div>
 
       <div class="sheet-field">
         <span class="sheet-label">Status</span>
         <div class="sheet-chips">
-          ${Object.entries(STATUSES).map(([k,v])=>`<button type="button" class="sheet-chip sh-status ${s===k?'on':''}" data-status="${k}"><span class="sw" style="background:${statusColor[k]};"></span>${v.label}</button>`).join('')}
+          ${Object.entries(STATUSES).map(([k,v])=>`<button type="button" class="sheet-chip sh-status ${s===k?'on':''}" data-status="${k}"><span class="sw" style="background:${STATUS_COLOR[k]};"></span>${v.label}</button>`).join('')}
         </div>
-      </div>
-
-      <div class="sheet-field">
-        <span class="sheet-label">When</span>
-        <input type="date" id="sh-date" value="${d.date||''}">
-        <div class="sheet-hint">Leave blank for ${defaultLabel}${defaultDate?' ('+fmtDate(defaultDate)+')':''}.</div>
-        <label class="toggle-row"><input type="checkbox" id="sh-allday" ${allDay?'checked':''}> All day</label>
-        ${!allDay ? `
-          <div class="sheet-2col">
-            <div><span class="sheet-label">Start</span><input type="time" id="sh-start" value="${d.startTime||''}"></div>
-            <div><span class="sheet-label">End</span><input type="time" id="sh-end" value="${d.endTime||''}"></div>
-          </div>` : ''}
       </div>
 
       <div class="sheet-field">
         <span class="sheet-label">Note</span>
-        <input type="text" id="sh-note" placeholder="Optional, e.g. led by Sarah" value="${escHTML(d.note||'')}">
+        <input type="text" id="sh-note" placeholder="Optional" value="${escHTML(d.note||'')}">
       </div>
 
-      <div class="sheet-field">
-        <span class="sheet-label">Comms needed?</span>
-        <div class="sheet-chips">
-          <button type="button" class="sheet-chip sh-comms ${d.needsComms===true?'on':''}" data-choice="yes">Yes</button>
-          <button type="button" class="sheet-chip sh-comms ${d.needsComms===false?'on':''}" data-choice="no">No</button>
-        </div>
-      </div>
-
-      <div class="sheet-field">
-        ${(d.repeatFreq || d.showRepeat) ? `
-          <span class="sheet-label">Repeats</span>
+      <div class="sheet-rows">
+        <label class="sheet-row"><span>Who's it for</span>
+          <select id="sh-aud">
+            <option value="" ${!d.audience?'selected':''}>${selTag ? escHTML(selTag.audience)+' (usual)' : (d.creatingTag ? escHTML((state.audiences[0]&&state.audiences[0].name)||'Whole Church') : 'Usual audience')}</option>
+            ${state.audiences.map(a=>`<option value="${escHTML(a.name)}" ${d.audience===a.name?'selected':''}>${escHTML(a.name)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="sheet-row"><span>Owner</span>
+          <select id="sh-owner">
+            <option value="" ${!d.owner?'selected':''}>${tagDefaultOwner ? escHTML(tagDefaultOwner)+' ('+escHTML(selTag.name)+' default)' : 'None'}</option>
+            ${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${d.owner===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}
+            ${(d.owner && !state.owners.some(o=>o.name===d.owner)) ? `<option value="${escHTML(d.owner)}" selected>${escHTML(d.owner)}</option>` : ''}
+          </select>
+        </label>
+        <button type="button" class="sheet-row sheet-more-toggle" id="sh-more" aria-expanded="${state.sheetMore?'true':'false'}"><span>More options</span><span class="sheet-more-sum">${escHTML(moreSummary)} ${state.sheetMore?'▴':'▾'}</span></button>
+        ${state.sheetMore ? `
+        <div class="sheet-more">
+          <span class="sheet-label">Comms needed?</span>
+          <div class="sheet-chips">
+            <button type="button" class="sheet-chip sh-comms ${d.needsComms===true?'on':''}" data-choice="yes">Yes</button>
+            <button type="button" class="sheet-chip sh-comms ${d.needsComms===false?'on':''}" data-choice="no">No</button>
+          </div>
+          <span class="sheet-label" style="margin-top:14px;">Repeats</span>
           <select id="sh-repeat">
             <option value="" ${!d.repeatFreq?'selected':''}>Doesn't repeat</option>
             <option value="weekly:1" ${d.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
@@ -2459,11 +2480,11 @@ function sheetHTML(){
             <option value="monthly:1" ${d.repeatFreq==='monthly:1'?'selected':''}>Monthly</option>
           </select>
           <div class="sheet-hint">A repeating activity becomes a recurring rhythm when you save the week.</div>
-        ` : `<button type="button" class="sheet-link" id="sh-show-repeat">+ Make this repeat</button>`}
+          ${(selTag && !d.creatingTag) ? `<button type="button" class="sheet-link danger" id="sh-delete-tag" data-tagid="${selTag.id}" style="margin-top:10px;">Delete "${escHTML(selTag.name)}" from the activity list everywhere</button>` : ''}
+        </div>` : ''}
       </div>
 
       ${!isNew ? `<div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="sh-remove">Remove from this week</button></div>` : ''}
-      ${(selTag && !d.creatingTag) ? `<div class="sheet-field"><button type="button" class="sheet-link danger" id="sh-delete-tag" data-tagid="${selTag.id}">Delete "${escHTML(selTag.name)}" from the activity list everywhere</button></div>` : ''}
 
       <div class="sheet-actions">
         <button type="button" class="btn" id="sh-cancel">Cancel</button>
@@ -2481,14 +2502,15 @@ function syncSheetFromDOM(){
   const v = id => document.getElementById(id);
   if(v('sh-newtag-name')) d.newTagName = v('sh-newtag-name').value;
   if(v('sh-date')) d.date = v('sh-date').value;
-  if(v('sh-allday')) d.allDay = v('sh-allday').checked;
-  if(v('sh-start')) d.startTime = v('sh-start').value;
+  if(v('sh-start')){ d.startTime = v('sh-start').value; d.allDay = !d.startTime; }
   if(v('sh-end')) d.endTime = v('sh-end').value;
   if(v('sh-note')) d.note = v('sh-note').value;
+  if(v('sh-aud')) d.audience = v('sh-aud').value;
+  if(v('sh-owner')) d.owner = v('sh-owner').value;
   if(v('sh-repeat')) d.repeatFreq = v('sh-repeat').value;
 }
 
-function closeSheet(){ state.sheet = null; state.sheetDraft = null; state.sheetError = ''; }
+function closeSheet(){ state.sheet = null; state.sheetDraft = null; state.sheetError = ''; state.sheetMore = false; }
 
 function removeEditorRow(id){
   const {entry, section} = findEditingRow(id);
@@ -2508,7 +2530,7 @@ function clearWeekEditing(){
   state.editingWeekId = null;
   state.editingMidweekRows = null; state.editingPostServiceRows = null;
   state.editingOriginalRecurringIds = null; state.editingOriginalPostServiceRecurringIds = null;
-  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.detailsOpen = false;
+  state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.detailsOpen = false; state.editingOriginal = null;
   closeSheet();
 }
 
@@ -2729,6 +2751,7 @@ function mainHTML(){
   const filtersActive = false;
   const showFilters = state.view==='calendar' || state.view==='list';
   return `
+    ${state.updateAvailable ? `<div class="update-banner">A newer version of the planner is available. <button type="button" id="reload-app">Reload</button><span style="font-size:12px;">(save what you're doing first)</span></div>` : ''}
     <div class="masthead">
       <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
       <div class="who">Planning as <strong>${state.currentUser.name}</strong> <button id="open-settings" class="settings-btn">⚙ Settings</button> <button id="switch-user">Switch</button></div>
@@ -2940,6 +2963,8 @@ function settingsHTML(){
 }
 
 function attachMainHandlers(){
+  const reloadApp = document.getElementById('reload-app');
+  if(reloadApp) reloadApp.onclick = ()=> location.reload();
   document.getElementById('switch-user').onclick = ()=>{ state.currentUser=null; render(); };
   document.querySelectorAll('.tab').forEach(el=>{
     el.onclick = ()=>{
@@ -3048,19 +3073,19 @@ function attachMainHandlers(){
     document.querySelectorAll('.tag-name').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
-        if(tag){ tag.name = el.value.trim() || tag.name; await saveTags(tag); }
+        if(tag){ tag.name = el.value.trim() || tag.name; await updateTagField(tag.id, {name: tag.name}); }
       };
     });
     document.querySelectorAll('.tag-owner').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
-        if(tag){ tag.defaultOwner = el.value; await saveTags(tag); }
+        if(tag){ tag.defaultOwner = el.value; await updateTagField(tag.id, {default_owner: el.value || null}); }
       };
     });
     document.querySelectorAll('.tag-audience').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
-        if(tag){ tag.audience = el.value; await saveTags(tag); render(); }
+        if(tag){ tag.audience = el.value; await updateTagField(tag.id, {audience: el.value}); render(); }
       };
     });
     document.querySelectorAll('.tag-remove').forEach(el=>{
@@ -3247,6 +3272,149 @@ function findEditingRow(id){
   return {entry:null, section:null};
 }
 
+// ---------- Safe week saving ----------
+// Only rows that were actually added, changed or removed in this edit are
+// written, and each changed/removed row is first checked against what the
+// editor originally loaded. If someone else changed it in the meantime, their
+// version is kept and the conflict is reported — nobody's edit is silently
+// overwritten, and two people can edit different items in the same week.
+function normItem(m, anchor){
+  const allDay = m.allDay !== false;
+  return JSON.stringify({
+    date: m.date || anchor || '', status: m.status || 'confirmed', note: (m.note||'').trim(),
+    allDay, start: allDay ? '' : (m.startTime||'').slice(0,5), end: allDay ? '' : (m.endTime||'').slice(0,5),
+    audience: m.audience || '', owner: ownerColumnsExist ? (m.owner || '') : '',
+    tags: (m.tagIds||[]).slice().sort().join(',')
+  });
+}
+function rowToItem(r, tagKey){
+  return {id:r.id, note:r.note||'', date:r.item_date, status:r.status||'confirmed', allDay:r.all_day!==false,
+    startTime:r.start_time||'', endTime:r.end_time||'', audience:r.audience||'', owner:r.owner||'',
+    tagIds:(r[tagKey]||[]).map(t=>t.tag_id)};
+}
+function snapshotWeek(wk){
+  if(!wk) return null;
+  const mid = {}, ps = {};
+  (wk.midweek||[]).forEach(m=> mid[m.id] = normItem(m, wk.weekCommencing || wk.sundayDate));
+  (wk.postService||[]).forEach(m=> ps[m.id] = normItem(m, wk.sundayDate));
+  return {
+    week: {occasion:wk.occasion||'', sundayDate:wk.sundayDate||'', sundaySeries:wk.sundaySeries||'', weekCommencing:wk.weekCommencing||''},
+    midAnchor: wk.weekCommencing || wk.sundayDate, psAnchor: wk.sundayDate,
+    midweek: mid, postService: ps
+  };
+}
+async function saveWeekSafely(w, isNew){
+  const conflicts = [];
+  const orig = isNew ? null : state.editingOriginal;
+  const nameOf = m => (m.tagIds||[]).map(tagById).filter(Boolean).map(t=>t.name).join(' + ') || 'An activity';
+  const fail = (what, err)=>{ console.error(what, err); conflicts.push(what+': '+(err.message||err)); };
+
+  if(isNew || !orig){
+    const { error } = await sb.from('weeks').upsert({id:w.id, occasion:w.occasion||'', sunday_date:w.sundayDate, sunday_series:w.sundaySeries||'', week_commencing:w.weekCommencing||null, happening:w.happening||''});
+    if(error){ fail('Could not save this week', error); return conflicts; }
+  } else {
+    const { data: srv, error } = await sb.from('weeks').select('occasion, sunday_date, sunday_series, week_commencing').eq('id', w.id).maybeSingle();
+    if(error){ fail('Could not check this week before saving', error); return conflicts; }
+    if(!srv){ conflicts.push('This week was deleted by someone else, so nothing was saved.'); return conflicts; }
+    const patch = {};
+    [['occasion','occasion','Occasion'],['sundayDate','sunday_date','Sunday date'],['sundaySeries','sunday_series','Sunday series'],['weekCommencing','week_commencing',null]].forEach(([k,col,label])=>{
+      const mine = w[k]||'', was = orig.week[k]||'', now = srv[col]||'';
+      if(mine===was) return;
+      if(now!==was && now!==mine){ if(label) conflicts.push(`${label} was changed by someone else — kept their version ("${now}").`); return; }
+      patch[col] = col==='week_commencing' ? (mine||null) : mine;
+    });
+    if(Object.keys(patch).length){
+      const { error: upErr } = await sb.from('weeks').update(patch).eq('id', w.id);
+      if(upErr) fail('Could not save the Sunday details', upErr);
+    }
+  }
+
+  const sections = [
+    {key:'midweek', table:'week_midweek_items', tagTable:'week_midweek_item_tags', fk:'midweek_item_id', anchor:w.weekCommencing||w.sundayDate, origAnchor: orig ? orig.midAnchor : null},
+    {key:'postService', table:'week_post_service_items', tagTable:'week_post_service_item_tags', fk:'post_service_item_id', anchor:w.sundayDate, origAnchor: orig ? orig.psAnchor : null}
+  ];
+  const ownerCol = ownerColumnsExist ? ', owner' : '';
+  for(const sec of sections){
+    const mine = w[sec.key] || [];
+    const origMap = orig ? orig[sec.key] : {};
+    let srvMap = {};
+    if(orig){
+      const { data, error } = await sb.from(sec.table).select(`id, note, item_date, status, start_time, end_time, all_day, audience${ownerCol}, ${sec.tagTable} ( tag_id )`).eq('week_id', w.id);
+      if(error){ fail('Could not check activities before saving', error); continue; }
+      (data||[]).forEach(r=> srvMap[r.id] = normItem(rowToItem(r, sec.tagTable), sec.origAnchor));
+    }
+    const writeItem = async (m)=>{
+      const row = {id:m.id, week_id:w.id, note:m.note||'', item_date:m.date||null, status:m.status||'confirmed',
+        all_day:m.allDay!==false, start_time:m.startTime||null, end_time:m.endTime||null, audience:m.audience||null,
+        ...(ownerColumnsExist ? {owner:m.owner||null} : {})};
+      const { error } = await sb.from(sec.table).upsert(row);
+      if(error){ fail(`Could not save "${nameOf(m)}"`, error); return; }
+      await sb.from(sec.tagTable).delete().eq(sec.fk, m.id);
+      const tagRows = (m.tagIds||[]).map(tid=>({[sec.fk]:m.id, tag_id:tid}));
+      if(tagRows.length){
+        const { error: tErr } = await sb.from(sec.tagTable).insert(tagRows);
+        if(tErr) fail(`Could not save the activity for "${nameOf(m)}"`, tErr);
+      }
+    };
+    const mineIds = new Set();
+    for(const m of mine){
+      mineIds.add(m.id);
+      const was = origMap[m.id];
+      if(!was){ await writeItem(m); continue; }                        // newly added
+      const mineN = normItem(m, sec.origAnchor);
+      if(mineN === was) continue;                                       // untouched
+      const now = srvMap[m.id];
+      if(!now){ conflicts.push(`"${nameOf(m)}" was removed by someone else — not re-added.`); continue; }
+      if(now !== was){ conflicts.push(`"${nameOf(m)}" was changed by someone else — kept their version.`); continue; }
+      await writeItem(m);
+    }
+    for(const id of Object.keys(origMap)){
+      if(mineIds.has(id)) continue;
+      const now = srvMap[id];
+      if(!now) continue;                                                // already gone
+      if(now !== origMap[id]){ conflicts.push('An activity you removed had just been changed by someone else — kept it.'); continue; }
+      await sb.from(sec.tagTable).delete().eq(sec.fk, id);
+      const { error } = await sb.from(sec.table).delete().eq('id', id);
+      if(error) fail('Could not remove an activity', error);
+    }
+  }
+
+  // "Skip this week" exclusions are only ever added, never wiped.
+  const { data: exNow } = await sb.from('week_excluded_recurring').select('recurring_rhythm_id').eq('week_id', w.id);
+  const have = new Set((exNow||[]).map(r=>r.recurring_rhythm_id));
+  const add = (w.excludedRecurring||[]).filter(id=>!have.has(id)).map(id=>({week_id:w.id, recurring_rhythm_id:id}));
+  if(add.length){
+    const { error } = await sb.from('week_excluded_recurring').insert(add);
+    if(error) fail('Could not save a skipped recurring activity', error);
+  }
+  return conflicts;
+}
+
+// Only change the one field that was edited, so a stale copy of a tag can't
+// overwrite someone else's change to a different field.
+async function updateTagField(id, patch){
+  const { error } = await sb.from('tags').update(patch).eq('id', id);
+  if(error){ console.error('update tag failed', error); alert('Could not save that change: '+error.message); }
+}
+
+// ---------- Stale-tab protection ----------
+// A tab left open across a deploy keeps running the old code. Check for a newer
+// version when the tab comes back into view (and every few minutes); reload
+// straight away if nothing is mid-edit, otherwise show a banner.
+const APP_VERSION = '2026-10-02a';
+async function checkForNewVersion(){
+  try{
+    const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const html = await res.text();
+    const mm = html.match(/<meta name="app-version" content="([^"]+)"/);
+    if(!mm || mm[1] === APP_VERSION) return;
+    const busy = state.editingWeekId || state.sheet || state.showModal || state.showSettings;
+    if(!busy){ location.reload(); return; }
+    if(!state.updateAvailable){ state.updateAvailable = true; render(); }
+  }catch(e){ /* offline etc. — try again later */ }
+}
+
 function openWeekEditor(weekId){
   const wk = state.weeks.find(w=>w.id===weekId);
   const mw = wk ? effectiveMidweek(wk) : [];
@@ -3272,6 +3440,7 @@ function openWeekEditor(weekId){
   state.editingOriginalPostServiceRecurringIds = new Set(ps.filter(m=>m.recurringId).map(m=>m.recurringId));
   state.editingWeekDraft = null; state.weekMenuOpen = false; state.lastRemoved = null; state.dashMenuOpen = false; state.detailsOpen = false; closeSheet();
   state.editingWeekId = weekId;
+  state.editingOriginal = snapshotWeek(wk);
   if(wk && isPastWeek(wk)) state.showPastWeeks = true;
   // make sure the week is inside the dashboard's year/term scope so it's visible
   if(wk && wk.sundayDate){
@@ -3339,36 +3508,35 @@ function attachDashboardHandlers(){
   if(overlay && state.sheetDraft){
     const d = state.sheetDraft;
     overlay.onclick = (e)=>{ if(e.target===overlay){ closeSheet(); render(); } };
-    const itemSel = document.getElementById('sh-item');
-    if(itemSel) itemSel.onchange = ()=>{
+    const byId = id => document.getElementById(id);
+    if(byId('sh-cancel')) byId('sh-cancel').onclick = ()=>{ closeSheet(); render(); };
+    if(byId('sh-remove')) byId('sh-remove').onclick = ()=>{ const id = state.sheet.rowId; closeSheet(); removeEditorRow(id); render(); };
+    if(byId('sh-item')) byId('sh-item').onchange = ()=>{
       syncSheetFromDOM();
-      if(itemSel.value==='__new__'){ d.creatingTag = true; d.tagIds = []; }
-      else d.tagIds = itemSel.value ? [itemSel.value] : [];
+      const val = byId('sh-item').value;
+      if(val==='__new__'){ d.creatingTag = true; d.tagIds = []; }
+      else d.tagIds = val ? [val] : [];
       state.sheetError = '';
       render();
-      if(d.creatingTag){ const n = document.getElementById('sh-newtag-name'); if(n) n.focus(); }
+      if(d.creatingTag && byId('sh-newtag-name')) byId('sh-newtag-name').focus();
     };
-    const backBtn = document.getElementById('sh-back-to-list');
-    if(backBtn) backBtn.onclick = ()=>{ syncSheetFromDOM(); d.creatingTag = false; d.newTagName = ''; render(); };
-    const delTag = document.getElementById('sh-delete-tag');
-    if(delTag) delTag.onclick = async ()=>{
-      const id = delTag.dataset.tagid;
-      const t = tagById(id);
-      if(!confirm(`Delete "${t?t.name:'this activity'}"? This removes it from every week and recurring rhythm that uses it.`)) return;
+    if(byId('sh-back-to-list')) byId('sh-back-to-list').onclick = ()=>{ syncSheetFromDOM(); d.creatingTag = false; d.newTagName = ''; render(); };
+    document.querySelectorAll('.sh-day').forEach(el=>{
+      el.onclick = ()=>{
+        syncSheetFromDOM();
+        d.otherDate = false;
+        d.date = el.dataset.date === editorDefaultDate(state.sheet.section) ? '' : el.dataset.date;
+        render();
+      };
+    });
+    if(byId('sh-other-day')) byId('sh-other-day').onclick = ()=>{
       syncSheetFromDOM();
-      await deleteTagRemote(id);
-      state.tags = state.tags.filter(x=>x.id!==id);
-      (state.editingMidweekRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
-      (state.editingPostServiceRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
-      d.tagIds = (d.tagIds||[]).filter(x=>x!==id);
+      d.otherDate = true;
+      if(!d.date) d.date = editorDefaultDate(state.sheet.section);
       render();
+      const inp = byId('sh-date');
+      if(inp){ inp.focus(); try{ inp.showPicker && inp.showPicker(); }catch(e){} }
     };
-    document.querySelectorAll('.sh-aud').forEach(el=>{
-      el.onclick = ()=>{ syncSheetFromDOM(); d.audience = d.audience===el.dataset.aud ? '' : el.dataset.aud; render(); };
-    });
-    document.querySelectorAll('.sh-owner').forEach(el=>{
-      el.onclick = ()=>{ syncSheetFromDOM(); d.owner = d.owner===el.dataset.owner ? '' : el.dataset.owner; render(); };
-    });
     document.querySelectorAll('.sh-status').forEach(el=>{
       el.onclick = ()=>{ syncSheetFromDOM(); d.status = el.dataset.status; render(); };
     });
@@ -3380,15 +3548,20 @@ function attachDashboardHandlers(){
         render();
       };
     });
-    const allDayInp = document.getElementById('sh-allday');
-    if(allDayInp) allDayInp.onchange = ()=>{ syncSheetFromDOM(); render(); };
-    const showRepeat = document.getElementById('sh-show-repeat');
-    if(showRepeat) showRepeat.onclick = ()=>{ syncSheetFromDOM(); d.showRepeat = true; render(); };
-    document.getElementById('sh-cancel').onclick = ()=>{ closeSheet(); render(); };
-    const shRemove = document.getElementById('sh-remove');
-    if(shRemove) shRemove.onclick = ()=>{ const id = state.sheet.rowId; closeSheet(); removeEditorRow(id); render(); };
-    const shDone = document.getElementById('sh-done');
-    if(shDone) shDone.onclick = async ()=>{
+    if(byId('sh-more')) byId('sh-more').onclick = (e)=>{ e.preventDefault(); syncSheetFromDOM(); state.sheetMore = !state.sheetMore; render(); };
+    if(byId('sh-delete-tag')) byId('sh-delete-tag').onclick = async ()=>{
+      const id = byId('sh-delete-tag').dataset.tagid;
+      const t = tagById(id);
+      if(!confirm(`Delete "${t?t.name:'this activity'}"? This removes it from every week and recurring rhythm that uses it.`)) return;
+      syncSheetFromDOM();
+      await deleteTagRemote(id);
+      state.tags = state.tags.filter(x=>x.id!==id);
+      (state.editingMidweekRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
+      (state.editingPostServiceRows||[]).forEach(r=>{ if(r.tagIds) r.tagIds = r.tagIds.filter(x=>x!==id); });
+      d.tagIds = (d.tagIds||[]).filter(x=>x!==id);
+      render();
+    };
+    if(byId('sh-done')) byId('sh-done').onclick = async ()=>{
       syncSheetFromDOM();
       if(d.creatingTag){
         const name = (d.newTagName||'').trim();
@@ -3397,7 +3570,7 @@ function attachDashboardHandlers(){
         if(existing){ d.tagIds = [existing.id]; }
         else {
           const audience = d.audience || ((state.audiences[0] && state.audiences[0].name) || 'Whole Church');
-          const newTag = {id:uid(), name, audience};
+          const newTag = {id:uid(), name, audience, defaultOwner:''};
           state.tags.push(newTag);
           await saveTags(newTag);
           d.tagIds = [newTag.id];
@@ -3405,7 +3578,9 @@ function attachDashboardHandlers(){
         d.creatingTag = false; d.newTagName = '';
       }
       if(!(d.tagIds||[]).length){ state.sheetError = 'Choose an activity first.'; render(); return; }
-      if(d.allDay===false && !d.startTime){ d.allDay = true; }
+      d.allDay = !d.startTime;
+      if(d.allDay){ d.startTime = ''; d.endTime = ''; }
+      delete d.otherDate;
       const arrName = state.sheet.section==='midweek' ? 'editingMidweekRows' : 'editingPostServiceRows';
       if(state.sheet.isNew) state[arrName].push(d);
       else {
@@ -3539,7 +3714,8 @@ function attachDashboardHandlers(){
           savedWeek = state.weeks[idx];
         }
       }
-      if(savedWeek) await saveWeeks(savedWeek);
+      let conflicts = [];
+      if(savedWeek) conflicts = await saveWeekSafely(savedWeek, el.dataset.id==='new');
 
       // Write any inline Needs comms? decisions to comms_plans now that the week
       // and its items have real, final ids — upserting on item_ref_id means this
@@ -3568,7 +3744,9 @@ function attachDashboardHandlers(){
       }
 
       clearWeekEditing();
+      await loadData();
       render();
+      if(conflicts.length) alert('Saved — with a few notes:\n\n• ' + conflicts.join('\n• '));
     };
   });
   const addWeekBtn = document.getElementById('add-week');
@@ -3737,6 +3915,8 @@ function attachCommsHandlers(){
   await loadData();
   render();
   subscribeRealtime();
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkForNewVersion(); });
+  setInterval(checkForNewVersion, 5*60*1000);
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
   });

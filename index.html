@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-06a">
+<meta name="app-version" content="2026-10-06b">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -922,6 +922,31 @@
   .cp-item span{flex:1;min-width:0;}
   .cp-item small{display:block;color:var(--ink-soft);font-size:12px;}
   .cp-item button{border:none;background:none;color:var(--bad);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+
+  /* ---------- Campaign planner + paid posts ---------- */
+  .sheet input[type="number"],.sheet input[type="url"]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:16px;font-family:inherit;background:#fff;color:var(--ink);min-width:0;}
+  .sheet-2col > div{min-width:0;}
+  .wz-steps{display:flex;gap:5px;margin:6px 0 4px;}
+  .wz-stepdot{flex:1;height:5px;border-radius:3px;background:var(--line);border:none;padding:0;cursor:pointer;}
+  .wz-stepdot.on{background:var(--navy);}
+  .wz-fixed{font-size:15px;font-weight:700;padding:10px 12px;background:var(--paper);border-radius:8px;}
+  .wz-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;}
+  .wz-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
+  .wz-card-head b{font-size:14.5px;}
+  .wz-card-head input{flex:1;}
+  .wz-del{border:none;background:none;color:var(--bad);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;}
+  .wz-sum{background:#F1EEFA;color:var(--navy);border-radius:8px;padding:9px 12px;font-size:13.5px;font-weight:600;margin-top:12px;}
+  .wz-list{border:1px solid var(--line);border-radius:10px;padding:2px 12px;margin-top:10px;}
+  .wz-check{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--paper);font-size:14px;cursor:pointer;}
+  .wz-check:first-child{border-top:none;}
+  .wz-check input{width:20px;height:20px;flex-shrink:0;}
+  .wz-check small{display:block;font-size:12px;color:var(--ink-soft);}
+  .wz-check.past{opacity:.45;}
+  .wz-review{border:1px solid var(--line);border-radius:10px;padding:2px 12px 6px;margin-top:10px;}
+  .wz-wk{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin:10px 0 2px;}
+  .wz-rv{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--paper);font-size:13.5px;}
+  .wz-rv small{display:block;color:var(--ink-soft);font-size:12px;}
+  .cm-paid{font-size:11px;font-weight:700;background:var(--gold-soft);color:#7A5A16;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -1165,6 +1190,8 @@ let state = {
   commsPosts: [],
   commsView: 'needs', // needs | weeks | campaigns | calendar
   needsFilter: 'todo',
+  wizard: null,
+  wizardError: '',
   choiceSheet: null,
   choiceError: '',
   addItem: null,
@@ -1354,13 +1381,15 @@ async function loadData(){
     alert('Could not load comms data:\n' + commsLoadErrors.join('\n') + '\n\nComms tab may appear empty until this is fixed.');
   }
 
-  const [postX, planX, flowX, campX] = await Promise.all([
+  const [postX, planX, flowX, campX, paidX, leadX] = await Promise.all([
     sb.from('comms_posts').select('assignee, ready_by').limit(1),
     sb.from('comms_plans').select('start_date, end_date').limit(1),
     sb.from('comms_flows').select('purpose').limit(1),
-    sb.from('comms_plans').select('campaign_id, is_campaign').limit(1)
+    sb.from('comms_plans').select('campaign_id, is_campaign').limit(1),
+    sb.from('comms_posts').select('paid, budget, target, boost_of, approved_by, ad_link').limit(1),
+    sb.from('comms_plans').select('lead').limit(1)
   ]);
-  commsPostExtras = !postX.error; commsPlanDates = !planX.error; commsFlowPurpose = !flowX.error; commsPlanCampaign = !campX.error;
+  commsPostExtras = !postX.error; commsPlanDates = !planX.error; commsFlowPurpose = !flowX.error; commsPlanCampaign = !campX.error; commsPaidCols = !paidX.error; commsPlanLead = !leadX.error;
   state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||'', purpose:f.purpose||null}));
   state.commsFlowSteps = (stepsRes.data||[]).map(s=>({
     id:s.id, flowId:s.flow_id, dayOffset:s.day_offset, channel:s.channel,
@@ -1406,12 +1435,13 @@ async function loadData(){
     id:p.id, itemType:p.item_type, itemRefId:p.item_ref_id, needsComms:p.needs_comms,
     autoFlowId:p.auto_flow_id, itemTitle:p.item_title||'', notes:p.notes||'',
     startDate:p.start_date||null, endDate:p.end_date||null,
-    campaignId:p.campaign_id||null, isCampaign: commsPlanCampaign ? !!p.is_campaign : (p.item_type!=='sunday' && !!(p.start_date||p.end_date))
+    lead:p.lead||'', campaignId:p.campaign_id||null, isCampaign: commsPlanCampaign ? !!p.is_campaign : (p.item_type!=='sunday' && !!(p.start_date||p.end_date))
   }));
   state.commsPosts = (postsRes.data||[]).map(p=>({
     id:p.id, commsPlanId:p.comms_plan_id, channel:p.channel, platform:p.platform||'',
     format:p.format||'', postDate:p.post_date, endDate:p.end_date, note:p.note||'', status:p.status||'planned',
-    assignee:p.assignee||'', readyBy:p.ready_by||''
+    assignee:p.assignee||'', readyBy:p.ready_by||'',
+    paid:!!p.paid, budget:p.budget==null?'':String(p.budget), target:p.target||'', boostOf:p.boost_of||'', approvedBy:p.approved_by||'', adLink:p.ad_link||''
   }));
 
   state.loaded = true;
@@ -1502,7 +1532,8 @@ async function saveCommsPlan(planOrPlans, opts){
     ...(commsPlanDates && p.startDate!==undefined ? {start_date:p.startDate||null} : {}),
     ...(commsPlanDates && p.endDate!==undefined ? {end_date:p.endDate||null} : {}),
     ...(commsPlanCampaign && p.isCampaign!==undefined ? {is_campaign:!!p.isCampaign} : {}),
-    ...(commsPlanCampaign && p.campaignId!==undefined ? {campaign_id:p.campaignId||null} : {})
+    ...(commsPlanCampaign && p.campaignId!==undefined ? {campaign_id:p.campaignId||null} : {}),
+    ...(commsPlanLead && p.lead!==undefined ? {lead:p.lead||null} : {})
   }));
   const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id', ignoreDuplicates: !!(opts && opts.ignoreDuplicates)});
   if(error){ console.error('save comms plan failed', error); alert('Could not save this comms decision: '+error.message); }
@@ -1511,7 +1542,8 @@ async function saveCommsPost(postOrPosts){
   const rows = (Array.isArray(postOrPosts)?postOrPosts:[postOrPosts]).map(p=>({
     id:p.id, comms_plan_id:p.commsPlanId, channel:p.channel, platform:p.platform||null,
     format:p.format||null, post_date:p.postDate||null, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned',
-    ...(commsPostExtras ? {assignee:p.assignee||null, ready_by:p.readyBy||null} : {})
+    ...(commsPostExtras ? {assignee:p.assignee||null, ready_by:p.readyBy||null} : {}),
+    ...(commsPaidCols ? {paid:!!p.paid, budget:(p.budget===''||p.budget==null)?null:(parseFloat(p.budget)||0), target:p.target||null, boost_of:p.boostOf||null, approved_by:p.approvedBy||null, ad_link:p.adLink||null} : {})
   }));
   const { error } = await sb.from('comms_posts').upsert(rows);
   if(error){ console.error('save comms post failed', error); alert('Could not save this comms post: '+error.message); }
@@ -1888,6 +1920,7 @@ function commsPostRow(p, showDate, fullDate){
       <span class="cm-post-for">for ${escHTML(commsForLabel(plan))}${p.endDate?' · until '+fmtDate(p.endDate):''}${ready}</span>
     </span>
     ${p.assignee ? `<span class="cm-who" title="${escHTML(p.assignee)}">${escHTML(ownerInitials(p.assignee))}</span>` : ''}
+    ${p.paid ? `<span class="cm-paid" title="${escHTML([p.target, p.approvedBy?'approved by '+p.approvedBy:''].filter(Boolean).join(' · '))}">Paid${p.budget?' · £'+escHTML(p.budget):''}</span>` : ''}
     ${commsStatusPill(p)}
   </div>`;
 }
@@ -1962,7 +1995,7 @@ function commsCalendarGridHTML(){
     const st = COMMS_STATUS_STYLE[p.status||'planned'];
     const plan = state.commsPlans.find(x=>x.id===p.commsPlanId);
     const tip = [commsChanLabel(p), p.note, 'for '+commsForLabel(plan), COMMS_STATUSES[p.status||'planned'].label].filter(Boolean).join(' · ');
-    return `<div class="mg-ev cm-open" data-post-id="${p.id}" role="button" tabindex="0" title="${escHTML(tip)}"><span class="mg-bar" style="background:${st.bar};"></span><span class="mg-name">${escHTML(p.note || planTitle(plan) || 'Post')}</span><span class="mg-time">${escHTML(commsChanLabel(p).split(' ')[0])}</span></div>`;
+    return `<div class="mg-ev cm-open" data-post-id="${p.id}" role="button" tabindex="0" title="${escHTML(tip)}"><span class="mg-bar" style="background:${st.bar};"></span><span class="mg-name">${p.paid?'£ ':''}${escHTML(p.note || planTitle(plan) || 'Post')}</span><span class="mg-time">${escHTML(commsChanLabel(p).split(' ')[0])}</span></div>`;
   };
   const desk = cells.map(d=>{
     const k = isoDate(d), list = byDay[k]||[];
@@ -2038,7 +2071,8 @@ function campaignInfo(plan){
   const days = (start && until) ? Math.round((parseISO(until)-parseISO(start))/86400000)+1 : 0;
   const today = isoDate(new Date());
   const next = posts.find(p=>p.postDate>=today && (p.status||'planned')!=='posted');
-  return {posts, start, end, until, days, kids, events: events.length ? events : (end ? [end] : []),
+  const spend = posts.filter(p=>p.paid).reduce((t,p)=>t+(parseFloat(p.budget)||0),0);
+  return {posts, start, end, until, days, kids, spend, events: events.length ? events : (end ? [end] : []),
     done: posts.filter(p=>p.status==='posted').length,
     overdue: posts.filter(isOverdue).length, next};
 }
@@ -2102,7 +2136,7 @@ function campaignsViewHTML(){
       <div class="cp-main">
         <div class="cp-title">${escHTML(planTitle(plan)||'Campaign')}${isStandalonePlan(plan)?'':' <span class="cp-tag">from planner</span>'}</div>
         <div class="cp-run">Runs ${fmtDate(info.start)} – ${fmtDate(info.until)}${info.days?' · '+durationLabel(info.days):''}</div>
-        <div class="cp-sum">${info.posts.length} post${info.posts.length===1?'':'s'} · ${info.done} posted${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}${info.next?` · next: ${fmtDate(info.next.postDate)} ${escHTML(commsChanLabel(info.next))}`:''}</div>
+        <div class="cp-sum">${plan.lead?'Lead: '+escHTML(plan.lead)+' · ':''}${info.posts.length} post${info.posts.length===1?'':'s'} · ${info.done} posted${info.spend?' · £'+info.spend.toFixed(0)+' paid':''}${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}${info.next?` · next: ${fmtDate(info.next.postDate)} ${escHTML(commsChanLabel(info.next))}`:''}</div>
       </div>
       <span class="wk2-chev" aria-hidden="true">›</span>
     </div>`).join('');
@@ -2128,7 +2162,7 @@ function campaignSheetHTML(){
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cp-title">
       <div class="sheet-grip"></div>
       <h3 id="cp-title">${escHTML(planTitle(plan)||'Campaign')}</h3>
-      <div class="sheet-hint" style="margin-top:2px;">${info.start?`Runs ${fmtDate(info.start)} – ${fmtDate(info.until)}${info.days?' · '+durationLabel(info.days):''} · `:''}${info.posts.length} posts · ${info.done} posted${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}</div>
+      <div class="sheet-hint" style="margin-top:2px;">${info.start?`Runs ${fmtDate(info.start)} – ${fmtDate(info.until)}${info.days?' · '+durationLabel(info.days):''} · `:''}${plan.lead?'Lead: '+escHTML(plan.lead)+' · ':''}${info.posts.length} posts · ${info.done} posted${info.spend?' · £'+info.spend.toFixed(0)+' paid':''}${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}</div>
       ${commsPlanDates ? `<div class="sheet-2col" style="margin-top:12px;">
         <div><span class="sheet-label">Runs from</span><input type="date" id="cp-start" value="${plan.startDate||info.start||''}"></div>
         <div><span class="sheet-label">Until / event</span><input type="date" id="cp-end" value="${plan.endDate||info.end||''}"></div>
@@ -2146,7 +2180,7 @@ function campaignSheetHTML(){
       <div class="sheet-field">
         <span class="sheet-label">Posts</span>
         <div class="cm-posts" style="border-top:none;padding:0;">${info.posts.length ? info.posts.map(p=>commsPostRow(p, true, true)).join('') : '<div class="cal-none">No posts yet</div>'}</div>
-        <button type="button" class="btn" id="cp-add-post" style="margin-top:8px;">+ Add post</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button type="button" class="btn primary" id="cp-plan">Plan posts (weekly, paid…)</button><button type="button" class="btn" id="cp-add-post">+ Add one post</button></div>
       </div>
       <div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="cp-delete">Delete campaign and its posts</button></div>
       <div class="sheet-actions"><button type="button" class="btn primary" id="cp-close">Close</button></div>
@@ -2249,7 +2283,7 @@ async function createCampaign(){
 
 function attachCampaignHandlers(){
   const byId = id=>document.getElementById(id);
-  if(byId('cp-new')) byId('cp-new').onclick = ()=>{ state.newCampaign = {forValue:'', templateId: (campaignTemplates()[0]||{}).id || '', endDate:'', startDate:''}; state.newCampaignError=''; render(); };
+  if(byId('cp-new')) byId('cp-new').onclick = ()=>{ state.wizard = newWizard({}); state.wizardError=''; render(); };
   document.querySelectorAll('.gt-open').forEach(el=>{
     const go = ()=>{ state.campaignSheet = {planId: el.dataset.plan}; render(); };
     el.onclick = go;
@@ -2280,6 +2314,7 @@ function attachCampaignHandlers(){
       k.campaignId = planId; render();
       await updatePlanFields(k.id, {campaign_id:planId});
     };
+    byId('cp-plan').onclick = ()=>{ state.wizard = newWizard({planId}); state.wizard.step = 1; state.wizardError=''; state.campaignSheet = null; render(); };
     byId('cp-add-post').onclick = ()=>{
       const info = campaignInfo(plan);
       const anchor = info.next ? info.next.postDate : (info.end || isoDate(new Date()));
@@ -2544,8 +2579,8 @@ async function applyChoice(){
   if(plan.isCampaign){ state.commsView = 'campaigns'; state.campaignSheet = {planId: plan.id}; return true; }
   plan.campaignId = null;
   if(commsPlanCampaign) await updatePlanFields(plan.id, {campaign_id:null});
-  state.newCampaign = {forValue:'plan:'+plan.id, lockedFor:true, templateId:(campaignTemplates()[0]||{}).id||'', endDate: (isAddedItem(plan) ? (plan.endDate||plan.startDate) : ch.date) || '', startDate:''};
-  state.newCampaignError = '';
+  state.wizard = newWizard({forValue:'plan:'+plan.id, endDate: (isAddedItem(plan) ? (plan.endDate||plan.startDate) : ch.date) || '', startDate: isAddedItem(plan) ? (plan.startDate||'') : ''});
+  state.wizardError = '';
   return true;
 }
 
@@ -2642,6 +2677,304 @@ function attachNeedsHandlers(){
   }
 }
 
+// ---------- Campaign planner (step-by-step) ----------
+// One place to plan a whole campaign: basics, weekly posts, one-off key moments
+// (from a template, untickable, plus extras) and paid boosts — then everything is
+// created in one go. Opens from "+ New campaign", from "Start a new campaign"
+// after a Yes in Needs comms?, and from inside an existing campaign ("Plan posts").
+let commsPaidCols = true, commsPlanLead = true;
+const WZ_STEPS = ['The basics','Regular posts','Key moments','Paid promotion','Review'];
+const WZ_DAYS = [[1,'Mon'],[2,'Tue'],[3,'Wed'],[4,'Thu'],[5,'Fri'],[6,'Sat'],[0,'Sun']];
+function newWizard(opts){
+  const plan = opts.planId ? state.commsPlans.find(p=>p.id===opts.planId) : null;
+  const info = plan ? campaignInfo(plan) : null;
+  return {
+    step:0, planId: plan && plan.isCampaign ? plan.id : null,
+    forValue: opts.forValue || (plan ? 'plan:'+plan.id : ''), newTitle:'',
+    startDate: opts.startDate || (plan && plan.startDate) || (info && info.start) || '',
+    endDate: opts.endDate || (plan && plan.endDate) || (info && info.end) || '',
+    lead: (plan && plan.lead) || '',
+    weeklyOn: false, series: [],
+    templateId: plan && plan.isCampaign ? '' : ((campaignTemplates()[0]||{}).id || ''), unticked: {}, extras: [],
+    paidOn: false, boosts: []
+  };
+}
+function wzSeries(){ return {days:[3], channel:'social', platform:'facebook,instagram', format:'story', note:''}; }
+function wzBoost(wz){
+  const today = isoDate(new Date());
+  return {platform:'facebook,instagram', from: wz.startDate && wz.startDate>today ? wz.startDate : today, until: wz.endDate||'', budget:'', target:'', boostRef:'', approvedBy:'', adLink:'', more:false};
+}
+// Every post the planner would create (excluding boosts), each with a stable key
+function wzPosts(wz){
+  const today = isoDate(new Date());
+  const out = [];
+  const start = [wz.startDate, today].filter(Boolean).sort().pop();
+  if(wz.weeklyOn && start && wz.endDate){
+    wz.series.forEach((s, si)=>{
+      for(let d = start; d <= wz.endDate; d = addDaysISO(d, 1)){
+        if(s.days.includes(parseISO(d).getDay())) out.push({key:'w'+si+':'+d, postDate:d, channel:s.channel, platform:s.channel==='social'?s.platform:'', format:s.channel==='social'?s.format:'', note:s.note||'Weekly post', kind:'weekly'});
+      }
+    });
+  }
+  if(wz.templateId && wz.endDate){
+    const steps = state.commsFlowSteps.filter(s=>s.flowId===wz.templateId).sort((a,b)=>a.dayOffset-b.dayOffset);
+    steps.forEach(s=>{
+      let d = addDaysISO(wz.endDate, s.dayOffset);
+      if(s.channel==='notices') d = isoDate(sundayOnOrBefore(parseISO(d)));
+      const key = 't:'+s.id;
+      if(d < today || wz.unticked[key]) return;
+      out.push({key, postDate:d, channel:s.channel, platform:s.platform||'', format:s.format||'', note:s.note||'', kind:'moment'});
+    });
+  }
+  wz.extras.forEach((x, i)=>{ if(x.postDate) out.push({key:'x'+i, postDate:x.postDate, channel:x.channel, platform:x.channel==='social'?x.platform:'', format:x.channel==='social'?x.format:'', note:x.note||'Post', kind:'extra'}); });
+  return out.sort((a,b)=> a.postDate<b.postDate?-1:a.postDate>b.postDate?1:0);
+}
+function wzTemplateRows(wz){
+  if(!wz.templateId || !wz.endDate) return [];
+  const today = isoDate(new Date());
+  return state.commsFlowSteps.filter(s=>s.flowId===wz.templateId).sort((a,b)=>a.dayOffset-b.dayOffset).map(s=>{
+    let d = addDaysISO(wz.endDate, s.dayOffset);
+    if(s.channel==='notices') d = isoDate(sundayOnOrBefore(parseISO(d)));
+    return {key:'t:'+s.id, d, past: d < today, s};
+  });
+}
+function chanChips(cls, idx, cur){
+  return Object.entries(COMMS_CHANNELS).map(([k,v])=>`<button type="button" class="sheet-chip ${cls} ${cur===k?'on':''}" data-i="${idx}" data-v="${k}">${v.label}</button>`).join('');
+}
+function platFmtChips(prefix, idx, item){
+  const plats = (item.platform||'').split(',').filter(Boolean);
+  return `<div class="sheet-chips" style="margin-top:8px;">
+    ${Object.entries(COMMS_PLATFORMS).map(([k,v])=>`<button type="button" class="sheet-chip ${prefix}-plat ${plats.includes(k)?'on':''}" data-i="${idx}" data-v="${k}">${v}</button>`).join('')}
+    <span class="cm-chip-gap"></span>
+    ${Object.entries(COMMS_FORMATS).map(([k,v])=>`<button type="button" class="sheet-chip ${prefix}-fmt ${item.format===k?'on':''}" data-i="${idx}" data-v="${k}">${v}</button>`).join('')}
+  </div>`;
+}
+function wizardHTML(){
+  const wz = state.wizard; if(!wz) return '';
+  const posts = wzPosts(wz);
+  const plan = wz.planId ? state.commsPlans.find(p=>p.id===wz.planId) : null;
+  let body = '';
+  if(wz.step===0){
+    let forHTML = '';
+    if(plan){ forHTML = `<div class="wz-fixed">${escHTML(planTitle(plan))}</div>`; }
+    else {
+      const today = new Date();
+      const items = commsItemsForRange(today, new Date(today.getFullYear(), today.getMonth(), today.getDate()+16*7)).filter(o=> commsItemType(o.ev)!=='sunday');
+      const seen = new Set(), opts = [];
+      items.forEach(o=>{ const k = commsItemKey(o); if(seen.has(k)) return; seen.add(k); const pl = commsPlanFor(o); if(pl && pl.needsComms===false) return; opts.push({value: pl ? 'plan:'+pl.id : 'item:'+k, label:`${commsItemName(o)} · ${fmtDate(isoDate(o.date))}`, key:k, type:commsItemType(o.ev), title:commsItemName(o), date:isoDate(o.date)}); });
+      state.commsPlans.filter(p=>isStandalonePlan(p) && p.needsComms!==false && !opts.some(o=>o.value==='plan:'+p.id)).forEach(p=> opts.push({value:'plan:'+p.id, label:planTitle(p)+' (added)', date: p.endDate||p.startDate||''}));
+      if(wz.forValue && wz.forValue.startsWith('plan:') && !opts.some(o=>o.value===wz.forValue)){ const pl = state.commsPlans.find(p=>'plan:'+p.id===wz.forValue); if(pl) opts.unshift({value:wz.forValue, label:planTitle(pl)+(planItemDate(pl)?' · '+fmtDate(planItemDate(pl)):''), date:planItemDate(pl)}); }
+      wz.options = opts;
+      forHTML = `<select id="wz-for"><option value="" ${!wz.forValue?'selected':''}>Choose…</option>${opts.map(o=>`<option value="${escHTML(o.value)}" ${wz.forValue===o.value?'selected':''}>${escHTML(o.label)}</option>`).join('')}<option value="__new__" ${wz.forValue==='__new__'?'selected':''}>+ Something else…</option></select>
+        ${wz.forValue==='__new__' ? `<input type="text" id="wz-title" placeholder="e.g. Toys Under The Tree" value="${escHTML(wz.newTitle||'')}" style="margin-top:8px;">` : ''}`;
+    }
+    body = `
+      <div class="sheet-field"><span class="sheet-label">What's being promoted</span>${forHTML}</div>
+      <div class="sheet-2col" style="margin-top:14px;">
+        <div><span class="sheet-label">Runs from</span><input type="date" id="wz-start" value="${wz.startDate||''}"></div>
+        <div><span class="sheet-label">Event / until</span><input type="date" id="wz-end" value="${wz.endDate||''}"></div>
+      </div>
+      ${commsPlanLead ? `<div class="sheet-rows" style="margin-top:14px;"><label class="sheet-row"><span>Campaign lead</span><select id="wz-lead"><option value="">Nobody yet</option>${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${wz.lead===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}</select></label></div>` : ''}`;
+  } else if(wz.step===1){
+    const n = posts.filter(p=>p.kind==='weekly').length;
+    body = `
+      <div class="sheet-field"><span class="sheet-label">Post every week while it runs?</span>
+        <div class="sheet-chips"><button type="button" class="sheet-chip wz-weekly ${wz.weeklyOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-weekly ${!wz.weeklyOn?'on':''}" data-v="0">No</button></div></div>
+      ${wz.weeklyOn ? wz.series.map((s,i)=>`
+        <div class="wz-card">
+          <div class="wz-card-head"><b>Weekly post ${wz.series.length>1?i+1:''}</b>${wz.series.length>1?`<button type="button" class="wz-del wz-series-del" data-i="${i}">Remove</button>`:''}</div>
+          <span class="sheet-label">On which days</span>
+          <div class="sheet-chips">${WZ_DAYS.map(([d,l])=>`<button type="button" class="sheet-chip wz-day ${s.days.includes(d)?'on':''}" data-i="${i}" data-v="${d}">${l}</button>`).join('')}</div>
+          <span class="sheet-label" style="margin-top:12px;">Channel</span>
+          <div class="sheet-chips">${chanChips('wz-s-chan', i, s.channel)}</div>
+          ${s.channel==='social' ? platFmtChips('wz-s', i, s) : ''}
+          <span class="sheet-label" style="margin-top:12px;">What is it</span>
+          <input type="text" class="wz-s-note" data-i="${i}" value="${escHTML(s.note)}" placeholder="e.g. Alpha countdown">
+        </div>`).join('') + `<button type="button" class="btn" id="wz-add-series" style="margin-top:8px;">+ Another weekly post</button>` : ''}
+      ${wz.weeklyOn ? `<div class="wz-sum">${n} weekly post${n===1?'':'s'}${wz.startDate&&wz.endDate?' between '+fmtDate([wz.startDate, isoDate(new Date())].sort().pop())+' and '+fmtDate(wz.endDate):''}</div>` : ''}`;
+  } else if(wz.step===2){
+    const rows = wzTemplateRows(wz);
+    body = `
+      <div class="sheet-field"><span class="sheet-label">Start from a template</span>
+        <div class="sheet-chips">${campaignTemplates().map(t=>`<button type="button" class="sheet-chip wz-tpl ${wz.templateId===t.id?'on':''}" data-v="${t.id}">${escHTML(t.name)}</button>`).join('')}<button type="button" class="sheet-chip wz-tpl ${!wz.templateId?'on':''}" data-v="">None</button></div></div>
+      ${rows.length ? `<div class="wz-list">${rows.map(r=>`<label class="wz-check${r.past?' past':''}"><input type="checkbox" class="wz-tick" data-k="${r.key}" ${(!r.past && !wz.unticked[r.key])?'checked':''} ${r.past?'disabled':''}><span>${escHTML(r.s.note||'Post')}<small>${escHTML(commsChanLabel(r.s))} · ${fmtDate(r.d)}${r.past?' · already passed':''}</small></span></label>`).join('')}</div>` : ''}
+      <div class="sheet-field"><span class="sheet-label">Other one-off posts</span>
+        ${wz.extras.map((x,i)=>`<div class="wz-card">
+          <div class="wz-card-head"><input type="text" class="wz-x-note" data-i="${i}" value="${escHTML(x.note)}" placeholder="What is it?"><button type="button" class="wz-del wz-x-del" data-i="${i}">Remove</button></div>
+          <input type="date" class="wz-x-date" data-i="${i}" value="${x.postDate||''}" style="margin-top:8px;">
+          <div class="sheet-chips" style="margin-top:8px;">${chanChips('wz-x-chan', i, x.channel)}</div>
+          ${x.channel==='social' ? platFmtChips('wz-x', i, x) : ''}
+        </div>`).join('')}
+        <button type="button" class="btn" id="wz-add-extra" style="margin-top:8px;">+ Add a one-off post</button>
+      </div>`;
+  } else if(wz.step===3){
+    const refOpts = posts.map(p=>({v:'gen:'+p.key, l:`${p.note} · ${fmtDate(p.postDate)}`}))
+      .concat(plan ? campaignInfo(plan).posts.filter(p=>!p.paid).map(p=>({v:'post:'+p.id, l:`${p.note||'Post'} · ${fmtDate(p.postDate)}`})) : []);
+    const total = wz.boosts.reduce((t,b)=>t+(parseFloat(b.budget)||0),0);
+    body = `
+      ${!commsPaidCols ? `<div class="notice" style="color:var(--bad);">Paid boosts need the latest Supabase update before they can be saved.</div>` : ''}
+      <div class="sheet-field"><span class="sheet-label">Do we want paid (boosted) posts?</span>
+        <div class="sheet-chips"><button type="button" class="sheet-chip wz-paid ${wz.paidOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-paid ${!wz.paidOn?'on':''}" data-v="0">No</button></div></div>
+      ${wz.paidOn ? wz.boosts.map((b,i)=>{ const plats=(b.platform||'').split(',').filter(Boolean); return `
+        <div class="wz-card">
+          <div class="wz-card-head"><b>Boost ${wz.boosts.length>1?i+1:''}</b>${wz.boosts.length>1?`<button type="button" class="wz-del wz-b-del" data-i="${i}">Remove</button>`:''}</div>
+          <span class="sheet-label">Platforms</span>
+          <div class="sheet-chips">${Object.entries(COMMS_PLATFORMS).map(([k,v])=>`<button type="button" class="sheet-chip wz-b-plat ${plats.includes(k)?'on':''}" data-i="${i}" data-v="${k}">${v}</button>`).join('')}</div>
+          <div class="sheet-2col" style="margin-top:12px;">
+            <div><span class="sheet-label">Push from</span><input type="date" class="wz-b-from" data-i="${i}" value="${b.from||''}"></div>
+            <div><span class="sheet-label">Until</span><input type="date" class="wz-b-until" data-i="${i}" value="${b.until||''}"></div>
+          </div>
+          <div class="sheet-2col" style="margin-top:12px;">
+            <div><span class="sheet-label">Budget (£)</span><input type="number" min="0" step="1" class="wz-b-budget" data-i="${i}" value="${escHTML(b.budget)}" placeholder="40"></div>
+            <div><span class="sheet-label">Target</span><input type="text" class="wz-b-target" data-i="${i}" value="${escHTML(b.target)}" placeholder="e.g. Sunderland, 18–35"></div>
+          </div>
+          <span class="sheet-label" style="margin-top:12px;">Boost which post</span>
+          <select class="wz-b-ref" data-i="${i}"><option value="">A new ad (not one of these posts)</option>${refOpts.map(o=>`<option value="${escHTML(o.v)}" ${b.boostRef===o.v?'selected':''}>${escHTML(o.l)}</option>`).join('')}</select>
+          <button type="button" class="sheet-link wz-b-more" data-i="${i}">${b.more?'Fewer details':'More details (approval, ad link)'}</button>
+          ${b.more ? `<div class="sheet-2col" style="margin-top:8px;">
+            <div><span class="sheet-label">Approved by</span><select class="wz-b-appr" data-i="${i}"><option value="">Not yet</option>${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${b.approvedBy===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}</select></div>
+            <div><span class="sheet-label">Ad link</span><input type="url" class="wz-b-link" data-i="${i}" value="${escHTML(b.adLink)}" placeholder="Meta Ads link"></div>
+          </div>` : ''}
+        </div>`; }).join('') + `<button type="button" class="btn" id="wz-add-boost" style="margin-top:8px;">+ Add another boost</button>
+        <div class="wz-sum">${wz.boosts.length} boost${wz.boosts.length===1?'':'s'} · £${total.toFixed(0)} total</div>` : ''}`;
+  } else {
+    const boosts = wz.paidOn ? wz.boosts.filter(b=>b.from) : [];
+    const total = boosts.reduce((t,b)=>t+(parseFloat(b.budget)||0),0);
+    const all = posts.map(p=>({...p, paid:false})).concat(boosts.map(b=>({postDate:b.from, endDate:b.until, channel:'social', platform:b.platform, format:'post', note:'Boost', paid:true, budget:b.budget})))
+      .sort((a,b)=>a.postDate<b.postDate?-1:a.postDate>b.postDate?1:0);
+    let lastWk = '', rows = '';
+    all.forEach(p=>{
+      const wk = isoDate(sundayOnOrBefore(parseISO(p.postDate)));
+      if(wk!==lastWk){ rows += `<div class="wz-wk">Week of ${fmtDate(wk)}</div>`; lastWk = wk; }
+      rows += `<div class="wz-rv"><span>${fmtDate(p.postDate)}</span><span><b>${escHTML(p.note)}</b><small>${escHTML(commsChanLabel(p))}${p.paid&&p.endDate?' · until '+fmtDate(p.endDate):''}</small></span>${p.paid?`<span class="cm-paid">Paid${p.budget?' · £'+escHTML(p.budget):''}</span>`:'<span></span>'}</div>`;
+    });
+    body = `<div class="sheet-hint" style="margin-top:4px;">${posts.length} post${posts.length===1?'':'s'}${boosts.length?` · ${boosts.length} boost${boosts.length===1?'':'s'} (£${total.toFixed(0)})`:''}. Nobody is assigned yet; each post gets a "ready by" ${READY_DAYS_BEFORE} days before.</div>
+      <div class="wz-review">${rows || '<div class="cal-none">Nothing to create yet — go back and add some posts.</div>'}</div>`;
+  }
+  const createCount = posts.length + (wz.paidOn ? wz.boosts.filter(b=>b.from).length : 0);
+  return `
+  <div class="sheet-overlay" id="wz-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wz-title-h">
+      <div class="sheet-grip"></div>
+      <h3 id="wz-title-h">Plan campaign · ${WZ_STEPS[wz.step]}</h3>
+      <div class="wz-steps">${WZ_STEPS.map((s,i)=>`<button type="button" class="wz-stepdot ${i<=wz.step?'on':''}" data-step="${i}" aria-label="${s}"></button>`).join('')}</div>
+      ${body}
+      ${state.wizardError ? `<div class="sheet-error">${escHTML(state.wizardError)}</div>` : ''}
+      <div class="sheet-actions">
+        <button type="button" class="btn" id="wz-back">${wz.step===0?'Cancel':'Back'}</button>
+        <button type="button" class="btn primary" id="wz-next">${wz.step<4 ? 'Next' : (createCount ? 'Create '+createCount+' post'+(createCount===1?'':'s') : (wz.planId ? 'Done' : 'Create campaign'))}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function syncWizardFromDOM(){
+  const wz = state.wizard; if(!wz) return;
+  const v = id=>document.getElementById(id);
+  if(v('wz-title')) wz.newTitle = v('wz-title').value;
+  if(v('wz-start')) wz.startDate = v('wz-start').value;
+  if(v('wz-end')) wz.endDate = v('wz-end').value;
+  if(v('wz-lead')) wz.lead = v('wz-lead').value;
+  document.querySelectorAll('.wz-s-note').forEach(el=>{ const s = wz.series[+el.dataset.i]; if(s) s.note = el.value; });
+  document.querySelectorAll('.wz-x-note').forEach(el=>{ const x = wz.extras[+el.dataset.i]; if(x) x.note = el.value; });
+  document.querySelectorAll('.wz-x-date').forEach(el=>{ const x = wz.extras[+el.dataset.i]; if(x) x.postDate = el.value; });
+  const bf = (cls, f)=> document.querySelectorAll(cls).forEach(el=>{ const b = wz.boosts[+el.dataset.i]; if(b) b[f] = el.value; });
+  bf('.wz-b-from','from'); bf('.wz-b-until','until'); bf('.wz-b-budget','budget'); bf('.wz-b-target','target'); bf('.wz-b-ref','boostRef'); bf('.wz-b-appr','approvedBy'); bf('.wz-b-link','adLink');
+}
+function wzValidate(wz){
+  if(wz.step===0){
+    if(!wz.planId && !wz.forValue) return 'Choose what is being promoted.';
+    if(wz.forValue==='__new__' && !(wz.newTitle||'').trim()) return 'Give the campaign a name.';
+    if(!wz.endDate) return 'Set the event / until date.';
+    if(wz.startDate && wz.startDate > wz.endDate) return 'The start date is after the end date.';
+  }
+  if(wz.step===1 && wz.weeklyOn && wz.series.some(s=>!s.days.length)) return 'Pick at least one day for each weekly post.';
+  if(wz.step===3 && wz.paidOn){
+    for(const b of wz.boosts){ if(!b.from) return 'Each boost needs a "push from" date.'; if(b.until && b.until < b.from) return 'A boost ends before it starts.'; }
+  }
+  return '';
+}
+async function wizardCreate(){
+  const wz = state.wizard;
+  let plan = wz.planId ? state.commsPlans.find(p=>p.id===wz.planId) : null;
+  if(!plan){
+    if(wz.forValue==='__new__'){
+      const title = wz.newTitle.trim();
+      plan = state.commsPlans.find(p=>isStandalonePlan(p) && (p.itemTitle||'').toLowerCase()===title.toLowerCase());
+      if(!plan){ plan = {id:uid(), itemType:'event', itemRefId:'standalone::'+uid(), needsComms:true, autoFlowId:null, itemTitle:title, notes:''}; state.commsPlans.push(plan); await saveCommsPlan(plan); }
+    } else if(wz.forValue.startsWith('item:')){
+      const o = (wz.options||[]).find(x=>x.value===wz.forValue);
+      if(o) plan = await getOrCreateItemPlan(o.key, o.type, o.title, true);
+    } else if(wz.forValue.startsWith('plan:')){
+      plan = state.commsPlans.find(p=>p.id===wz.forValue.slice(5));
+    }
+    if(!plan){ state.wizardError = 'Choose what is being promoted.'; render(); return false; }
+  }
+  if(plan.needsComms!==true) await getOrCreateItemPlan(plan.itemRefId, plan.itemType, plan.itemTitle, true);
+  const posts = wzPosts(wz);
+  const start = wz.startDate || (posts.length ? posts[0].postDate : wz.endDate);
+  plan.startDate = start; plan.endDate = wz.endDate; plan.isCampaign = true; plan.campaignId = null; plan.lead = wz.lead||'';
+  await updatePlanFields(plan.id, {
+    ...(commsPlanDates?{start_date:start, end_date:wz.endDate}:{}),
+    ...(commsPlanCampaign?{is_campaign:true, campaign_id:null}:{}),
+    ...(commsPlanLead?{lead:wz.lead||null}:{})
+  });
+  const idByKey = {};
+  const rows = posts.map(p=>{ const id = uid(); idByKey[p.key] = id; return {id, commsPlanId:plan.id, channel:p.channel, platform:p.platform, format:p.format, postDate:p.postDate, endDate:null, note:p.note, status:'planned', assignee:'', readyBy:addDaysISO(p.postDate, -READY_DAYS_BEFORE)}; });
+  if(wz.paidOn && commsPaidCols){
+    wz.boosts.filter(b=>b.from).forEach(b=>{
+      let boostOf = '', label = 'Boost';
+      if(b.boostRef.startsWith('gen:')){ boostOf = idByKey[b.boostRef.slice(4)] || ''; const g = posts.find(p=>'gen:'+p.key===b.boostRef); if(g) label = 'Boost: '+g.note; }
+      else if(b.boostRef.startsWith('post:')){ boostOf = b.boostRef.slice(5); const ex = state.commsPosts.find(p=>p.id===boostOf); if(ex) label = 'Boost: '+(ex.note||'post'); }
+      rows.push({id:uid(), commsPlanId:plan.id, channel:'social', platform:b.platform, format:'post', postDate:b.from, endDate:b.until||null, note:label, status:'planned', assignee:'', readyBy:addDaysISO(b.from, -READY_DAYS_BEFORE),
+        paid:true, budget:b.budget, target:b.target, boostOf, approvedBy:b.approvedBy, adLink:b.adLink});
+    });
+  }
+  if(rows.length){ state.commsPosts.push(...rows); await saveCommsPost(rows); }
+  state.wizard = null;
+  state.commsView = 'campaigns';
+  state.campaignSheet = {planId: plan.id};
+  return true;
+}
+function attachWizardHandlers(){
+  const ov = document.getElementById('wz-overlay');
+  if(!ov || !state.wizard) return;
+  const wz = state.wizard, byId = id=>document.getElementById(id);
+  const re = ()=>{ state.wizardError=''; render(); };
+  ov.onclick = (e)=>{ if(e.target===ov){ if(confirm('Close the campaign planner? Nothing has been saved yet.')){ state.wizard=null; render(); } } };
+  const on = (sel, fn)=> document.querySelectorAll(sel).forEach(el=> el.onclick = ()=>{ syncWizardFromDOM(); fn(el); re(); });
+  if(byId('wz-for')) byId('wz-for').onchange = ()=>{ syncWizardFromDOM(); wz.forValue = byId('wz-for').value; const o = (wz.options||[]).find(x=>x.value===wz.forValue); if(o && o.date && !wz.endDate) wz.endDate = o.date; re(); };
+  on('.wz-stepdot', el=>{ const t = +el.dataset.step; if(t < wz.step) wz.step = t; });
+  on('.wz-weekly', el=>{ wz.weeklyOn = el.dataset.v==='1'; if(wz.weeklyOn && !wz.series.length) wz.series.push(wzSeries()); });
+  on('.wz-day', el=>{ const s = wz.series[+el.dataset.i], d = +el.dataset.v; s.days = s.days.includes(d) ? s.days.filter(x=>x!==d) : s.days.concat(d); });
+  on('.wz-s-chan', el=>{ const s = wz.series[+el.dataset.i]; s.channel = el.dataset.v; if(s.channel==='social' && !s.platform){ s.platform='facebook,instagram'; s.format='post'; } });
+  on('.wz-s-plat', el=>{ const s = wz.series[+el.dataset.i]; let p = (s.platform||'').split(',').filter(Boolean); p = p.includes(el.dataset.v) ? p.filter(x=>x!==el.dataset.v) : p.concat(el.dataset.v); s.platform = p.join(','); });
+  on('.wz-s-fmt', el=>{ wz.series[+el.dataset.i].format = el.dataset.v; });
+  on('.wz-series-del', el=>{ wz.series.splice(+el.dataset.i, 1); });
+  if(byId('wz-add-series')) byId('wz-add-series').onclick = ()=>{ syncWizardFromDOM(); wz.series.push(wzSeries()); re(); };
+  on('.wz-tpl', el=>{ wz.templateId = el.dataset.v; wz.unticked = {}; });
+  document.querySelectorAll('.wz-tick').forEach(el=> el.onchange = ()=>{ syncWizardFromDOM(); if(el.checked) delete wz.unticked[el.dataset.k]; else wz.unticked[el.dataset.k] = true; re(); });
+  if(byId('wz-add-extra')) byId('wz-add-extra').onclick = ()=>{ syncWizardFromDOM(); wz.extras.push({postDate: wz.endDate || '', channel:'social', platform:'facebook,instagram', format:'post', note:''}); re(); };
+  on('.wz-x-del', el=>{ wz.extras.splice(+el.dataset.i, 1); });
+  on('.wz-x-chan', el=>{ const x = wz.extras[+el.dataset.i]; x.channel = el.dataset.v; if(x.channel==='social' && !x.platform){ x.platform='facebook,instagram'; x.format='post'; } });
+  on('.wz-x-plat', el=>{ const x = wz.extras[+el.dataset.i]; let p = (x.platform||'').split(',').filter(Boolean); p = p.includes(el.dataset.v) ? p.filter(y=>y!==el.dataset.v) : p.concat(el.dataset.v); x.platform = p.join(','); });
+  on('.wz-x-fmt', el=>{ wz.extras[+el.dataset.i].format = el.dataset.v; });
+  on('.wz-paid', el=>{ wz.paidOn = el.dataset.v==='1'; if(wz.paidOn && !wz.boosts.length) wz.boosts.push(wzBoost(wz)); });
+  on('.wz-b-plat', el=>{ const b = wz.boosts[+el.dataset.i]; let p = (b.platform||'').split(',').filter(Boolean); p = p.includes(el.dataset.v) ? p.filter(x=>x!==el.dataset.v) : p.concat(el.dataset.v); b.platform = p.join(','); });
+  on('.wz-b-more', el=>{ const b = wz.boosts[+el.dataset.i]; b.more = !b.more; });
+  on('.wz-b-del', el=>{ wz.boosts.splice(+el.dataset.i, 1); });
+  if(byId('wz-add-boost')) byId('wz-add-boost').onclick = ()=>{ syncWizardFromDOM(); wz.boosts.push(wzBoost(wz)); re(); };
+  byId('wz-back').onclick = ()=>{ syncWizardFromDOM(); if(wz.step===0){ state.wizard = null; render(); return; } wz.step--; re(); };
+  byId('wz-next').onclick = async ()=>{
+    syncWizardFromDOM();
+    const err = wzValidate(wz);
+    if(err){ state.wizardError = err; render(); return; }
+    if(wz.step < 4){ wz.step++; re(); const sh = document.querySelector('#wz-overlay .sheet'); if(sh) sh.scrollTop = 0; return; }
+    const btn = byId('wz-next'); btn.disabled = true; btn.textContent = 'Creating…';
+    const ok = await wizardCreate();
+    if(ok) render(); else if(byId('wz-next')) byId('wz-next').disabled = false;
+  };
+}
+
 function commsTabHTML(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   // provision the weekly Sunday flow for every Sunday whose posts could land in
@@ -2656,13 +2989,14 @@ function commsTabHTML(){
       <button type="button" class="comms-subtab ${v==='campaigns'?'active':''}" data-commsview="campaigns">Campaigns</button>
       <button type="button" class="comms-subtab ${v==='calendar'?'active':''}" data-commsview="calendar">Calendar</button>
     </div>
-    ${(!commsPostExtras || !commsPlanDates || !commsFlowPurpose || !commsPlanCampaign) ? `<div class="notice" style="color:var(--bad);margin:0 0 10px;">Campaign features need the latest Supabase update (assignee, ready-by, campaign dates, templates). Some options are hidden until it's run.</div>` : ''}
+    ${(!commsPostExtras || !commsPlanDates || !commsFlowPurpose || !commsPlanCampaign || !commsPaidCols || !commsPlanLead) ? `<div class="notice" style="color:var(--bad);margin:0 0 10px;">Campaign features need the latest Supabase update (assignee, ready-by, campaign dates, templates). Some options are hidden until it's run.</div>` : ''}
     ${(v==='weeks' || v==='calendar') ? commsFiltersHTML() : ''}
     ${v==='needs' ? needsTabHTML() : `<div class="${v==='weeks'?'cal-wrap':''}">${v==='weeks' ? commsWeeksHTML() : v==='campaigns' ? campaignsViewHTML() : commsCalendarGridHTML()}</div>`}
     ${campaignSheetHTML()}
     ${addItemSheetHTML()}
     ${choiceSheetHTML()}
     ${newCampaignSheetHTML()}
+    ${wizardHTML()}
     ${commsSheetHTML()}
   `;
 }
@@ -2757,6 +3091,20 @@ function commsSheetHTML(){
         <label class="sheet-row"><span>Ready by</span><input type="date" id="cm-ready" value="${d.readyBy||''}" class="sheet-row-date"></label>
       </div>
       <div class="sheet-hint">Leave "Ready by" blank to use ${READY_DAYS_BEFORE} days before the post date.</div>` : ''}
+      ${commsPaidCols ? `<div class="sheet-field">
+        <span class="sheet-label">Paid boost?</span>
+        <div class="sheet-chips"><button type="button" class="sheet-chip cm-paid-yn ${d.paid?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip cm-paid-yn ${!d.paid?'on':''}" data-v="0">No</button></div>
+        ${d.paid ? `<div class="sheet-2col" style="margin-top:10px;">
+          <div><span class="sheet-label">Budget (£)</span><input type="number" min="0" step="1" id="cm-budget" value="${escHTML(d.budget||'')}"></div>
+          <div><span class="sheet-label">Target</span><input type="text" id="cm-target" value="${escHTML(d.target||'')}" placeholder="e.g. Sunderland, 18–35"></div>
+        </div>
+        <div class="sheet-2col" style="margin-top:10px;">
+          <div><span class="sheet-label">Approved by</span><select id="cm-appr"><option value="">Not yet</option>${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${d.approvedBy===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}${(d.approvedBy && !state.owners.some(o=>o.name===d.approvedBy))?`<option selected>${escHTML(d.approvedBy)}</option>`:''}</select></div>
+          <div><span class="sheet-label">Ad link</span><input type="url" id="cm-adlink" value="${escHTML(d.adLink||'')}" placeholder="Meta Ads link"></div>
+        </div>
+        ${d.adLink ? `<a class="sheet-link" href="${escHTML(d.adLink)}" target="_blank" rel="noopener">Open the ad ↗</a>` : ''}
+        <div class="sheet-hint">The post date is when the boost is pushed; "Runs until" below is when it stops.</div>` : ''}
+      </div>` : ''}
       <div class="sheet-field">
         <span class="sheet-label">Runs until <span class="sheet-label-soft">· optional, e.g. for banners</span></span>
         <input type="date" id="cm-end" value="${d.endDate||''}">
@@ -2778,6 +3126,10 @@ function syncCommsSheetFromDOM(){
   if(v('cm-end')) d.endDate = v('cm-end').value;
   if(v('cm-assignee')) d.assignee = v('cm-assignee').value;
   if(v('cm-ready')) d.readyBy = v('cm-ready').value;
+  if(v('cm-budget')) d.budget = v('cm-budget').value;
+  if(v('cm-target')) d.target = v('cm-target').value;
+  if(v('cm-appr')) d.approvedBy = v('cm-appr').value;
+  if(v('cm-adlink')) d.adLink = v('cm-adlink').value;
 }
 function openCommsSheet({postId, weekIso, planId, date}){
   state.commsSheetError = '';
@@ -2788,7 +3140,7 @@ function openCommsSheet({postId, weekIso, planId, date}){
     const today = isoDate(new Date());
     const end = addDaysISO(weekIso, 6);
     const def = date || (today>=weekIso && today<=end ? today : weekIso);
-    state.commsSheet = {isNew:true, weekIso, draft:{planId:planId||'', channel:'social', platform:'facebook,instagram', format:'post', postDate:def, endDate:'', note:'', status:'planned', assignee:'', readyBy:''}};
+    state.commsSheet = {isNew:true, weekIso, draft:{planId:planId||'', channel:'social', platform:'facebook,instagram', format:'post', postDate:def, endDate:'', note:'', status:'planned', assignee:'', readyBy:'', paid:false, budget:'', target:'', approvedBy:'', adLink:''}};
   }
   render();
 }
@@ -2818,7 +3170,7 @@ async function getOrCreateItemPlan(key, itemType, title, needsComms){
   return plan;
 }
 
-function commsPostFields(){ return COMMS_POST_FIELDS.concat(commsPostExtras ? [['assignee','assignee'],['readyBy','ready_by']] : []); }
+function commsPostFields(){ return COMMS_POST_FIELDS.concat(commsPostExtras ? [['assignee','assignee'],['readyBy','ready_by']] : [], commsPaidCols ? [['paid','paid'],['budget','budget'],['target','target'],['approvedBy','approved_by'],['adLink','ad_link']] : []); }
 const COMMS_POST_FIELDS = [['channel','channel'],['platform','platform'],['format','format'],['postDate','post_date'],['endDate','end_date'],['note','note'],['status','status'],['commsPlanId','comms_plan_id']];
 async function saveCommsSheet(){
   const cs = state.commsSheet, d = cs.draft;
@@ -2848,7 +3200,7 @@ async function saveCommsSheet(){
 
   const mine = {...d, commsPlanId:planId, endDate:d.endDate||null};
   if(cs.isNew){
-    const post = {id:uid(), commsPlanId:planId, channel:mine.channel, platform:mine.platform, format:mine.format, postDate:mine.postDate, endDate:mine.endDate, note:mine.note||'', status:mine.status||'planned', assignee:mine.assignee||'', readyBy:mine.readyBy||addDaysISO(mine.postDate, -READY_DAYS_BEFORE)};
+    const post = {id:uid(), commsPlanId:planId, channel:mine.channel, platform:mine.platform, format:mine.format, postDate:mine.postDate, endDate:mine.endDate, note:mine.note||'', status:mine.status||'planned', assignee:mine.assignee||'', readyBy:mine.readyBy||addDaysISO(mine.postDate, -READY_DAYS_BEFORE), paid:!!mine.paid, budget:mine.budget||'', target:mine.target||'', approvedBy:mine.approvedBy||'', adLink:mine.adLink||''};
     state.commsPosts.push(post);
     await saveCommsPost(post);
     return true;
@@ -2860,16 +3212,17 @@ async function saveCommsSheet(){
   const o = cs.original, patch = {}, conflicts = [];
   const norm = v => v==null ? '' : String(v);
   commsPostFields().forEach(([k,col])=>{
-    const mv = norm(mine[k]), ov = norm(o[k]), sv = norm(srv[col]);
+    const nb = (c,v)=> c==='paid' ? String(!!v) : c==='budget' ? (v===''||v==null ? '' : String(parseFloat(v))) : norm(v);
+    const mv = nb(col, mine[k]), ov = nb(col, o[k]), sv = nb(col, srv[col]);
     if(mv===ov) return;
     if(sv!==ov && sv!==mv){ conflicts.push(k); return; }
-    patch[col] = mine[k]===''&&['end_date','platform','format','assignee','ready_by'].includes(col) ? null : mine[k];
+    patch[col] = col==='budget' ? (mine[k]===''||mine[k]==null ? null : (parseFloat(mine[k])||0)) : col==='paid' ? !!mine[k] : (mine[k]===''&&['end_date','platform','format','assignee','ready_by','target','approved_by','ad_link'].includes(col) ? null : mine[k]);
   });
   if(Object.keys(patch).length){
     const { error: upErr } = await sb.from('comms_posts').update(patch).eq('id', cs.postId);
     if(upErr){ alert('Could not save this post: '+upErr.message); return false; }
     const local = state.commsPosts.find(p=>p.id===cs.postId);
-    if(local) commsPostFields().forEach(([k,col])=>{ if(col in patch) local[k] = patch[col]==null ? '' : patch[col]; });
+    if(local) commsPostFields().forEach(([k,col])=>{ if(col in patch) local[k] = col==='paid' ? !!patch[col] : (patch[col]==null ? '' : (col==='budget' ? String(patch[col]) : patch[col])); });
   }
   if(conflicts.length) alert('Someone else changed this post while you were editing, so their '+conflicts.join(', ').replace('postDate','date').replace('commsPlanId','"for"')+' was kept.');
   return true;
@@ -2881,6 +3234,7 @@ function attachCommsHandlers(){
   document.querySelectorAll('.cm-filter').forEach(el=>{ el.onclick = ()=>{ state.commsStatusFilter = el.dataset.status; render(); }; });
   attachCampaignHandlers();
   attachNeedsHandlers();
+  attachWizardHandlers();
   if(byId('cm-channel')) byId('cm-channel').onchange = ()=>{ state.commsChannelFilter = byId('cm-channel').value; render(); };
   if(byId('cm-clear')) byId('cm-clear').onclick = ()=>{ state.commsStatusFilter='all'; state.commsChannelFilter=''; render(); };
   document.querySelectorAll('.cm-open').forEach(el=>{
@@ -2944,6 +3298,7 @@ function attachCommsHandlers(){
     document.querySelectorAll('.cm-fmt-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.format = el.dataset.format; render(); }; });
     document.querySelectorAll('.cm-day').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.otherDate=false; d.postDate = el.dataset.date; render(); }; });
     byId('cm-other-day').onclick = ()=>{ syncCommsSheetFromDOM(); d.otherDate = true; render(); const i=byId('cm-date'); if(i){ i.focus(); try{ i.showPicker && i.showPicker(); }catch(e){} } };
+    document.querySelectorAll('.cm-paid-yn').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.paid = el.dataset.v==='1'; render(); }; });
     document.querySelectorAll('.cm-status-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.status = el.dataset.status; render(); }; });
     if(byId('cm-delete')) byId('cm-delete').onclick = async ()=>{
       if(!confirm('Delete this post?')) return;
@@ -3033,9 +3388,9 @@ function toCSV(rows){
 // Typed-but-unsaved sheet values are captured before any re-render that isn't
 // triggered by the sheet itself (live refresh, version banner). Sheet handlers sync
 // first and then change the draft, so render() itself must NOT re-read the DOM.
-function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncNewCampaignFromDOM(); syncChoiceFromDOM(); syncAddItemFromDOM(); }
+function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncNewCampaignFromDOM(); syncChoiceFromDOM(); syncAddItemFromDOM(); syncWizardFromDOM(); }
 function render(){
-  document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem) ? 'hidden' : '';
+  document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard) ? 'hidden' : '';
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
   if(!state.currentUser){ app.className='app'; app.innerHTML = loginHTML(); attachLoginHandlers(); return; }
@@ -4521,7 +4876,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-06a';
+const APP_VERSION = '2026-10-06b';
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
@@ -4529,7 +4884,7 @@ async function checkForNewVersion(){
     const html = await res.text();
     const mm = html.match(/<meta name="app-version" content="([^"]+)"/);
     if(!mm || mm[1] === APP_VERSION) return;
-    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.showModal || state.showSettings;
+    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard || state.showModal || state.showSettings;
     if(!busy){ location.reload(); return; }
     if(!state.updateAvailable){ state.updateAvailable = true; syncAllDrafts(); render(); }
   }catch(e){ /* offline etc. — try again later */ }
@@ -4917,6 +5272,7 @@ function attachDashboardHandlers(){
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
     else if(e.key==='Escape' && state.commsSheet){ state.commsSheet = null; render(); }
+    else if(e.key==='Escape' && state.wizard){ if(confirm('Close the campaign planner? Nothing has been saved yet.')){ state.wizard = null; render(); } }
     else if(e.key==='Escape' && (state.choiceSheet || state.addItem)){ state.choiceSheet = null; state.addItem = null; render(); }
     else if(e.key==='Escape' && (state.newCampaign || state.campaignSheet)){ state.newCampaign = null; state.campaignSheet = null; render(); }
   });

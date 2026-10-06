@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-02a">
+<meta name="app-version" content="2026-10-02b">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -811,6 +811,38 @@
   .sheet-more{padding:4px 0 14px;}
   .update-banner{position:sticky;top:0;z-index:40;background:var(--gold-soft);color:#5C4512;border-bottom:1px solid var(--gold);padding:10px 16px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:0 -20px;}
   .update-banner button{border:1px solid #5C4512;background:#fff;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+  /* ---------- Comms: weeks + calendar ---------- */
+  .comms-subtabs{max-width:820px;}
+  .cm-whead{display:flex;gap:14px;align-items:center;padding:12px 14px;}
+  .cm-whead .btn{flex-shrink:0;padding:8px 12px;}
+  .cm-sec{border-top:1px solid var(--line);padding:8px 14px;background:#FBFAFD;}
+  .cm-sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:2px;}
+  .cm-dec{display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap;}
+  .cm-dec-name{flex:1;min-width:150px;font-size:14px;font-weight:700;}
+  .cm-dec-meta{font-weight:400;color:var(--ink-soft);font-size:12.5px;}
+  .cm-dec .btn{padding:7px 11px;font-size:13px;}
+  .cm-posts{border-top:1px solid var(--line);padding:2px 14px 4px;}
+  .mg-daylist .cm-posts{border-top:none;padding:0;}
+  .cm-post{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--paper);cursor:pointer;}
+  .cm-posts .cm-post:first-child{border-top:none;}
+  @media (hover:hover){ .cm-posts .cm-post:hover .cm-post-title{text-decoration:underline;} }
+  .cm-date{width:48px;flex-shrink:0;font-size:12.5px;color:var(--ink-soft);}
+  .cm-chan{font-size:11px;font-weight:700;color:#fff;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;max-width:110px;overflow:hidden;text-overflow:ellipsis;}
+  .cm-post-main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .cm-post-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cm-post-for{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cm-st{font-family:inherit;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .cm-nocomms{border-top:1px solid var(--line);padding:6px 14px 8px;}
+  .cm-link{border:none;background:none;padding:4px 0;font-family:inherit;font-size:12.5px;color:var(--ink-soft);cursor:pointer;text-decoration:underline;}
+  .cm-chip-gap{width:100%;height:0;}
+  .cm-day-grid .day-chip small{font-size:11px;}
+  @media (max-width:640px){
+    .cm-whead{gap:10px;padding:12px;}
+    .cm-posts{padding:2px 12px 4px;}
+    .cm-date{width:40px;font-size:11.5px;}
+    .cm-chan{max-width:84px;}
+  }
 </style>
 </head>
 <body>
@@ -1051,7 +1083,13 @@ let state = {
   commsFlowSteps: [],
   commsPlans: [],
   commsPosts: [],
-  commsView: 'review', // review | calendar
+  commsView: 'weeks', // weeks | calendar
+  commsStatusFilter: 'all',
+  commsChannelFilter: '',
+  commsSheet: null,
+  commsSheetError: '',
+  commsShowNoComms: null,
+  commsCalSelected: null,
   currentUser: null,
   view: 'dashboard',
   cursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1347,12 +1385,12 @@ async function saveCommsFlowSteps(steps){
 // item_ref_id is unique, so upserting on that key means two team members opening the
 // Comms tab for the same week at the same moment converge on one plan rather than
 // creating duplicates.
-async function saveCommsPlan(planOrPlans){
+async function saveCommsPlan(planOrPlans, opts){
   const rows = (Array.isArray(planOrPlans)?planOrPlans:[planOrPlans]).map(p=>({
     id:p.id, item_type:p.itemType, item_ref_id:p.itemRefId, needs_comms:p.needsComms,
     auto_flow_id:p.autoFlowId||null, item_title:p.itemTitle||null, notes:p.notes||'', updated_at:new Date().toISOString()
   }));
-  const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id'});
+  const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id', ignoreDuplicates: !!(opts && opts.ignoreDuplicates)});
   if(error){ console.error('save comms plan failed', error); alert('Could not save this comms decision: '+error.message); }
 }
 async function saveCommsPost(postOrPosts){
@@ -1640,216 +1678,484 @@ function ensureAutoCommsForSundays(items){
       newPosts.push(post);
     });
   });
-  if(newPlans.length) saveCommsPlan(newPlans);
+  if(newPlans.length) saveCommsPlan(newPlans, {ignoreDuplicates:true});
   if(newPosts.length) saveCommsPost(newPosts);
 }
 
-function commsPostRowHTML(p){
-  const isSocial = p.channel === 'social';
-  const platforms = (p.platform||'').split(',').filter(Boolean);
-  return `<div class="comms-post-row" data-post-id="${p.id}">
-    <button type="button" class="comms-post-remove" data-post-id="${p.id}" title="Remove post">✕</button>
-    <div class="comms-post-grid">
-      <div class="mw-field">
-        <label>Channel</label>
-        <select class="comms-post-channel" data-post-id="${p.id}">
-          ${Object.entries(COMMS_CHANNELS).map(([k,v])=>`<option value="${k}" ${p.channel===k?'selected':''}>${v.label}</option>`).join('')}
-        </select>
-      </div>
-      ${isSocial ? `
-      <div class="mw-field">
-        <label>Platform</label>
-        <div class="comms-platform-toggle">
-          ${Object.entries(COMMS_PLATFORMS).map(([k,v])=>`<button type="button" class="comms-plat-btn ${platforms.includes(k)?'on':''}" data-post-id="${p.id}" data-plat="${k}">${v}</button>`).join('')}
-        </div>
-      </div>
-      <div class="mw-field">
-        <label>Format</label>
-        <select class="comms-post-format" data-post-id="${p.id}">
-          ${Object.entries(COMMS_FORMATS).map(([k,v])=>`<option value="${k}" ${p.format===k?'selected':''}>${v}</option>`).join('')}
-        </select>
-      </div>` : ''}
-      <div class="mw-field">
-        <label>Date</label>
-        <input type="date" class="comms-post-date" data-post-id="${p.id}" value="${p.postDate||''}">
-      </div>
-      <div class="mw-field">
-        <label>End date, optional</label>
-        <input type="date" class="comms-post-enddate" data-post-id="${p.id}" value="${p.endDate||''}">
-      </div>
-      <div class="mw-field full">
-        <label>Note</label>
-        <input type="text" class="comms-post-note" data-post-id="${p.id}" value="${(p.note||'').replace(/"/g,'&quot;')}" placeholder="e.g. Instagram carousel, 3 slides">
-      </div>
-    </div>
-    <div class="comms-status-row">
-      ${Object.entries(COMMS_STATUSES).map(([k,v])=>`<button type="button" class="comms-status-btn ${p.status===k?'on':''}" data-post-id="${p.id}" data-status="${k}" style="${p.status===k?'background:'+v.color+';color:#fff;border-color:transparent;':'color:'+v.color+';border-color:'+v.color+';'}">${v.label}</button>`).join('')}
-    </div>
+// ---------- Comms: Weeks + Calendar ----------
+// Posts are grouped by the week they're POSTED in (Sun–Sat), so each week card is
+// a to-do list for that week. Decisions ("needs comms?") sit in the week of the
+// item itself. Standalone comms (things not in the other tabs, e.g. "Alpha")
+// are plans with item_ref_id "standalone::<uuid>" — stored with item_type 'event'
+// so no schema change is needed. Every view reads the same state, and every write
+// is field-level and checked first, so changes show everywhere and never clobber
+// someone else's edit.
+const COMMS_STATUS_ORDER = ['planned','in_progress','scheduled','posted'];
+const COMMS_STATUS_STYLE = {
+  planned:{bar:'var(--tl-red)', bg:'var(--tl-red-soft)', fg:'#A12C26'},
+  in_progress:{bar:'var(--tl-amber)', bg:'var(--tl-amber-soft)', fg:'#7A4E00'},
+  scheduled:{bar:'#378ADD', bg:'#E6F1FB', fg:'#185FA5'},
+  posted:{bar:'var(--tl-green)', bg:'var(--tl-green-soft)', fg:'#146B3E'}
+};
+const isStandalonePlan = p => p && (p.itemRefId||'').startsWith('standalone::');
+function sundayOnOrBefore(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()); }
+function commsChanLabel(p){
+  if(p.channel==='social'){
+    const plats = (p.platform||'').split(',').filter(Boolean).map(x=>x==='instagram'?'IG':x==='facebook'?'FB':x);
+    return (plats.join('+') || 'Social') + (p.format ? ' '+(COMMS_FORMATS[p.format]||p.format) : '');
+  }
+  return (COMMS_CHANNELS[p.channel]||{label:p.channel}).label;
+}
+function commsForLabel(plan){
+  if(!plan) return '';
+  if(isStandalonePlan(plan)) return plan.itemTitle || 'Standalone';
+  const iso = (plan.itemRefId||'').split('::')[1];
+  return (plan.itemTitle || 'Item') + (iso ? ' · '+fmtDate(iso) : '');
+}
+function commsPostPasses(p){
+  if(state.commsStatusFilter && state.commsStatusFilter!=='all' && (p.status||'planned')!==state.commsStatusFilter) return false;
+  if(state.commsChannelFilter && p.channel!==state.commsChannelFilter) return false;
+  return true;
+}
+function commsFiltering(){ return (state.commsStatusFilter && state.commsStatusFilter!=='all') || !!state.commsChannelFilter; }
+// visible posts = posts whose plan still exists and still needs comms
+function liveCommsPosts(){
+  const plans = {}; state.commsPlans.forEach(p=> plans[p.id]=p);
+  return state.commsPosts.filter(p=> p.postDate && plans[p.commsPlanId] && plans[p.commsPlanId].needsComms!==false);
+}
+
+function commsStatusPill(p){
+  const s = p.status||'planned', st = COMMS_STATUS_STYLE[s];
+  return `<button type="button" class="cm-st" data-post-id="${p.id}" title="Tap to move to the next status" style="background:${st.bg};color:${st.fg};border-color:${st.bar};">${COMMS_STATUSES[s].label}</button>`;
+}
+function commsPostRow(p, showDate){
+  const plan = state.commsPlans.find(x=>x.id===p.commsPlanId);
+  const chan = COMMS_CHANNELS[p.channel] || {color:'var(--ink-soft)'};
+  const d = parseISO(p.postDate);
+  return `<div class="cm-post cm-open" data-post-id="${p.id}" role="button" tabindex="0">
+    ${showDate ? `<span class="cm-date">${DOW[(d.getDay()+6)%7]} ${d.getDate()}</span>` : ''}
+    <span class="cm-chan" style="background:${chan.color};">${escHTML(commsChanLabel(p))}</span>
+    <span class="cm-post-main">
+      <span class="cm-post-title">${escHTML(p.note || (plan && plan.itemTitle) || 'Post')}</span>
+      <span class="cm-post-for">for ${escHTML(commsForLabel(plan))}${isStandalonePlan(plan)?' <i>(standalone)</i>':''}${p.endDate?' · until '+fmtDate(p.endDate):''}</span>
+    </span>
+    ${commsStatusPill(p)}
   </div>`;
 }
 
-// Flat, per-post list, ordered by each post's own date — matching Look Ahead's
-// style rather than nesting posts under their source Sunday/item. Decisions not
-// yet made still show as a compact single-line "Needs comms?" row; once a post
-// exists, it appears in the flow on its own date, folded by default (same
-// fold/unfold pattern as the week editor rows), with "for <item title>" as its
-// only tie back to the thing that generated it.
-function commsReviewEntries(){
-  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
-  const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
-  const items = commsItemsForRange(rangeStart, rangeEnd);
-  const entries = [];
-  items.forEach(o=>{
-    const plan = commsPlanFor(o);
-    if(plan && plan.needsComms === false) return;
-    if(!plan || plan.needsComms == null){
-      entries.push({kind:'decision', date:o.date, o, key:commsItemKey(o)});
-      return;
-    }
-    const posts = commsPostsFor(plan.id);
-    if(!posts.length){
-      entries.push({kind:'empty-yes', date:o.date, o, plan});
-    } else {
-      posts.forEach(p=> entries.push({kind:'post', date: p.postDate ? parseISO(p.postDate) : o.date, o, plan, post:p}));
-    }
-  });
-  entries.sort((a,b)=> a.date - b.date);
-  return entries;
+function commsFiltersHTML(){
+  const f = state.commsStatusFilter || 'all';
+  return `<div class="cal-filters">
+    <button type="button" class="cal-chip cm-filter ${f==='all'?'on':''}" data-status="all">All</button>
+    ${COMMS_STATUS_ORDER.map(k=>`<button type="button" class="cal-chip cm-filter ${f===k?'on':''}" data-status="${k}"><span class="cal-dot" style="background:${COMMS_STATUS_STYLE[k].bar};"></span>${COMMS_STATUSES[k].label}</button>`).join('')}
+    <select id="cm-channel" aria-label="Filter by channel">
+      <option value="">All channels</option>
+      ${Object.entries(COMMS_CHANNELS).map(([k,v])=>`<option value="${k}" ${state.commsChannelFilter===k?'selected':''}>${v.label}</option>`).join('')}
+    </select>
+    ${commsFiltering() ? `<button type="button" class="cal-clear" id="cm-clear">Clear</button>` : ''}
+  </div>`;
 }
 
-function commsReviewHTML(){
-  const entries = commsReviewEntries();
-  if(!entries.length) return `<div class="empty">Nothing to review this month.</div>`;
-  return entries.map(e=>{
-    const dateLabel = `${DOW[(e.date.getDay()+6)%7]} ${e.date.getDate()} ${MONTHS[e.date.getMonth()].slice(0,3)}`;
-
-    if(e.kind==='decision'){
-      const type = commsItemType(e.o.ev);
-      return `<div class="comms-row">
-        <div class="comms-row-date">${dateLabel}</div>
-        <div class="comms-row-main">
-          <span class="comms-row-title">${e.o.ev.title}</span>
-          <span class="comms-row-meta">${COMMS_TYPE_LABELS[type]}</span>
+function commsWeeksHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const monthEnd = new Date(y, m+1, 0);
+  let S = sundayOnOrBefore(new Date(y, m, 1));
+  const posts = liveCommsPosts();
+  const filtering = commsFiltering();
+  const today = isoDate(new Date());
+  let html = '';
+  while(S <= monthEnd){
+    const sIso = isoDate(S), eIso = addDaysISO(sIso, 6);
+    const wk = state.weeks.find(w=>w.sundayDate===sIso);
+    const items = commsItemsForRange(S, parseISO(eIso)).filter(o=> commsItemType(o.ev)!=='sunday');
+    const decisions = [], waiting = [], noComms = [];
+    items.forEach(o=>{
+      const plan = commsPlanFor(o);
+      if(!plan || plan.needsComms==null) decisions.push(o);
+      else if(plan.needsComms===false) noComms.push({o, plan});
+      else if(!posts.some(p=>p.commsPlanId===plan.id)) waiting.push({o, plan});
+    });
+    const weekPosts = posts.filter(p=> p.postDate>=sIso && p.postDate<=eIso).sort((a,b)=> a.postDate<b.postDate?-1:a.postDate>b.postDate?1:0);
+    const shown = weekPosts.filter(commsPostPasses);
+    if(filtering && !shown.length){ S = new Date(S.getFullYear(), S.getMonth(), S.getDate()+7); continue; }
+    const notStarted = weekPosts.filter(p=>(p.status||'planned')==='planned').length;
+    const inProg = weekPosts.filter(p=>p.status==='in_progress').length;
+    const isNow = today>=sIso && today<=eIso;
+    const showNo = state.commsShowNoComms === sIso;
+    html += `<div class="la-week cm-week${isNow?' now':''}">
+      <div class="cm-whead">
+        <div class="la-wdate"><span>Sun</span><b>${S.getDate()}</b></div>
+        <div class="la-whead-main">
+          <div class="la-wtitle">${escHTML(wk && wk.sundaySeries ? wk.sundaySeries : 'Week of '+fmtDate(sIso))}</div>
+          <div class="la-wsum">${isNow?'<b class="la-now">This week</b> · ':''}${fmtDate(sIso)} – ${fmtDate(eIso)} · ${weekPosts.length} post${weekPosts.length===1?'':'s'}${notStarted?` · <b class="la-red">${notStarted} not started</b>`:''}${inProg?` · <b class="la-amber">${inProg} in progress</b>`:''}</div>
         </div>
-        <div class="comms-yesno">
-          <button type="button" class="comms-no-btn" data-key="${e.key}" data-itemtype="${type}" data-title="${e.o.ev.title.replace(/"/g,'&quot;')}">No comms</button>
-          <button type="button" class="comms-yes-btn" data-key="${e.key}" data-itemtype="${type}" data-anchor="${isoDate(e.o.date)}" data-title="${e.o.ev.title.replace(/"/g,'&quot;')}">Needs comms</button>
-        </div>
-      </div>`;
-    }
-
-    if(e.kind==='empty-yes'){
-      return `<div class="comms-row">
-        <div class="comms-row-date">${dateLabel}</div>
-        <div class="comms-row-main">
-          <span class="comms-row-title">${e.o.ev.title}</span>
-          <span class="comms-row-meta">Needs comms — no posts added yet</span>
-        </div>
-        <button type="button" class="comms-add-post" data-plan-id="${e.plan.id}" data-anchor="${isoDate(e.o.date)}">+ Add post</button>
-      </div>`;
-    }
-
-    const p = e.post;
-    if(!p.reviewExpanded){
-      const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
-      const chan = COMMS_CHANNELS[p.channel] || {label:p.channel, color:'var(--ink-soft)'};
-      const chanLabel = p.channel==='social'
-        ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
-        : chan.label;
-      return `<div class="comms-row" data-post-id="${p.id}">
-        <div class="comms-row-date">${dateLabel}</div>
-        <div class="comms-row-main">
-          <span class="comms-row-chan-badge" style="background:${chan.color};">${chanLabel}</span>
-          <span class="comms-row-title">${p.note || e.o.ev.title}</span>
-          <span class="comms-row-meta">for ${e.o.ev.title}</span>
-        </div>
-        <span class="comms-status-badge-sm" style="background:${st.soft};color:${st.color};">${st.label}</span>
-        <button type="button" class="comms-post-expand" data-post-id="${p.id}">Edit</button>
-      </div>`;
-    }
-
-    return `<div class="comms-item expanded">
-      <div class="comms-item-head">
-        <div class="comms-item-meta">${dateLabel} &middot; for ${e.o.ev.title}</div>
-        <button type="button" class="comms-post-fold" data-post-id="${p.id}">▲ Done</button>
+        <button type="button" class="btn cm-add" data-week="${sIso}">+ Add</button>
       </div>
-      <div class="comms-posts">${commsPostRowHTML(p)}</div>
-    </div>`;
-  }).join('');
-}
-
-function commsCalendarHTML(){
-  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
-  const daysInMonth = new Date(y, m+1, 0).getDate();
-  const byDay = {};
-  state.commsPosts.forEach(p=>{
-    if(!p.postDate) return;
-    const d = parseISO(p.postDate);
-    if(d.getFullYear()!==y || d.getMonth()!==m) return;
-    (byDay[p.postDate] = byDay[p.postDate]||[]).push(p);
-  });
-  let html = `<div class="cal-agenda">`;
-  let any = false;
-  for(let day=1; day<=daysInMonth; day++){
-    const d = new Date(y,m,day);
-    const k = isoDate(d);
-    const posts = byDay[k]||[];
-    if(!posts.length) continue;
-    any = true;
-    html += `<div class="agenda-day">
-      <div class="agenda-date"><div class="dow">${DOW[(d.getDay()+6)%7]}</div><div class="num">${day}</div></div>
-      <div class="agenda-events">
-        ${posts.map(p=>{
-          const st = COMMS_STATUSES[p.status]||COMMS_STATUSES.planned;
-          const chan = COMMS_CHANNELS[p.channel] || {label:p.channel, color:'var(--ink-soft)'};
-          const chanLabel = p.channel==='social'
-            ? (p.platform||'').split(',').filter(Boolean).map(x=>COMMS_PLATFORMS[x]||x).join('+')+' '+(COMMS_FORMATS[p.format]||'')
-            : chan.label;
-          const plan = state.commsPlans.find(pl=>pl.id===p.commsPlanId);
-          const forTitle = plan && plan.itemTitle ? plan.itemTitle : '';
-          if(!p.calExpanded){
-            return `<div class="comms-cal-pill" style="background:${chan.color};">
-              <span>
-                <span class="comms-cal-pill-main">${chanLabel}${p.note?' — '+p.note:''}</span>
-                ${forTitle?`<span class="comms-cal-pill-for">for ${forTitle}</span>`:''}
-              </span>
-              <span class="comms-cal-pill-right">
-                <span class="comms-cal-pill-status" style="background:${st.soft};color:${st.color};">${st.label}</span>
-                <button type="button" class="comms-cal-post-expand" data-post-id="${p.id}">Edit</button>
-              </span>
-            </div>`;
-          }
-          return `<div class="comms-item expanded">
-            <div class="comms-item-head">
-              <div class="comms-item-meta">${chanLabel}${forTitle?' &middot; for '+forTitle:''}</div>
-              <button type="button" class="comms-cal-post-fold" data-post-id="${p.id}">▲ Done</button>
-            </div>
-            <div class="comms-posts">${commsPostRowHTML(p)}</div>
+      ${(!filtering && (decisions.length || waiting.length)) ? `<div class="cm-sec">
+        <div class="cm-sec-label">Needs a decision</div>
+        ${decisions.map(o=>{
+          const type = commsItemType(o.ev);
+          return `<div class="cm-dec">
+            <span class="cm-dec-name">${escHTML(o.ev.name || o.ev.title)} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span>
+            <button type="button" class="btn cm-no" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(o.ev.name||o.ev.title)}">No comms</button>
+            <button type="button" class="btn primary cm-yes" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(o.ev.name||o.ev.title)}" data-week="${sIso}">Needs comms</button>
           </div>`;
         }).join('')}
-      </div>
+        ${waiting.map(({o, plan})=>`<div class="cm-dec">
+            <span class="cm-dec-name">${escHTML(o.ev.name || o.ev.title)} <span class="cm-dec-meta">· needs comms, no posts yet</span></span>
+            <button type="button" class="btn cm-add" data-week="${sIso}" data-plan="${plan.id}">+ Add post</button>
+          </div>`).join('')}
+      </div>` : ''}
+      <div class="cm-posts">${shown.length ? shown.map(p=>commsPostRow(p, true)).join('') : `<div class="la-empty" style="border:none;padding-left:0;">No posts this week</div>`}</div>
+      ${(!filtering && noComms.length) ? `<div class="cm-nocomms">
+        <button type="button" class="cm-link cm-toggle-no" data-week="${sIso}">${noComms.length} item${noComms.length===1?'':'s'} marked no comms · ${showNo?'hide':'show'}</button>
+        ${showNo ? noComms.map(({o, plan})=>`<div class="cm-dec"><span class="cm-dec-name">${escHTML(o.ev.name||o.ev.title)} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span><button type="button" class="btn cm-undo-no" data-plan="${plan.id}">Undo</button></div>`).join('') : ''}
+      </div>` : ''}
     </div>`;
+    S = new Date(S.getFullYear(), S.getMonth(), S.getDate()+7);
   }
-  html += `</div>`;
-  if(!any) return `<div class="empty">No comms posts scheduled this month.</div>`;
-  return html;
+  return html || `<div class="empty">Nothing matches this filter in ${MONTHS[m]}.</div>`;
+}
+
+function commsCalendarGridHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const first = new Date(y, m, 1), offset = (first.getDay()+6)%7, daysInMonth = new Date(y, m+1, 0).getDate();
+  const weeks = Math.ceil((offset + daysInMonth)/7), gridStart = new Date(y, m, 1-offset);
+  const cells = []; for(let i=0;i<weeks*7;i++) cells.push(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i));
+  const byDay = {};
+  liveCommsPosts().filter(commsPostPasses).forEach(p=> (byDay[p.postDate]=byDay[p.postDate]||[]).push(p));
+  const today = isoDate(new Date());
+  const inMonth = k=> k.slice(0,7) === `${y}-${String(m+1).padStart(2,'0')}`;
+  if(!state.commsCalSelected || !inMonth(state.commsCalSelected)) state.commsCalSelected = inMonth(today) ? today : isoDate(first);
+  const line = p=>{
+    const st = COMMS_STATUS_STYLE[p.status||'planned'];
+    const plan = state.commsPlans.find(x=>x.id===p.commsPlanId);
+    const tip = [commsChanLabel(p), p.note, 'for '+commsForLabel(plan), COMMS_STATUSES[p.status||'planned'].label].filter(Boolean).join(' · ');
+    return `<div class="mg-ev cm-open" data-post-id="${p.id}" role="button" tabindex="0" title="${escHTML(tip)}"><span class="mg-bar" style="background:${st.bar};"></span><span class="mg-name">${escHTML((p.note || (plan&&plan.itemTitle) || 'Post'))}</span><span class="mg-time">${escHTML(commsChanLabel(p).split(' ')[0])}</span></div>`;
+  };
+  const desk = cells.map(d=>{
+    const k = isoDate(d), list = byDay[k]||[];
+    const expanded = state.calExpanded === 'c'+k;
+    const shown = expanded ? list : list.slice(0, MG_MAX);
+    return `<div class="mg-cell${inMonth(k)?'':' out'}${d.getDay()===0?' sun':''}">
+      <div class="mg-num${k===today?' today':''}"><span>${d.getDate()}</span></div>
+      ${shown.map(line).join('')}
+      ${list.length>shown.length ? `<button type="button" class="mg-more cm-more" data-day="c${k}">+${list.length-shown.length} more</button>` : ''}
+    </div>`;
+  }).join('');
+  const mob = cells.map(d=>{
+    const k = isoDate(d), list = byDay[k]||[];
+    return `<div class="mg-mcell cm-mcell${inMonth(k)?'':' out'}${d.getDay()===0?' sun':''}${k===today?' today':''}${k===state.commsCalSelected?' sel':''}" data-date="${k}" role="button" tabindex="0">
+      <div class="mg-mnum">${d.getDate()}</div>
+      <div class="mg-dots">${list.slice(0,3).map(p=>`<i style="background:${COMMS_STATUS_STYLE[p.status||'planned'].bar};"></i>`).join('')}</div>
+    </div>`;
+  }).join('');
+  const sel = (byDay[state.commsCalSelected]||[]);
+  const sd = parseISO(state.commsCalSelected);
+  return `<div class="mg-top"><span></span><span style="display:flex;gap:6px;"><button type="button" class="btn cm-add" data-week="${isoDate(sundayOnOrBefore(sd))}" data-date="${state.commsCalSelected}">+ Add</button><button type="button" class="btn" id="cm-today">Today</button></span></div>
+    <div class="mg-desk"><div class="mg">${DOW.map(x=>`<div class="mg-dow">${x}</div>`).join('')}${desk}</div></div>
+    <div class="mg-mob"><div class="mg">${DOW.map(x=>`<div class="mg-dow">${x[0]}</div>`).join('')}${mob}</div>
+      <div class="mg-daylist"><div class="mg-dayhead">${DOW[(sd.getDay()+6)%7]} ${sd.getDate()} ${MONTHS[sd.getMonth()]}</div>
+      <div class="cm-posts">${sel.length ? sel.map(p=>commsPostRow(p,false)).join('') : '<div class="cal-none">No posts</div>'}</div></div>
+    </div>`;
 }
 
 function commsTabHTML(){
-  // Auto-provisioning must happen here, once, regardless of which sub-tab is
-  // active — previously it only ran inside Review, so jumping straight to Comms
-  // calendar for a month you hadn't opened Review for showed nothing, even
-  // though the underlying Sundays existed.
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
-  const rangeStart = new Date(y, m, 1), rangeEnd = new Date(y, m+1, 0);
-  ensureAutoCommsForSundays(commsItemsForRange(rangeStart, rangeEnd));
+  // provision the weekly Sunday flow for every Sunday whose posts could land in
+  // this month (a week either side), whichever sub-view is open
+  ensureAutoCommsForSundays(commsItemsForRange(new Date(y, m, 1-7), new Date(y, m+1, 7)));
+  const v = state.commsView==='calendar' ? 'calendar' : 'weeks';
   return `
     <div class="comms-subtabs">
-      <button type="button" class="comms-subtab ${state.commsView==='review'?'active':''}" data-commsview="review">Review</button>
-      <button type="button" class="comms-subtab ${state.commsView==='calendar'?'active':''}" data-commsview="calendar">Comms calendar</button>
+      <button type="button" class="comms-subtab ${v==='weeks'?'active':''}" data-commsview="weeks">Weeks</button>
+      <button type="button" class="comms-subtab ${v==='calendar'?'active':''}" data-commsview="calendar">Calendar</button>
     </div>
-    ${state.commsView==='review' ? commsReviewHTML() : commsCalendarHTML()}
+    ${commsFiltersHTML()}
+    <div class="${v==='weeks'?'cal-wrap':''}">${v==='weeks' ? commsWeeksHTML() : commsCalendarGridHTML()}</div>
+    ${commsSheetHTML()}
   `;
+}
+
+// ---------- Comms post sheet ----------
+function commsForOptions(weekIso){
+  const S = parseISO(weekIso);
+  const items = commsItemsForRange(new Date(S.getFullYear(), S.getMonth(), S.getDate()-7), new Date(S.getFullYear(), S.getMonth(), S.getDate()+20));
+  const seen = new Set();
+  const opts = [];
+  items.forEach(o=>{
+    const key = commsItemKey(o);
+    if(seen.has(key)) return; seen.add(key);
+    const plan = commsPlanFor(o);
+    if(plan && plan.needsComms===false) return;
+    opts.push({value: plan ? 'plan:'+plan.id : 'item:'+key, label:`${o.ev.name||o.ev.title} · ${fmtDate(isoDate(o.date))}`, key, type:commsItemType(o.ev), title:o.ev.name||o.ev.title});
+  });
+  state.commsPlans.filter(isStandalonePlan).sort((a,b)=>(a.itemTitle||'').localeCompare(b.itemTitle||'')).forEach(p=>{
+    opts.push({value:'plan:'+p.id, label:`${p.itemTitle||'Standalone'} (standalone)`});
+  });
+  return opts;
+}
+function commsSheetHTML(){
+  const cs = state.commsSheet;
+  if(!cs) return '';
+  const d = cs.draft;
+  const opts = commsForOptions(cs.weekIso);
+  cs.forOptions = opts;
+  if(d.planId && !opts.some(o=>o.value==='plan:'+d.planId)){
+    const pl = state.commsPlans.find(p=>p.id===d.planId);
+    if(pl) opts.unshift({value:'plan:'+pl.id, label: commsForLabel(pl) + (isStandalonePlan(pl)?' (standalone)':'')});
+  }
+  const forVal = d.newStandalone ? '__new__' : (d.forValue || (d.planId ? 'plan:'+d.planId : ''));
+  const days = [0,1,2,3,4,5,6].map(i=>addDaysISO(cs.weekIso, i));
+  const onChip = !d.otherDate && days.includes(d.postDate);
+  const plats = (d.platform||'').split(',').filter(Boolean);
+  return `
+  <div class="sheet-overlay" id="cm-sheet-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cm-sheet-title">
+      <div class="sheet-grip"></div>
+      <h3 id="cm-sheet-title">${cs.isNew?'Add post':'Edit post'}</h3>
+      <div class="sheet-field">
+        <span class="sheet-label">For</span>
+        <select id="cm-for">
+          <option value="" ${!forVal?'selected':''}>Choose what it's for…</option>
+          ${opts.map(o=>`<option value="${escHTML(o.value)}" ${forVal===o.value?'selected':''}>${escHTML(o.label)}</option>`).join('')}
+          <option value="__new__" ${forVal==='__new__'?'selected':''}>+ Something else…</option>
+        </select>
+        ${d.newStandalone ? `<input type="text" id="cm-new-title" placeholder="What is it? e.g. Alpha" value="${escHTML(d.newTitle||'')}" style="margin-top:8px;">` : ''}
+        ${state.commsSheetError ? `<div class="sheet-error">${escHTML(state.commsSheetError)}</div>` : ''}
+      </div>
+      <div class="sheet-field">
+        <span class="sheet-label">Channel</span>
+        <div class="sheet-chips">${Object.entries(COMMS_CHANNELS).map(([k,v])=>`<button type="button" class="sheet-chip cm-chan-chip ${d.channel===k?'on':''}" data-channel="${k}">${v.label}</button>`).join('')}</div>
+      </div>
+      ${d.channel==='social' ? `
+      <div class="sheet-field">
+        <span class="sheet-label">Platform & format</span>
+        <div class="sheet-chips">
+          ${Object.entries(COMMS_PLATFORMS).map(([k,v])=>`<button type="button" class="sheet-chip cm-plat-chip ${plats.includes(k)?'on':''}" data-plat="${k}">${v}</button>`).join('')}
+          <span class="cm-chip-gap"></span>
+          ${Object.entries(COMMS_FORMATS).map(([k,v])=>`<button type="button" class="sheet-chip cm-fmt-chip ${d.format===k?'on':''}" data-format="${k}">${v}</button>`).join('')}
+        </div>
+      </div>` : ''}
+      <div class="sheet-field">
+        <span class="sheet-label">Day · week of ${fmtDate(cs.weekIso)}</span>
+        <div class="sheet-chips day-grid cm-day-grid">
+          ${days.map(iso=>{ const dt=parseISO(iso); return `<button type="button" class="sheet-chip day-chip cm-day ${onChip && d.postDate===iso?'on':''}" data-date="${iso}">${DOW[(dt.getDay()+6)%7]}<small>${dt.getDate()}</small></button>`; }).join('')}
+        </div>
+        <button type="button" class="sheet-link" id="cm-other-day">${onChip ? 'Another date…' : 'Date: '+(d.postDate?fmtDate(d.postDate):'not set')}</button>
+        ${!onChip ? `<input type="date" id="cm-date" value="${d.postDate||''}" style="margin-top:6px;">` : ''}
+      </div>
+      <div class="sheet-field">
+        <span class="sheet-label">Note</span>
+        <input type="text" id="cm-note" placeholder="e.g. Sunday teaser, carousel 3 slides" value="${escHTML(d.note||'')}">
+      </div>
+      <div class="sheet-field">
+        <span class="sheet-label">Status</span>
+        <div class="sheet-chips">${COMMS_STATUS_ORDER.map(k=>`<button type="button" class="sheet-chip cm-status-chip ${d.status===k?'on':''}" data-status="${k}"><span class="sw" style="background:${COMMS_STATUS_STYLE[k].bar};"></span>${COMMS_STATUSES[k].label}</button>`).join('')}</div>
+      </div>
+      <div class="sheet-field">
+        <span class="sheet-label">Runs until <span class="sheet-label-soft">· optional, e.g. for banners</span></span>
+        <input type="date" id="cm-end" value="${d.endDate||''}">
+      </div>
+      ${!cs.isNew ? `<div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="cm-delete">Delete post</button></div>` : ''}
+      <div class="sheet-actions">
+        <button type="button" class="btn" id="cm-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="cm-done">${cs.isNew?'Add':'Done'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function syncCommsSheetFromDOM(){
+  const cs = state.commsSheet; if(!cs) return;
+  const d = cs.draft, v = id=>document.getElementById(id);
+  if(v('cm-new-title')) d.newTitle = v('cm-new-title').value;
+  if(v('cm-date')) d.postDate = v('cm-date').value;
+  if(v('cm-note')) d.note = v('cm-note').value;
+  if(v('cm-end')) d.endDate = v('cm-end').value;
+}
+function openCommsSheet({postId, weekIso, planId, date}){
+  state.commsSheetError = '';
+  if(postId){
+    const p = state.commsPosts.find(x=>x.id===postId); if(!p) return;
+    state.commsSheet = {isNew:false, postId, weekIso: isoDate(sundayOnOrBefore(parseISO(p.postDate))), original:{...p}, draft:{...p, planId:p.commsPlanId}};
+  } else {
+    const today = isoDate(new Date());
+    const end = addDaysISO(weekIso, 6);
+    const def = date || (today>=weekIso && today<=end ? today : weekIso);
+    state.commsSheet = {isNew:true, weekIso, draft:{planId:planId||'', channel:'social', platform:'facebook,instagram', format:'post', postDate:def, endDate:'', note:'', status:'planned'}};
+  }
+  render();
+}
+
+// Get the plan for an item, reusing one someone else may have just created
+// (item_ref_id is unique) instead of creating a duplicate.
+async function getOrCreateItemPlan(key, itemType, title, needsComms){
+  let plan = state.commsPlans.find(p=>p.itemRefId===key);
+  if(!plan){
+    const { data } = await sb.from('comms_plans').select('*').eq('item_ref_id', key).maybeSingle();
+    if(data){
+      plan = {id:data.id, itemType:data.item_type, itemRefId:data.item_ref_id, needsComms:data.needs_comms, autoFlowId:data.auto_flow_id, itemTitle:data.item_title||'', notes:data.notes||''};
+      state.commsPlans.push(plan);
+    }
+  }
+  if(plan){
+    if(plan.needsComms !== needsComms){
+      plan.needsComms = needsComms;
+      const { error } = await sb.from('comms_plans').update({needs_comms:needsComms, updated_at:new Date().toISOString()}).eq('id', plan.id);
+      if(error) alert('Could not save that: '+error.message);
+    }
+    return plan;
+  }
+  plan = {id:uid(), itemType, itemRefId:key, needsComms, autoFlowId:null, itemTitle:title||'', notes:''};
+  state.commsPlans.push(plan);
+  await saveCommsPlan(plan);
+  return plan;
+}
+
+const COMMS_POST_FIELDS = [['channel','channel'],['platform','platform'],['format','format'],['postDate','post_date'],['endDate','end_date'],['note','note'],['status','status'],['commsPlanId','comms_plan_id']];
+async function saveCommsSheet(){
+  const cs = state.commsSheet, d = cs.draft;
+  // resolve what it's for
+  let planId = null;
+  const forVal = d.newStandalone ? '__new__' : (d.forValue || (d.planId ? 'plan:'+d.planId : ''));
+  if(forVal==='__new__'){
+    const title = (d.newTitle||'').trim();
+    if(!title){ state.commsSheetError = 'Say what this is for, e.g. Alpha.'; render(); return false; }
+    const existing = state.commsPlans.find(p=>isStandalonePlan(p) && (p.itemTitle||'').toLowerCase()===title.toLowerCase());
+    if(existing){ planId = existing.id; if(existing.needsComms===false){ await getOrCreateItemPlan(existing.itemRefId, existing.itemType, existing.itemTitle, true); } }
+    else {
+      const plan = {id:uid(), itemType:'event', itemRefId:'standalone::'+uid(), needsComms:true, autoFlowId:null, itemTitle:title, notes:''};
+      state.commsPlans.push(plan); await saveCommsPlan(plan); planId = plan.id;
+    }
+  } else if(forVal.startsWith('plan:')){
+    planId = forVal.slice(5);
+    const pl = state.commsPlans.find(p=>p.id===planId);
+    if(pl && pl.needsComms!==true) await getOrCreateItemPlan(pl.itemRefId, pl.itemType, pl.itemTitle, true);
+  } else if(forVal.startsWith('item:')){
+    const opt = (cs.forOptions||[]).find(o=>o.value===forVal);
+    if(opt){ const plan = await getOrCreateItemPlan(opt.key, opt.type, opt.title, true); planId = plan.id; }
+  }
+  if(!planId){ state.commsSheetError = 'Choose what this post is for.'; render(); return false; }
+  if(!d.postDate){ state.commsSheetError = 'Pick a day.'; render(); return false; }
+  if(d.channel!=='social'){ d.platform=''; d.format=''; }
+
+  const mine = {...d, commsPlanId:planId, endDate:d.endDate||null};
+  if(cs.isNew){
+    const post = {id:uid(), commsPlanId:planId, channel:mine.channel, platform:mine.platform, format:mine.format, postDate:mine.postDate, endDate:mine.endDate, note:mine.note||'', status:mine.status||'planned'};
+    state.commsPosts.push(post);
+    await saveCommsPost(post);
+    return true;
+  }
+  // field-level, conflict-checked update
+  const { data: srv, error } = await sb.from('comms_posts').select('*').eq('id', cs.postId).maybeSingle();
+  if(error){ alert('Could not check this post before saving: '+error.message); return false; }
+  if(!srv){ alert('This post was deleted by someone else, so your changes weren\'t saved.'); return true; }
+  const o = cs.original, patch = {}, conflicts = [];
+  const norm = v => v==null ? '' : String(v);
+  COMMS_POST_FIELDS.forEach(([k,col])=>{
+    const mv = norm(mine[k]), ov = norm(o[k]), sv = norm(srv[col]);
+    if(mv===ov) return;
+    if(sv!==ov && sv!==mv){ conflicts.push(k); return; }
+    patch[col] = mine[k]===''&&(col==='end_date'||col==='platform'||col==='format') ? null : mine[k];
+  });
+  if(Object.keys(patch).length){
+    const { error: upErr } = await sb.from('comms_posts').update(patch).eq('id', cs.postId);
+    if(upErr){ alert('Could not save this post: '+upErr.message); return false; }
+    const local = state.commsPosts.find(p=>p.id===cs.postId);
+    if(local) COMMS_POST_FIELDS.forEach(([k,col])=>{ if(col in patch) local[k] = patch[col]; });
+  }
+  if(conflicts.length) alert('Someone else changed this post while you were editing, so their '+conflicts.join(', ').replace('postDate','date').replace('commsPlanId','"for"')+' was kept.');
+  return true;
+}
+
+function attachCommsHandlers(){
+  const byId = id=>document.getElementById(id);
+  document.querySelectorAll('.comms-subtab').forEach(el=>{ el.onclick = ()=>{ state.commsView = el.dataset.commsview; render(); }; });
+  document.querySelectorAll('.cm-filter').forEach(el=>{ el.onclick = ()=>{ state.commsStatusFilter = el.dataset.status; render(); }; });
+  if(byId('cm-channel')) byId('cm-channel').onchange = ()=>{ state.commsChannelFilter = byId('cm-channel').value; render(); };
+  if(byId('cm-clear')) byId('cm-clear').onclick = ()=>{ state.commsStatusFilter='all'; state.commsChannelFilter=''; render(); };
+  document.querySelectorAll('.cm-open').forEach(el=>{
+    const open = ()=> openCommsSheet({postId: el.dataset.postId});
+    el.onclick = open;
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
+  });
+  // tap the status pill to move it on one step — writes only the status field
+  document.querySelectorAll('.cm-st').forEach(el=>{
+    el.onclick = async (e)=>{
+      e.stopPropagation();
+      const p = state.commsPosts.find(x=>x.id===el.dataset.postId); if(!p) return;
+      const next = COMMS_STATUS_ORDER[(COMMS_STATUS_ORDER.indexOf(p.status||'planned')+1) % COMMS_STATUS_ORDER.length];
+      p.status = next; render();
+      const { error } = await sb.from('comms_posts').update({status:next}).eq('id', p.id);
+      if(error) alert('Could not update status: '+error.message);
+    };
+  });
+  document.querySelectorAll('.cm-add').forEach(el=>{ el.onclick = ()=> openCommsSheet({weekIso: el.dataset.week, planId: el.dataset.plan, date: el.dataset.date}); });
+  document.querySelectorAll('.cm-yes').forEach(el=>{
+    el.onclick = async ()=>{
+      const plan = await getOrCreateItemPlan(el.dataset.key, el.dataset.itemtype, el.dataset.title, true);
+      openCommsSheet({weekIso: el.dataset.week, planId: plan.id});
+    };
+  });
+  document.querySelectorAll('.cm-no').forEach(el=>{
+    el.onclick = async ()=>{ await getOrCreateItemPlan(el.dataset.key, el.dataset.itemtype, el.dataset.title, false); render(); };
+  });
+  document.querySelectorAll('.cm-toggle-no').forEach(el=>{
+    el.onclick = ()=>{ state.commsShowNoComms = state.commsShowNoComms===el.dataset.week ? null : el.dataset.week; render(); };
+  });
+  document.querySelectorAll('.cm-undo-no').forEach(el=>{
+    el.onclick = async ()=>{
+      const plan = state.commsPlans.find(p=>p.id===el.dataset.plan); if(!plan) return;
+      plan.needsComms = null; render();
+      const { error } = await sb.from('comms_plans').update({needs_comms:null, updated_at:new Date().toISOString()}).eq('id', plan.id);
+      if(error) alert('Could not undo: '+error.message);
+    };
+  });
+  document.querySelectorAll('.cm-more').forEach(el=>{ el.onclick = ()=>{ state.calExpanded = el.dataset.day; render(); }; });
+  document.querySelectorAll('.cm-mcell').forEach(el=>{ el.onclick = ()=>{ state.commsCalSelected = el.dataset.date; render(); }; });
+  if(byId('cm-today')) byId('cm-today').onclick = ()=>{ const t=new Date(); state.cursor=new Date(t.getFullYear(),t.getMonth(),1); state.commsCalSelected=isoDate(t); render(); };
+
+  // sheet
+  const ov = byId('cm-sheet-overlay');
+  if(ov && state.commsSheet){
+    const cs = state.commsSheet, d = cs.draft;
+    const re = ()=>{ syncCommsSheetFromDOM(); render(); };
+    ov.onclick = (e)=>{ if(e.target===ov){ state.commsSheet=null; render(); } };
+    byId('cm-cancel').onclick = ()=>{ state.commsSheet=null; render(); };
+    byId('cm-for').onchange = ()=>{
+      syncCommsSheetFromDOM();
+      const v = byId('cm-for').value;
+      d.newStandalone = v==='__new__'; d.forValue = v==='__new__' ? '' : v;
+      if(v.startsWith('plan:')) d.planId = v.slice(5);
+      state.commsSheetError=''; render();
+      if(d.newStandalone && byId('cm-new-title')) byId('cm-new-title').focus();
+    };
+    document.querySelectorAll('.cm-chan-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.channel = el.dataset.channel; if(d.channel==='social' && !d.platform){ d.platform='facebook,instagram'; d.format=d.format||'post'; } render(); }; });
+    document.querySelectorAll('.cm-plat-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); let pl=(d.platform||'').split(',').filter(Boolean); pl = pl.includes(el.dataset.plat) ? pl.filter(x=>x!==el.dataset.plat) : pl.concat(el.dataset.plat); d.platform = pl.join(','); render(); }; });
+    document.querySelectorAll('.cm-fmt-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.format = el.dataset.format; render(); }; });
+    document.querySelectorAll('.cm-day').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.otherDate=false; d.postDate = el.dataset.date; render(); }; });
+    byId('cm-other-day').onclick = ()=>{ syncCommsSheetFromDOM(); d.otherDate = true; render(); const i=byId('cm-date'); if(i){ i.focus(); try{ i.showPicker && i.showPicker(); }catch(e){} } };
+    document.querySelectorAll('.cm-status-chip').forEach(el=>{ el.onclick = ()=>{ syncCommsSheetFromDOM(); d.status = el.dataset.status; render(); }; });
+    if(byId('cm-delete')) byId('cm-delete').onclick = async ()=>{
+      if(!confirm('Delete this post?')) return;
+      const { data: srv } = await sb.from('comms_posts').select('status, note, post_date').eq('id', cs.postId).maybeSingle();
+      const o = cs.original;
+      if(srv && (srv.status!==o.status || (srv.note||'')!==(o.note||'') || srv.post_date!==o.postDate)){
+        alert('Someone else just changed this post, so it wasn\'t deleted. Have a look and try again.');
+        state.commsSheet=null; await loadData(); render(); return;
+      }
+      await deleteCommsPostRemote(cs.postId);
+      state.commsPosts = state.commsPosts.filter(p=>p.id!==cs.postId);
+      state.commsSheet = null; render();
+    };
+    byId('cm-done').onclick = async ()=>{
+      syncCommsSheetFromDOM();
+      const btn = byId('cm-done'); btn.disabled = true; btn.textContent = 'Saving…';
+      const ok = await saveCommsSheet();
+      if(ok){ state.commsSheet = null; render(); }
+      else if(btn){ btn.disabled = false; btn.textContent = cs.isNew?'Add':'Done'; }
+    };
+  }
 }
 
 // ---------- PDF export (per-month, via browser print) ----------
@@ -1917,7 +2223,8 @@ function toCSV(rows){
 // ---------- Rendering ----------
 function render(){
   syncSheetFromDOM();
-  document.body.style.overflow = state.sheet ? 'hidden' : '';
+  syncCommsSheetFromDOM();
+  document.body.style.overflow = (state.sheet || state.commsSheet) ? 'hidden' : '';
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
   if(!state.currentUser){ app.className='app'; app.innerHTML = loginHTML(); attachLoginHandlers(); return; }
@@ -3401,7 +3708,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-02a';
+const APP_VERSION = '2026-10-02b';
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
@@ -3409,7 +3716,7 @@ async function checkForNewVersion(){
     const html = await res.text();
     const mm = html.match(/<meta name="app-version" content="([^"]+)"/);
     if(!mm || mm[1] === APP_VERSION) return;
-    const busy = state.editingWeekId || state.sheet || state.showModal || state.showSettings;
+    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.showModal || state.showSettings;
     if(!busy){ location.reload(); return; }
     if(!state.updateAvailable){ state.updateAvailable = true; render(); }
   }catch(e){ /* offline etc. — try again later */ }
@@ -3788,129 +4095,6 @@ function attachDashboardHandlers(){
   };
 }
 
-function attachCommsHandlers(){
-  document.querySelectorAll('.comms-subtab').forEach(el=>{
-    el.onclick = ()=>{ state.commsView = el.dataset.commsview; render(); };
-  });
-  document.querySelectorAll('.comms-post-expand').forEach(el=>{
-    el.onclick = ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post) post.reviewExpanded = true;
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-post-fold').forEach(el=>{
-    el.onclick = ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post) post.reviewExpanded = false;
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-cal-post-expand').forEach(el=>{
-    el.onclick = ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post) post.calExpanded = true;
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-cal-post-fold').forEach(el=>{
-    el.onclick = ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post) post.calExpanded = false;
-      render();
-    };
-  });
-  // Needs comms? Yes/No — Yes creates an empty plan the person then adds posts to;
-  // No is permanent and the item drops off the review list from here on.
-  document.querySelectorAll('.comms-yes-btn').forEach(el=>{
-    el.onclick = async ()=>{
-      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:true, autoFlowId:null, itemTitle:el.dataset.title||'', notes:''};
-      state.commsPlans.push(plan);
-      await saveCommsPlan(plan);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-no-btn').forEach(el=>{
-    el.onclick = async ()=>{
-      const plan = {id:uid(), itemType:el.dataset.itemtype, itemRefId:el.dataset.key, needsComms:false, autoFlowId:null, itemTitle:el.dataset.title||'', notes:''};
-      state.commsPlans.push(plan);
-      await saveCommsPlan(plan);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-add-post').forEach(el=>{
-    el.onclick = async ()=>{
-      const post = {id:uid(), commsPlanId:el.dataset.planId, channel:'social', platform:'facebook,instagram', format:'post', postDate:el.dataset.anchor, endDate:null, note:'', status:'planned'};
-      state.commsPosts.push(post);
-      await saveCommsPost(post);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-post-remove').forEach(el=>{
-    el.onclick = async ()=>{
-      await deleteCommsPostRemote(el.dataset.postId);
-      state.commsPosts = state.commsPosts.filter(p=>p.id!==el.dataset.postId);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-post-channel').forEach(el=>{
-    el.onchange = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(!post) return;
-      post.channel = el.value;
-      if(post.channel!=='social'){ post.platform=''; post.format=''; }
-      else if(!post.platform){ post.platform='facebook,instagram'; post.format='post'; }
-      await saveCommsPost(post);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-plat-btn').forEach(el=>{
-    el.onclick = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(!post) return;
-      let plats = (post.platform||'').split(',').filter(Boolean);
-      const plat = el.dataset.plat;
-      if(plats.includes(plat)) plats = plats.filter(x=>x!==plat); else plats.push(plat);
-      post.platform = plats.join(',');
-      await saveCommsPost(post);
-      render();
-    };
-  });
-  document.querySelectorAll('.comms-post-format').forEach(el=>{
-    el.onchange = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post){ post.format = el.value; await saveCommsPost(post); }
-    };
-  });
-  document.querySelectorAll('.comms-post-date').forEach(el=>{
-    el.onchange = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post){ post.postDate = el.value; await saveCommsPost(post); }
-    };
-  });
-  document.querySelectorAll('.comms-post-enddate').forEach(el=>{
-    el.onchange = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post){ post.endDate = el.value || null; await saveCommsPost(post); }
-    };
-  });
-  document.querySelectorAll('.comms-post-note').forEach(el=>{
-    el.onchange = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(post){ post.note = el.value; await saveCommsPost(post); }
-    };
-  });
-  document.querySelectorAll('.comms-status-btn').forEach(el=>{
-    el.onclick = async ()=>{
-      const post = state.commsPosts.find(p=>p.id===el.dataset.postId);
-      if(!post) return;
-      post.status = el.dataset.status;
-      await saveCommsPost(post);
-      render();
-    };
-  });
-}
-
 (async ()=>{
   await loadData();
   render();
@@ -3919,6 +4103,7 @@ function attachCommsHandlers(){
   setInterval(checkForNewVersion, 5*60*1000);
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
+    else if(e.key==='Escape' && state.commsSheet){ state.commsSheet = null; render(); }
   });
 })();
 </script>

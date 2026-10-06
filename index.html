@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-02b">
+<meta name="app-version" content="2026-10-02d">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -843,6 +843,54 @@
     .cm-date{width:40px;font-size:11.5px;}
     .cm-chan{max-width:84px;}
   }
+
+  /* ---------- Comms campaigns ---------- */
+  .cp-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .cp-hint{font-size:13px;color:var(--ink-soft);}
+  .gt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px;background:#fff;}
+  .gt{display:grid;min-width:720px;}
+  .gt > div{border-bottom:1px solid var(--line);min-height:44px;position:relative;}
+  .gt-head{font-size:11px;font-weight:700;color:var(--ink-soft);text-align:center;padding:8px 2px;min-height:auto!important;background:var(--paper-raised);text-transform:uppercase;letter-spacing:.03em;}
+  .gt-head.gt-now{color:#9A7420;background:var(--gold-soft);}
+  .gt-label{position:sticky!important;left:0;z-index:2;background:#fff;border-right:1px solid var(--line);padding:6px 10px;font-size:13px;display:flex;flex-direction:column;justify-content:center;min-width:0;}
+  .gt-label.gt-head{text-align:left;background:var(--paper-raised);}
+  .gt-label b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gt-label small{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .gt-open{cursor:pointer;}
+  @media (hover:hover){ .gt-label.gt-open:hover b{text-decoration:underline;} }
+  .gt-cell{border-left:1px solid var(--paper);}
+  .gt-bar{position:absolute;top:18px;height:8px;background:#DCD8EC;border-radius:4px;}
+  .gt-dot{position:absolute;top:16px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.08);}
+  .gt-dot.od{box-shadow:0 0 0 2px var(--tl-red);}
+  .gt-star{position:absolute;top:11px;font-size:15px;color:var(--gold);line-height:1;}
+  .gt-loadlabel{font-size:12px;color:var(--ink-soft);font-weight:700;}
+  .gt-load{text-align:center;font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .gt-load.hi{color:var(--tl-red);font-weight:700;}
+  .cp-legend{font-size:12px;color:var(--ink-soft);margin:8px 2px 16px;}
+  .cp-list{display:flex;flex-direction:column;gap:8px;max-width:820px;}
+  .cp-card{display:flex;gap:12px;align-items:center;background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;}
+  .cp-main{flex:1;min-width:0;}
+  .cp-title{font-size:15.5px;font-weight:700;}
+  .cp-tag{font-size:10.5px;font-weight:700;color:var(--ink-soft);background:var(--paper);padding:1px 7px;border-radius:20px;vertical-align:2px;}
+  .cp-run{font-size:13px;color:var(--navy);font-weight:600;margin-top:2px;}
+  .cp-sum{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .nc-preview{border:1px solid var(--line);border-radius:8px;padding:2px 10px;}
+  .nc-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--paper);font-size:13.5px;}
+  .nc-row:first-child{border-top:none;}
+  .nc-row small{display:block;color:var(--ink-soft);font-size:12px;}
+  .nc-row.past{opacity:.45;text-decoration:line-through;}
+  .cm-who{font-size:10.5px;font-weight:700;background:var(--paper);color:var(--navy);border-radius:20px;padding:2px 7px;flex-shrink:0;}
+  .cm-od{color:var(--tl-red);font-weight:700;}
+  .tpl-card{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px;}
+  .tpl-head{display:flex;gap:6px;margin-bottom:6px;}
+  .tpl-head input{flex:1;font-weight:700;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;}
+  .tpl-head button,.tpl-step button{border:none;background:none;color:var(--bad);cursor:pointer;}
+  .tpl-step{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--paper);}
+  .tpl-step input,.tpl-step select{padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;}
+  .tpl-days{width:52px;text-align:center;}
+  .tpl-note{flex:1;min-width:110px;}
+  .cm-date.full{width:78px;}
+  .sheet .sheet-row .sheet-row-date{width:auto;max-width:60%;border:none;background:transparent;font-weight:700;color:var(--navy);text-align:right;padding:8px 0;min-height:auto;}
 </style>
 </head>
 <body>
@@ -880,6 +928,7 @@ const STATUSES = {
 const COMMS_CHANNELS = {
   social: {label:'Social media', color:'var(--winter)'},
   email: {label:'Email', color:'var(--autumn)'},
+  notices: {label:'Sunday notices', color:'#8A6A1F'},
   website_page: {label:'Website page', color:'var(--spring)'},
   website_banner: {label:'Website banner', color:'var(--summer)'},
   churchsuite: {label:'ChurchSuite ticket', color:'var(--navy)'},
@@ -1090,6 +1139,9 @@ let state = {
   commsSheetError: '',
   commsShowNoComms: null,
   commsCalSelected: null,
+  campaignSheet: null,
+  newCampaign: null,
+  newCampaignError: '',
   currentUser: null,
   view: 'dashboard',
   cursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -1266,7 +1318,13 @@ async function loadData(){
     alert('Could not load comms data:\n' + commsLoadErrors.join('\n') + '\n\nComms tab may appear empty until this is fixed.');
   }
 
-  state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||''}));
+  const [postX, planX, flowX] = await Promise.all([
+    sb.from('comms_posts').select('assignee, ready_by').limit(1),
+    sb.from('comms_plans').select('start_date, end_date').limit(1),
+    sb.from('comms_flows').select('purpose').limit(1)
+  ]);
+  commsPostExtras = !postX.error; commsPlanDates = !planX.error; commsFlowPurpose = !flowX.error;
+  state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||'', purpose:f.purpose||null}));
   state.commsFlowSteps = (stepsRes.data||[]).map(s=>({
     id:s.id, flowId:s.flow_id, dayOffset:s.day_offset, channel:s.channel,
     platform:s.platform||'', format:s.format||'', note:s.note||'', sortOrder:s.sort_order||0
@@ -1275,7 +1333,7 @@ async function loadData(){
     // Seed the default weekly Sunday flow once, the same way default tags/audiences are
     // seeded — but only when the table genuinely has no rows, not when the read itself
     // failed (re-seeding on a failed read would create duplicate/orphaned flows every reload).
-    const flow = {id:uid(), ...DEFAULT_COMMS_FLOW};
+    const flow = {id:uid(), ...DEFAULT_COMMS_FLOW, purpose:'sunday'};
     state.commsFlows = [flow];
     await saveCommsFlow(flow);
     const steps = DEFAULT_COMMS_FLOW_STEPS.map(s=>({id:uid(), flowId:flow.id, ...s, sortOrder:0}));
@@ -1286,22 +1344,36 @@ async function loadData(){
     // failed (e.g. a permissions issue that's since been fixed) while the flow's own
     // save succeeded — that combination silently blocks the Sunday rhythm forever
     // otherwise, since a flow "existing" was the only condition checked above.
-    const flow = state.commsFlows[0];
-    const hasSteps = state.commsFlowSteps.some(s=>s.flowId===flow.id);
-    if(!hasSteps){
+    const flow = sundayFlow();
+    const hasSteps = flow && state.commsFlowSteps.some(s=>s.flowId===flow.id);
+    if(flow && !hasSteps){
       const steps = DEFAULT_COMMS_FLOW_STEPS.map(s=>({id:uid(), flowId:flow.id, ...s, sortOrder:0}));
       state.commsFlowSteps = state.commsFlowSteps.concat(steps);
       await saveCommsFlowSteps(steps);
     }
   }
 
+  // seed the starter campaign templates once (only when the read worked and none exist)
+  if(commsFlowPurpose && !flowsRes.error && !stepsRes.error && !state.commsFlows.some(f=>f.purpose==='campaign')){
+    for(const t of DEFAULT_CAMPAIGN_TEMPLATES){
+      const flow = {id:uid(), name:t.name, description:'', purpose:'campaign'};
+      state.commsFlows.push(flow);
+      await saveCommsFlow(flow);
+      const steps = t.steps.map((s,i)=>({id:uid(), flowId:flow.id, dayOffset:s.dayOffset, channel:s.channel, platform:s.platform||'', format:s.format||'', note:s.note||'', sortOrder:i}));
+      state.commsFlowSteps.push(...steps);
+      await saveCommsFlowSteps(steps);
+    }
+  }
+
   state.commsPlans = (plansRes.data||[]).map(p=>({
     id:p.id, itemType:p.item_type, itemRefId:p.item_ref_id, needsComms:p.needs_comms,
-    autoFlowId:p.auto_flow_id, itemTitle:p.item_title||'', notes:p.notes||''
+    autoFlowId:p.auto_flow_id, itemTitle:p.item_title||'', notes:p.notes||'',
+    startDate:p.start_date||null, endDate:p.end_date||null
   }));
   state.commsPosts = (postsRes.data||[]).map(p=>({
     id:p.id, commsPlanId:p.comms_plan_id, channel:p.channel, platform:p.platform||'',
-    format:p.format||'', postDate:p.post_date, endDate:p.end_date, note:p.note||'', status:p.status||'planned'
+    format:p.format||'', postDate:p.post_date, endDate:p.end_date, note:p.note||'', status:p.status||'planned',
+    assignee:p.assignee||'', readyBy:p.ready_by||''
   }));
 
   state.loaded = true;
@@ -1371,7 +1443,7 @@ async function deleteEventRemote(id){
 
 // ---------- Comms Plan save/delete helpers ----------
 async function saveCommsFlow(flow){
-  const { error } = await sb.from('comms_flows').upsert({id:flow.id, name:flow.name, description:flow.description||''});
+  const { error } = await sb.from('comms_flows').upsert({id:flow.id, name:flow.name, description:flow.description||'', ...(commsFlowPurpose && flow.purpose ? {purpose:flow.purpose} : {})});
   if(error){ console.error('save comms flow failed', error); alert('Could not save the default comms flow: '+error.message); }
 }
 async function saveCommsFlowSteps(steps){
@@ -1388,7 +1460,9 @@ async function saveCommsFlowSteps(steps){
 async function saveCommsPlan(planOrPlans, opts){
   const rows = (Array.isArray(planOrPlans)?planOrPlans:[planOrPlans]).map(p=>({
     id:p.id, item_type:p.itemType, item_ref_id:p.itemRefId, needs_comms:p.needsComms,
-    auto_flow_id:p.autoFlowId||null, item_title:p.itemTitle||null, notes:p.notes||'', updated_at:new Date().toISOString()
+    auto_flow_id:p.autoFlowId||null, item_title:p.itemTitle||null, notes:p.notes||'', updated_at:new Date().toISOString(),
+    ...(commsPlanDates && p.startDate!==undefined ? {start_date:p.startDate||null} : {}),
+    ...(commsPlanDates && p.endDate!==undefined ? {end_date:p.endDate||null} : {})
   }));
   const { error } = await sb.from('comms_plans').upsert(rows, {onConflict:'item_ref_id', ignoreDuplicates: !!(opts && opts.ignoreDuplicates)});
   if(error){ console.error('save comms plan failed', error); alert('Could not save this comms decision: '+error.message); }
@@ -1396,7 +1470,8 @@ async function saveCommsPlan(planOrPlans, opts){
 async function saveCommsPost(postOrPosts){
   const rows = (Array.isArray(postOrPosts)?postOrPosts:[postOrPosts]).map(p=>({
     id:p.id, comms_plan_id:p.commsPlanId, channel:p.channel, platform:p.platform||null,
-    format:p.format||null, post_date:p.postDate||null, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned'
+    format:p.format||null, post_date:p.postDate||null, end_date:p.endDate||null, note:p.note||'', status:p.status||'planned',
+    ...(commsPostExtras ? {assignee:p.assignee||null, ready_by:p.readyBy||null} : {})
   }));
   const { error } = await sb.from('comms_posts').upsert(rows);
   if(error){ console.error('save comms post failed', error); alert('Could not save this comms post: '+error.message); }
@@ -1500,6 +1575,7 @@ function scheduleRefresh(){
   // midweek items and tags), so wait a moment for the burst to settle before refetching.
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async ()=>{
+    syncAllDrafts();
     await loadData();
     render();
   }, 400);
@@ -1654,7 +1730,7 @@ function commsPostsFor(planId){ return state.commsPosts.filter(p=>p.commsPlanId=
 // writes happen in the background and reconcile via the item_ref_id unique constraint
 // if two people open the tab for the same week at once.
 function ensureAutoCommsForSundays(items){
-  const defaultFlow = state.commsFlows[0];
+  const defaultFlow = sundayFlow();
   if(!defaultFlow) return;
   const steps = state.commsFlowSteps.filter(s=>s.flowId===defaultFlow.id);
   if(!steps.length) return;
@@ -1664,7 +1740,7 @@ function ensureAutoCommsForSundays(items){
     const key = commsItemKey(o);
     let plan = state.commsPlans.find(p=>p.itemRefId===key);
     if(!plan){
-      plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, itemTitle:o.ev.title, notes:''};
+      plan = {id:uid(), itemType:'sunday', itemRefId:key, needsComms:true, autoFlowId:defaultFlow.id, itemTitle:commsItemName(o), notes:''};
       state.commsPlans.push(plan);
       newPlans.push(plan);
     }
@@ -1699,7 +1775,37 @@ const COMMS_STATUS_STYLE = {
 };
 const isStandalonePlan = p => p && (p.itemRefId||'').startsWith('standalone::');
 function sundayOnOrBefore(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()); }
+// Display names are always worked out live from the planner, so renaming a series,
+// occasion or activity updates every comms view straight away. Sundays are named
+// by their series (the occasion is extra detail, not the name). The stored
+// item_title is only a fallback, and the only source for standalone comms.
+function commsItemName(o){
+  if(o.ev.id && o.ev.id.startsWith('wk-sun-')) return o.ev.series || o.ev.occasion || 'Sunday';
+  return o.ev.name || o.ev.title;
+}
+function planTitle(plan){
+  if(!plan) return '';
+  if(isStandalonePlan(plan)) return plan.itemTitle || 'Standalone';
+  const ref = (plan.itemRefId||'').split('::')[0];
+  if(ref.startsWith('wk-sun-')){
+    const wk = state.weeks.find(w=>'wk-sun-'+w.id===ref);
+    if(wk) return wk.sundaySeries || wk.occasion || plan.itemTitle || 'Sunday';
+  } else if(ref.startsWith('wk-mid-') || ref.startsWith('wk-ps-')){
+    for(const wk of state.weeks){
+      const list = ref.startsWith('wk-mid-') ? effectiveMidweek(wk) : effectivePostService(wk);
+      const pre = (ref.startsWith('wk-mid-') ? 'wk-mid-' : 'wk-ps-') + wk.id + '-';
+      if(!ref.startsWith(pre)) continue;
+      const m = list.find(x=> pre + x.id === ref);
+      if(m){ const n = (m.tagIds||[]).map(tagById).filter(Boolean).map(t=>t.name).join(' + '); if(n) return n; }
+    }
+  } else {
+    const ev = state.events.find(e=>e.id===ref);
+    if(ev) return ev.title;
+  }
+  return plan.itemTitle || 'Item';
+}
 function commsChanLabel(p){
+  if(p.channel==='notices') return 'Notices';
   if(p.channel==='social'){
     const plats = (p.platform||'').split(',').filter(Boolean).map(x=>x==='instagram'?'IG':x==='facebook'?'FB':x);
     return (plats.join('+') || 'Social') + (p.format ? ' '+(COMMS_FORMATS[p.format]||p.format) : '');
@@ -1708,9 +1814,9 @@ function commsChanLabel(p){
 }
 function commsForLabel(plan){
   if(!plan) return '';
-  if(isStandalonePlan(plan)) return plan.itemTitle || 'Standalone';
+  if(isStandalonePlan(plan)) return planTitle(plan);
   const iso = (plan.itemRefId||'').split('::')[1];
-  return (plan.itemTitle || 'Item') + (iso ? ' · '+fmtDate(iso) : '');
+  return planTitle(plan) + (iso ? ' · '+fmtDate(iso) : '');
 }
 function commsPostPasses(p){
   if(state.commsStatusFilter && state.commsStatusFilter!=='all' && (p.status||'planned')!==state.commsStatusFilter) return false;
@@ -1728,17 +1834,20 @@ function commsStatusPill(p){
   const s = p.status||'planned', st = COMMS_STATUS_STYLE[s];
   return `<button type="button" class="cm-st" data-post-id="${p.id}" title="Tap to move to the next status" style="background:${st.bg};color:${st.fg};border-color:${st.bar};">${COMMS_STATUSES[s].label}</button>`;
 }
-function commsPostRow(p, showDate){
+function commsPostRow(p, showDate, fullDate){
   const plan = state.commsPlans.find(x=>x.id===p.commsPlanId);
   const chan = COMMS_CHANNELS[p.channel] || {color:'var(--ink-soft)'};
   const d = parseISO(p.postDate);
+  const od = isOverdue(p);
+  const ready = p.readyBy ? ` · ${od?'<span class="cm-od">overdue, was ready by '+fmtDate(p.readyBy)+'</span>':'ready by '+fmtDate(p.readyBy)}` : '';
   return `<div class="cm-post cm-open" data-post-id="${p.id}" role="button" tabindex="0">
-    ${showDate ? `<span class="cm-date">${DOW[(d.getDay()+6)%7]} ${d.getDate()}</span>` : ''}
+    ${showDate ? `<span class="cm-date${fullDate?' full':''}">${fullDate ? fmtDate(p.postDate) : DOW[(d.getDay()+6)%7]+' '+d.getDate()}</span>` : ''}
     <span class="cm-chan" style="background:${chan.color};">${escHTML(commsChanLabel(p))}</span>
     <span class="cm-post-main">
-      <span class="cm-post-title">${escHTML(p.note || (plan && plan.itemTitle) || 'Post')}</span>
-      <span class="cm-post-for">for ${escHTML(commsForLabel(plan))}${isStandalonePlan(plan)?' <i>(standalone)</i>':''}${p.endDate?' · until '+fmtDate(p.endDate):''}</span>
+      <span class="cm-post-title">${escHTML(p.note || planTitle(plan) || 'Post')}</span>
+      <span class="cm-post-for">for ${escHTML(commsForLabel(plan))}${p.endDate?' · until '+fmtDate(p.endDate):''}${ready}</span>
     </span>
+    ${p.assignee ? `<span class="cm-who" title="${escHTML(p.assignee)}">${escHTML(ownerInitials(p.assignee))}</span>` : ''}
     ${commsStatusPill(p)}
   </div>`;
 }
@@ -1779,6 +1888,7 @@ function commsWeeksHTML(){
     const shown = weekPosts.filter(commsPostPasses);
     if(filtering && !shown.length){ S = new Date(S.getFullYear(), S.getMonth(), S.getDate()+7); continue; }
     const notStarted = weekPosts.filter(p=>(p.status||'planned')==='planned').length;
+    const overdueN = weekPosts.filter(isOverdue).length;
     const inProg = weekPosts.filter(p=>p.status==='in_progress').length;
     const isNow = today>=sIso && today<=eIso;
     const showNo = state.commsShowNoComms === sIso;
@@ -1787,7 +1897,7 @@ function commsWeeksHTML(){
         <div class="la-wdate"><span>Sun</span><b>${S.getDate()}</b></div>
         <div class="la-whead-main">
           <div class="la-wtitle">${escHTML(wk && wk.sundaySeries ? wk.sundaySeries : 'Week of '+fmtDate(sIso))}</div>
-          <div class="la-wsum">${isNow?'<b class="la-now">This week</b> · ':''}${fmtDate(sIso)} – ${fmtDate(eIso)} · ${weekPosts.length} post${weekPosts.length===1?'':'s'}${notStarted?` · <b class="la-red">${notStarted} not started</b>`:''}${inProg?` · <b class="la-amber">${inProg} in progress</b>`:''}</div>
+          <div class="la-wsum">${isNow?'<b class="la-now">This week</b> · ':''}${fmtDate(sIso)} – ${fmtDate(eIso)} · ${weekPosts.length} post${weekPosts.length===1?'':'s'}${notStarted?` · <b class="la-red">${notStarted} not started</b>`:''}${inProg?` · <b class="la-amber">${inProg} in progress</b>`:''}${overdueN?` · <b class="la-red">${overdueN} overdue</b>`:''}</div>
         </div>
         <button type="button" class="btn cm-add" data-week="${sIso}">+ Add</button>
       </div>
@@ -1796,20 +1906,20 @@ function commsWeeksHTML(){
         ${decisions.map(o=>{
           const type = commsItemType(o.ev);
           return `<div class="cm-dec">
-            <span class="cm-dec-name">${escHTML(o.ev.name || o.ev.title)} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span>
-            <button type="button" class="btn cm-no" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(o.ev.name||o.ev.title)}">No comms</button>
-            <button type="button" class="btn primary cm-yes" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(o.ev.name||o.ev.title)}" data-week="${sIso}">Needs comms</button>
+            <span class="cm-dec-name">${escHTML(commsItemName(o))} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span>
+            <button type="button" class="btn cm-no" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(commsItemName(o))}">No comms</button>
+            <button type="button" class="btn primary cm-yes" data-key="${commsItemKey(o)}" data-itemtype="${type}" data-title="${escHTML(commsItemName(o))}" data-week="${sIso}">Needs comms</button>
           </div>`;
         }).join('')}
         ${waiting.map(({o, plan})=>`<div class="cm-dec">
-            <span class="cm-dec-name">${escHTML(o.ev.name || o.ev.title)} <span class="cm-dec-meta">· needs comms, no posts yet</span></span>
+            <span class="cm-dec-name">${escHTML(commsItemName(o))} <span class="cm-dec-meta">· needs comms, no posts yet</span></span>
             <button type="button" class="btn cm-add" data-week="${sIso}" data-plan="${plan.id}">+ Add post</button>
           </div>`).join('')}
       </div>` : ''}
       <div class="cm-posts">${shown.length ? shown.map(p=>commsPostRow(p, true)).join('') : `<div class="la-empty" style="border:none;padding-left:0;">No posts this week</div>`}</div>
       ${(!filtering && noComms.length) ? `<div class="cm-nocomms">
         <button type="button" class="cm-link cm-toggle-no" data-week="${sIso}">${noComms.length} item${noComms.length===1?'':'s'} marked no comms · ${showNo?'hide':'show'}</button>
-        ${showNo ? noComms.map(({o, plan})=>`<div class="cm-dec"><span class="cm-dec-name">${escHTML(o.ev.name||o.ev.title)} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span><button type="button" class="btn cm-undo-no" data-plan="${plan.id}">Undo</button></div>`).join('') : ''}
+        ${showNo ? noComms.map(({o, plan})=>`<div class="cm-dec"><span class="cm-dec-name">${escHTML(commsItemName(o))} <span class="cm-dec-meta">· ${fmtDate(isoDate(o.date))}</span></span><button type="button" class="btn cm-undo-no" data-plan="${plan.id}">Undo</button></div>`).join('') : ''}
       </div>` : ''}
     </div>`;
     S = new Date(S.getFullYear(), S.getMonth(), S.getDate()+7);
@@ -1831,7 +1941,7 @@ function commsCalendarGridHTML(){
     const st = COMMS_STATUS_STYLE[p.status||'planned'];
     const plan = state.commsPlans.find(x=>x.id===p.commsPlanId);
     const tip = [commsChanLabel(p), p.note, 'for '+commsForLabel(plan), COMMS_STATUSES[p.status||'planned'].label].filter(Boolean).join(' · ');
-    return `<div class="mg-ev cm-open" data-post-id="${p.id}" role="button" tabindex="0" title="${escHTML(tip)}"><span class="mg-bar" style="background:${st.bar};"></span><span class="mg-name">${escHTML((p.note || (plan&&plan.itemTitle) || 'Post'))}</span><span class="mg-time">${escHTML(commsChanLabel(p).split(' ')[0])}</span></div>`;
+    return `<div class="mg-ev cm-open" data-post-id="${p.id}" role="button" tabindex="0" title="${escHTML(tip)}"><span class="mg-bar" style="background:${st.bar};"></span><span class="mg-name">${escHTML(p.note || planTitle(plan) || 'Post')}</span><span class="mg-time">${escHTML(commsChanLabel(p).split(' ')[0])}</span></div>`;
   };
   const desk = cells.map(d=>{
     const k = isoDate(d), list = byDay[k]||[];
@@ -1860,19 +1970,379 @@ function commsCalendarGridHTML(){
     </div>`;
 }
 
+// ---------- Comms campaigns ----------
+// A campaign is any comms plan that isn't a weekly Sunday plan: something from
+// the planner or a standalone item like "Alpha". It runs from start_date to
+// end_date (the event / last day), and its posts can be generated backwards from
+// the end date using a template. Templates never assign people.
+const DEFAULT_CAMPAIGN_TEMPLATES = [
+  {name:'Event · 3 weeks', steps:[
+    {dayOffset:-21, channel:'social', platform:'facebook,instagram', format:'post', note:'Announcement'},
+    {dayOffset:-14, channel:'notices', note:'Sunday notice'},
+    {dayOffset:-7, channel:'email', note:'Reminder email'},
+    {dayOffset:-1, channel:'social', platform:'facebook,instagram', format:'story', note:'Tomorrow reminder'}]},
+  {name:'Course launch · 6 weeks', steps:[
+    {dayOffset:-42, channel:'social', platform:'facebook,instagram', format:'post', note:'Announcement'},
+    {dayOffset:-28, channel:'notices', note:'Sunday notice'},
+    {dayOffset:-21, channel:'email', note:'Sign-up email'},
+    {dayOffset:-10, channel:'social', platform:'facebook,instagram', format:'reel', note:'Testimony reel'},
+    {dayOffset:-3, channel:'notices', note:'Last call notice'},
+    {dayOffset:-1, channel:'social', platform:'instagram', format:'story', note:'Reminder story'}]},
+  {name:'Quick · 1 week', steps:[
+    {dayOffset:-7, channel:'social', platform:'facebook,instagram', format:'post', note:'Announcement'},
+    {dayOffset:-3, channel:'notices', note:'Sunday notice'}]}
+];
+let commsPostExtras = true, commsPlanDates = true, commsFlowPurpose = true;
+const READY_DAYS_BEFORE = 3;
+
+function sundayFlow(){
+  return state.commsFlows.find(f=>f.purpose==='sunday') || state.commsFlows.find(f=>!f.purpose) || null;
+}
+function campaignTemplates(){ return state.commsFlows.filter(f=>f.purpose==='campaign').sort((a,b)=>(a.name||'').localeCompare(b.name||'')); }
+function isCampaignPlan(p){ return p && p.itemType!=='sunday' && p.needsComms===true; }
+function planItemDate(p){ const iso = (p.itemRefId||'').split('::')[1]; return /^\d{4}-\d{2}-\d{2}$/.test(iso||'') ? iso : ''; }
+function isOverdue(p){
+  const today = isoDate(new Date());
+  return !!p.readyBy && p.readyBy < today && ['planned','in_progress'].includes(p.status||'planned');
+}
+function campaignInfo(plan){
+  const posts = state.commsPosts.filter(p=>p.commsPlanId===plan.id && p.postDate).sort((a,b)=>a.postDate<b.postDate?-1:1);
+  const end = plan.endDate || planItemDate(plan) || (posts.length ? posts[posts.length-1].postDate : '');
+  const start = plan.startDate || (posts.length ? posts[0].postDate : end);
+  const lastPost = posts.length ? posts[posts.length-1].postDate : '';
+  const until = (lastPost && lastPost > end) ? lastPost : end;
+  const days = (start && until) ? Math.round((parseISO(until)-parseISO(start))/86400000)+1 : 0;
+  const today = isoDate(new Date());
+  const next = posts.find(p=>p.postDate>=today && (p.status||'planned')!=='posted');
+  return {posts, start, end, until, days,
+    done: posts.filter(p=>p.status==='posted').length,
+    overdue: posts.filter(isOverdue).length, next};
+}
+function durationLabel(days){
+  if(!days) return '';
+  if(days < 14) return days + ' day' + (days===1?'':'s');
+  return Math.round(days/7) + ' weeks';
+}
+// Work a template back from the end date. Sunday notices snap to the Sunday on
+// or before their computed date.
+function generateFromTemplate(templateId, endIso){
+  const steps = state.commsFlowSteps.filter(s=>s.flowId===templateId).sort((a,b)=>a.dayOffset-b.dayOffset);
+  return steps.map(s=>{
+    let d = addDaysISO(endIso, s.dayOffset);
+    if(s.channel==='notices') d = isoDate(sundayOnOrBefore(parseISO(d)));
+    return {channel:s.channel, platform:s.platform||'', format:s.format||'', note:s.note||'', postDate:d};
+  });
+}
+
+function campaignsViewHTML(){
+  const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
+  const W = 10;
+  const ws0 = sundayOnOrBefore(new Date(y, m, 1));
+  const weeks = []; for(let i=0;i<W;i++) weeks.push(isoDate(new Date(ws0.getFullYear(), ws0.getMonth(), ws0.getDate()+7*i)));
+  const winStart = weeks[0], winEnd = addDaysISO(weeks[W-1], 6);
+  const today = isoDate(new Date());
+  const camps = state.commsPlans.filter(isCampaignPlan).map(p=>({plan:p, info:campaignInfo(p)}))
+    .filter(c=> c.info.start && c.info.until && c.info.until >= winStart && c.info.start <= winEnd)
+    .sort((a,b)=> a.info.start < b.info.start ? -1 : 1);
+  const head = `<div class="gt-label gt-head">Campaign</div>` + weeks.map(w=>{ const d=parseISO(w); return `<div class="gt-head${today>=w && today<=addDaysISO(w,6)?' gt-now':''}">${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}</div>`; }).join('');
+  const rows = camps.map(({plan, info})=>{
+    const cells = weeks.map(w=>{
+      const we = addDaysISO(w, 6);
+      let inner = '';
+      if(info.start <= we && info.until >= w){
+        const s = info.start > w ? info.start : w, e = info.until < we ? info.until : we;
+        const l = Math.round((parseISO(s)-parseISO(w))/86400000) / 7 * 100;
+        const r = (6 - Math.round((parseISO(e)-parseISO(w))/86400000)) / 7 * 100;
+        inner += `<span class="gt-bar" style="left:${l}%;right:${r}%;"></span>`;
+      }
+      info.posts.filter(p=>p.postDate>=w && p.postDate<=we).forEach(p=>{
+        const i = Math.round((parseISO(p.postDate)-parseISO(w))/86400000);
+        inner += `<span class="gt-dot${isOverdue(p)?' od':''}" style="left:calc(${(i+0.5)/7*100}% - 6px);background:${COMMS_STATUS_STYLE[p.status||'planned'].bar};" title="${escHTML(fmtDate(p.postDate)+' · '+commsChanLabel(p)+(p.note?' · '+p.note:''))}"></span>`;
+      });
+      if(info.end && info.end>=w && info.end<=we){
+        const i = Math.round((parseISO(info.end)-parseISO(w))/86400000);
+        inner += `<span class="gt-star" style="left:calc(${(i+0.5)/7*100}% - 7px);" title="${escHTML(planTitle(plan))} · ${fmtDate(info.end)}">★</span>`;
+      }
+      return `<div class="gt-cell">${inner}</div>`;
+    }).join('');
+    return `<div class="gt-label gt-open" data-plan="${plan.id}" role="button" tabindex="0"><b>${escHTML(planTitle(plan)||'Campaign')}</b><small>${fmtDate(info.start)} – ${fmtDate(info.until)}</small></div>${cells}`;
+  }).join('');
+  const load = weeks.map(w=>{
+    const we = addDaysISO(w,6);
+    const n = camps.reduce((t,c)=> t + c.info.posts.filter(p=>p.postDate>=w && p.postDate<=we).length, 0);
+    return `<div class="gt-load${n>=4?' hi':''}">${n}${n>=4?' ⚠':''}</div>`;
+  }).join('');
+
+  const cards = camps.map(({plan, info})=>`
+    <div class="cp-card gt-open" data-plan="${plan.id}" role="button" tabindex="0">
+      <div class="cp-main">
+        <div class="cp-title">${escHTML(planTitle(plan)||'Campaign')}${isStandalonePlan(plan)?'':' <span class="cp-tag">from planner</span>'}</div>
+        <div class="cp-run">Runs ${fmtDate(info.start)} – ${fmtDate(info.until)}${info.days?' · '+durationLabel(info.days):''}</div>
+        <div class="cp-sum">${info.posts.length} post${info.posts.length===1?'':'s'} · ${info.done} posted${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}${info.next?` · next: ${fmtDate(info.next.postDate)} ${escHTML(commsChanLabel(info.next))}`:''}</div>
+      </div>
+      <span class="wk2-chev" aria-hidden="true">›</span>
+    </div>`).join('');
+
+  return `
+    <div class="cp-top"><span class="cp-hint">What's being promoted when · ${fmtDate(winStart)} – ${fmtDate(winEnd)}</span><button type="button" class="add-btn" id="cp-new">+ New campaign</button></div>
+    ${camps.length ? `
+    <div class="gt-scroll"><div class="gt" style="grid-template-columns:150px repeat(${W}, minmax(56px,1fr));">
+      ${head}${rows}
+      <div class="gt-label gt-loadlabel">Posts per week</div>${load}
+    </div></div>
+    <div class="cp-legend">Bars show how long each campaign runs; dots are posts (coloured by status, ringed red if overdue); ★ is the event. Weekly Sunday posts aren't included.</div>
+    <div class="cp-list">${cards}</div>` : `<div class="empty">No campaigns running in this period.<br>Tap "+ New campaign" to plan one.</div>`}
+  `;
+}
+
+function campaignSheetHTML(){
+  const cs = state.campaignSheet; if(!cs) return '';
+  const plan = state.commsPlans.find(p=>p.id===cs.planId); if(!plan) return '';
+  const info = campaignInfo(plan);
+  return `
+  <div class="sheet-overlay" id="cp-sheet-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cp-title">
+      <div class="sheet-grip"></div>
+      <h3 id="cp-title">${escHTML(planTitle(plan)||'Campaign')}</h3>
+      <div class="sheet-hint" style="margin-top:2px;">${info.start?`Runs ${fmtDate(info.start)} – ${fmtDate(info.until)}${info.days?' · '+durationLabel(info.days):''} · `:''}${info.posts.length} posts · ${info.done} posted${info.overdue?` · <b class="la-red">${info.overdue} overdue</b>`:''}</div>
+      ${commsPlanDates ? `<div class="sheet-2col" style="margin-top:12px;">
+        <div><span class="sheet-label">Runs from</span><input type="date" id="cp-start" value="${plan.startDate||info.start||''}"></div>
+        <div><span class="sheet-label">Until / event</span><input type="date" id="cp-end" value="${plan.endDate||info.end||''}"></div>
+      </div>` : ''}
+      <div class="sheet-field">
+        <span class="sheet-label">Posts</span>
+        <div class="cm-posts" style="border-top:none;padding:0;">${info.posts.length ? info.posts.map(p=>commsPostRow(p, true, true)).join('') : '<div class="cal-none">No posts yet</div>'}</div>
+        <button type="button" class="btn" id="cp-add-post" style="margin-top:8px;">+ Add post</button>
+      </div>
+      <div class="sheet-field"><button type="button" class="btn danger sheet-remove" id="cp-delete">Delete campaign and its posts</button></div>
+      <div class="sheet-actions"><button type="button" class="btn primary" id="cp-close">Close</button></div>
+    </div>
+  </div>`;
+}
+
+function newCampaignSheetHTML(){
+  const nc = state.newCampaign; if(!nc) return '';
+  const today = new Date();
+  const items = commsItemsForRange(today, new Date(today.getFullYear(), today.getMonth(), today.getDate()+16*7))
+    .filter(o=> commsItemType(o.ev)!=='sunday');
+  const seen = new Set(), opts = [];
+  items.forEach(o=>{ const k = commsItemKey(o); if(seen.has(k)) return; seen.add(k); opts.push({value:'item:'+k, label:`${commsItemName(o)} · ${fmtDate(isoDate(o.date))}`, key:k, type:commsItemType(o.ev), title:commsItemName(o), date:isoDate(o.date)}); });
+  state.commsPlans.filter(isStandalonePlan).forEach(p=> opts.push({value:'plan:'+p.id, label:(p.itemTitle||'Standalone')+' (standalone)', planId:p.id}));
+  nc.options = opts;
+  const tpls = campaignTemplates();
+  const preview = (nc.templateId && nc.endDate) ? generateFromTemplate(nc.templateId, nc.endDate) : [];
+  const todayIso = isoDate(new Date());
+  const future = preview.filter(p=>p.postDate>=todayIso);
+  const start = nc.startDate || (future.length ? future[0].postDate : nc.endDate);
+  return `
+  <div class="sheet-overlay" id="nc-sheet-overlay">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="nc-title">
+      <div class="sheet-grip"></div>
+      <h3 id="nc-title">New campaign</h3>
+      <div class="sheet-field">
+        <span class="sheet-label">What's being promoted</span>
+        <select id="nc-for">
+          <option value="" ${!nc.forValue?'selected':''}>Choose…</option>
+          ${opts.map(o=>`<option value="${escHTML(o.value)}" ${nc.forValue===o.value?'selected':''}>${escHTML(o.label)}</option>`).join('')}
+          <option value="__new__" ${nc.forValue==='__new__'?'selected':''}>+ Something else…</option>
+        </select>
+        ${nc.forValue==='__new__' ? `<input type="text" id="nc-title-input" placeholder="e.g. Toys Under The Tree" value="${escHTML(nc.newTitle||'')}" style="margin-top:8px;">` : ''}
+      </div>
+      <div class="sheet-2col" style="margin-top:14px;">
+        <div><span class="sheet-label">Runs from</span><input type="date" id="nc-start" value="${start||''}"></div>
+        <div><span class="sheet-label">Until / event</span><input type="date" id="nc-end" value="${nc.endDate||''}"></div>
+      </div>
+      <div class="sheet-field">
+        <span class="sheet-label">Template</span>
+        <div class="sheet-chips">
+          ${tpls.map(t=>`<button type="button" class="sheet-chip nc-tpl ${nc.templateId===t.id?'on':''}" data-tpl="${t.id}">${escHTML(t.name)}</button>`).join('')}
+          <button type="button" class="sheet-chip nc-tpl ${nc.templateId===''?'on':''}" data-tpl="">Blank</button>
+        </div>
+      </div>
+      ${preview.length ? `<div class="sheet-field"><span class="sheet-label">This will create</span>
+        <div class="nc-preview">${preview.map(p=>`<div class="nc-row${p.postDate<todayIso?' past':''}"><span>${fmtDate(p.postDate)}</span><span><b>${escHTML(p.note)}</b><small>${escHTML(commsChanLabel(p))}${p.postDate<todayIso?' · already passed, will be skipped':''}</small></span></div>`).join('')}</div>
+        <div class="sheet-hint">Nobody is assigned yet. Every post can be changed, removed or added to afterwards.</div></div>` : (nc.templateId && !nc.endDate ? `<div class="sheet-hint" style="margin-top:12px;">Set the end/event date to see the posts this will create.</div>` : '')}
+      ${state.newCampaignError ? `<div class="sheet-error">${escHTML(state.newCampaignError)}</div>` : ''}
+      <div class="sheet-actions">
+        <button type="button" class="btn" id="nc-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="nc-create">${future.length ? 'Create with '+future.length+' post'+(future.length===1?'':'s') : 'Create campaign'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function syncNewCampaignFromDOM(){
+  const nc = state.newCampaign; if(!nc) return;
+  const v = id=>document.getElementById(id);
+  if(v('nc-title-input')) nc.newTitle = v('nc-title-input').value;
+  if(v('nc-start')) nc.startDate = v('nc-start').value;
+  if(v('nc-end')) nc.endDate = v('nc-end').value;
+}
+async function updatePlanFields(planId, patch){
+  const { error } = await sb.from('comms_plans').update({...patch, updated_at:new Date().toISOString()}).eq('id', planId);
+  if(error){ console.error(error); alert('Could not save that: '+error.message); return false; }
+  return true;
+}
+async function createCampaign(){
+  const nc = state.newCampaign;
+  let plan = null;
+  if(nc.forValue==='__new__'){
+    const title = (nc.newTitle||'').trim();
+    if(!title){ state.newCampaignError = 'Give the campaign a name.'; render(); return false; }
+    plan = state.commsPlans.find(p=>isStandalonePlan(p) && (p.itemTitle||'').toLowerCase()===title.toLowerCase());
+    if(plan){ if(plan.needsComms!==true) await getOrCreateItemPlan(plan.itemRefId, plan.itemType, plan.itemTitle, true); }
+    else { plan = {id:uid(), itemType:'event', itemRefId:'standalone::'+uid(), needsComms:true, autoFlowId:null, itemTitle:title, notes:''}; state.commsPlans.push(plan); await saveCommsPlan(plan); }
+  } else if(nc.forValue && nc.forValue.startsWith('item:')){
+    const o = (nc.options||[]).find(x=>x.value===nc.forValue);
+    if(o) plan = await getOrCreateItemPlan(o.key, o.type, o.title, true);
+  } else if(nc.forValue && nc.forValue.startsWith('plan:')){
+    plan = state.commsPlans.find(p=>p.id===nc.forValue.slice(5));
+    if(plan && plan.needsComms!==true) await getOrCreateItemPlan(plan.itemRefId, plan.itemType, plan.itemTitle, true);
+  }
+  if(!plan){ state.newCampaignError = 'Choose what is being promoted.'; render(); return false; }
+  if(!nc.endDate){ state.newCampaignError = 'Set the end/event date.'; render(); return false; }
+  const todayIso = isoDate(new Date());
+  const preview = (nc.templateId ? generateFromTemplate(nc.templateId, nc.endDate) : []).filter(p=>p.postDate>=todayIso);
+  const start = nc.startDate || (preview.length ? preview[0].postDate : nc.endDate);
+  plan.startDate = start; plan.endDate = nc.endDate;
+  if(commsPlanDates) await updatePlanFields(plan.id, {start_date:start, end_date:nc.endDate});
+  const posts = preview.map(p=>({id:uid(), commsPlanId:plan.id, channel:p.channel, platform:p.platform, format:p.format, postDate:p.postDate, endDate:null, note:p.note, status:'planned', assignee:'', readyBy:addDaysISO(p.postDate, -READY_DAYS_BEFORE)}));
+  if(posts.length){ state.commsPosts.push(...posts); await saveCommsPost(posts); }
+  state.newCampaign = null;
+  state.campaignSheet = {planId: plan.id};
+  return true;
+}
+
+function attachCampaignHandlers(){
+  const byId = id=>document.getElementById(id);
+  if(byId('cp-new')) byId('cp-new').onclick = ()=>{ state.newCampaign = {forValue:'', templateId: (campaignTemplates()[0]||{}).id || '', endDate:'', startDate:''}; state.newCampaignError=''; render(); };
+  document.querySelectorAll('.gt-open').forEach(el=>{
+    const go = ()=>{ state.campaignSheet = {planId: el.dataset.plan}; render(); };
+    el.onclick = go;
+    el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); go(); } };
+  });
+  // campaign sheet
+  const cov = byId('cp-sheet-overlay');
+  if(cov && state.campaignSheet && !state.commsSheet){
+    const planId = state.campaignSheet.planId;
+    const plan = state.commsPlans.find(p=>p.id===planId);
+    cov.onclick = (e)=>{ if(e.target===cov){ state.campaignSheet=null; render(); } };
+    byId('cp-close').onclick = ()=>{ state.campaignSheet=null; render(); };
+    ['cp-start','cp-end'].forEach(id=>{
+      if(byId(id)) byId(id).onchange = async ()=>{
+        const val = byId(id).value || null;
+        if(id==='cp-start') plan.startDate = val; else plan.endDate = val;
+        render();
+        await updatePlanFields(planId, id==='cp-start' ? {start_date:val} : {end_date:val});
+      };
+    });
+    byId('cp-add-post').onclick = ()=>{
+      const info = campaignInfo(plan);
+      const anchor = info.next ? info.next.postDate : (info.end || isoDate(new Date()));
+      openCommsSheet({weekIso: isoDate(sundayOnOrBefore(parseISO(anchor))), planId});
+    };
+    byId('cp-delete').onclick = async ()=>{
+      const posts = state.commsPosts.filter(p=>p.commsPlanId===planId);
+      if(!confirm(`Delete "${planTitle(plan)}" and its ${posts.length} post${posts.length===1?'':'s'}? This can't be undone.`)) return;
+      for(const p of posts) await deleteCommsPostRemote(p.id);
+      state.commsPosts = state.commsPosts.filter(p=>p.commsPlanId!==planId);
+      if(isStandalonePlan(plan)){
+        await sb.from('comms_plans').delete().eq('id', planId);
+        state.commsPlans = state.commsPlans.filter(p=>p.id!==planId);
+      } else {
+        plan.needsComms = null; plan.startDate = null; plan.endDate = null;
+        await updatePlanFields(planId, {needs_comms:null, ...(commsPlanDates?{start_date:null, end_date:null}:{})});
+      }
+      state.campaignSheet = null; render();
+    };
+  }
+  // new campaign sheet
+  const nov = byId('nc-sheet-overlay');
+  if(nov && state.newCampaign){
+    const nc = state.newCampaign;
+    nov.onclick = (e)=>{ if(e.target===nov){ state.newCampaign=null; render(); } };
+    byId('nc-cancel').onclick = ()=>{ state.newCampaign=null; render(); };
+    byId('nc-for').onchange = ()=>{
+      syncNewCampaignFromDOM();
+      nc.forValue = byId('nc-for').value; state.newCampaignError='';
+      const o = (nc.options||[]).find(x=>x.value===nc.forValue);
+      if(o && o.date){ nc.endDate = o.date; nc.startDate = ''; }
+      render();
+      if(nc.forValue==='__new__' && byId('nc-title-input')) byId('nc-title-input').focus();
+    };
+    byId('nc-end').onchange = ()=>{ syncNewCampaignFromDOM(); nc.startDate = ''; render(); };
+    document.querySelectorAll('.nc-tpl').forEach(el=>{ el.onclick = ()=>{ syncNewCampaignFromDOM(); nc.templateId = el.dataset.tpl; nc.startDate=''; render(); }; });
+    byId('nc-create').onclick = async ()=>{
+      syncNewCampaignFromDOM();
+      const btn = byId('nc-create'); btn.disabled = true; btn.textContent = 'Creating…';
+      const ok = await createCampaign();
+      if(ok) render(); else if(byId('nc-create')){ byId('nc-create').disabled=false; }
+    };
+  }
+}
+
+// ---------- Settings: campaign templates ----------
+function templatesSettingsHTML(){
+  if(!commsFlowPurpose) return `<div class="settings-section"><h4>Comms campaign templates</h4><div class="notice">Run the Supabase update for campaigns to enable templates.</div></div>`;
+  const tpls = campaignTemplates();
+  return `<div class="settings-section">
+    <h4>Comms campaign templates</h4>
+    <div class="notice" style="margin:-4px 0 10px;">Posts are worked back from a campaign's end/event date. Sunday notices land on the Sunday on or before.</div>
+    ${tpls.map(t=>{
+      const steps = state.commsFlowSteps.filter(s=>s.flowId===t.id).sort((a,b)=>a.dayOffset-b.dayOffset);
+      return `<div class="tpl-card">
+        <div class="tpl-head"><input type="text" class="tpl-name" data-id="${t.id}" value="${escHTML(t.name)}"><button class="tpl-del" data-id="${t.id}" title="Delete template">✕</button></div>
+        ${steps.map(s=>`<div class="tpl-step">
+          <input type="number" class="tpl-days" data-id="${s.id}" min="0" max="365" value="${-s.dayOffset}" aria-label="Days before">
+          <span class="rr-label">days before</span>
+          <select class="tpl-chan" data-id="${s.id}">${Object.entries(COMMS_CHANNELS).map(([k,v])=>`<option value="${k}" ${s.channel===k?'selected':''}>${v.label}</option>`).join('')}</select>
+          ${s.channel==='social' ? `<select class="tpl-fmt" data-id="${s.id}">${Object.entries(COMMS_FORMATS).map(([k,v])=>`<option value="${k}" ${s.format===k?'selected':''}>${v}</option>`).join('')}</select>` : ''}
+          <input type="text" class="tpl-note" data-id="${s.id}" value="${escHTML(s.note)}" placeholder="What is it?">
+          <button class="tpl-step-del" data-id="${s.id}" title="Remove step">✕</button>
+        </div>`).join('')}
+        <button class="mw-add tpl-add-step" data-id="${t.id}" type="button">+ Add step</button>
+      </div>`;
+    }).join('')}
+    <button class="mw-add" id="tpl-add" type="button">+ Add template</button>
+  </div>`;
+}
+function attachTemplateSettingsHandlers(){
+  const upd = async (table, id, patch)=>{ const { error } = await sb.from(table).update(patch).eq('id', id); if(error) alert('Could not save: '+error.message); };
+  document.querySelectorAll('.tpl-name').forEach(el=>{ el.onchange = async ()=>{ const f = state.commsFlows.find(x=>x.id===el.dataset.id); if(f){ f.name = el.value.trim()||f.name; await upd('comms_flows', f.id, {name:f.name}); } }; });
+  document.querySelectorAll('.tpl-days').forEach(el=>{ el.onchange = async ()=>{ const s = state.commsFlowSteps.find(x=>x.id===el.dataset.id); if(s){ s.dayOffset = -Math.max(0, parseInt(el.value,10)||0); await upd('comms_flow_steps', s.id, {day_offset:s.dayOffset}); render(); } }; });
+  document.querySelectorAll('.tpl-chan').forEach(el=>{ el.onchange = async ()=>{ const s = state.commsFlowSteps.find(x=>x.id===el.dataset.id); if(s){ s.channel = el.value; if(s.channel==='social'){ s.platform = s.platform||'facebook,instagram'; s.format = s.format||'post'; } else { s.platform=''; s.format=''; } await upd('comms_flow_steps', s.id, {channel:s.channel, platform:s.platform||null, format:s.format||null}); render(); } }; });
+  document.querySelectorAll('.tpl-fmt').forEach(el=>{ el.onchange = async ()=>{ const s = state.commsFlowSteps.find(x=>x.id===el.dataset.id); if(s){ s.format = el.value; await upd('comms_flow_steps', s.id, {format:s.format}); } }; });
+  document.querySelectorAll('.tpl-note').forEach(el=>{ el.onchange = async ()=>{ const s = state.commsFlowSteps.find(x=>x.id===el.dataset.id); if(s){ s.note = el.value; await upd('comms_flow_steps', s.id, {note:s.note}); } }; });
+  document.querySelectorAll('.tpl-step-del').forEach(el=>{ el.onclick = async ()=>{ await sb.from('comms_flow_steps').delete().eq('id', el.dataset.id); state.commsFlowSteps = state.commsFlowSteps.filter(s=>s.id!==el.dataset.id); render(); }; });
+  document.querySelectorAll('.tpl-add-step').forEach(el=>{ el.onclick = async ()=>{ const s = {id:uid(), flowId:el.dataset.id, dayOffset:-7, channel:'social', platform:'facebook,instagram', format:'post', note:'', sortOrder:0}; state.commsFlowSteps.push(s); await saveCommsFlowSteps(s); render(); }; });
+  document.querySelectorAll('.tpl-del').forEach(el=>{ el.onclick = async ()=>{
+    const f = state.commsFlows.find(x=>x.id===el.dataset.id); if(!f) return;
+    if(!confirm(`Delete the "${f.name}" template? Campaigns already created from it keep their posts.`)) return;
+    await sb.from('comms_flow_steps').delete().eq('flow_id', f.id);
+    const { error } = await sb.from('comms_flows').delete().eq('id', f.id);
+    if(error){ alert('Could not delete: '+error.message); return; }
+    state.commsFlowSteps = state.commsFlowSteps.filter(s=>s.flowId!==f.id); state.commsFlows = state.commsFlows.filter(x=>x.id!==f.id); render();
+  }; });
+  const addT = document.getElementById('tpl-add');
+  if(addT) addT.onclick = async ()=>{ const f = {id:uid(), name:'New template', description:'', purpose:'campaign'}; state.commsFlows.push(f); await saveCommsFlow(f); render(); };
+}
+
 function commsTabHTML(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   // provision the weekly Sunday flow for every Sunday whose posts could land in
   // this month (a week either side), whichever sub-view is open
   ensureAutoCommsForSundays(commsItemsForRange(new Date(y, m, 1-7), new Date(y, m+1, 7)));
-  const v = state.commsView==='calendar' ? 'calendar' : 'weeks';
+  const v = ['calendar','campaigns'].includes(state.commsView) ? state.commsView : 'weeks';
   return `
     <div class="comms-subtabs">
       <button type="button" class="comms-subtab ${v==='weeks'?'active':''}" data-commsview="weeks">Weeks</button>
+      <button type="button" class="comms-subtab ${v==='campaigns'?'active':''}" data-commsview="campaigns">Campaigns</button>
       <button type="button" class="comms-subtab ${v==='calendar'?'active':''}" data-commsview="calendar">Calendar</button>
     </div>
-    ${commsFiltersHTML()}
-    <div class="${v==='weeks'?'cal-wrap':''}">${v==='weeks' ? commsWeeksHTML() : commsCalendarGridHTML()}</div>
+    ${(!commsPostExtras || !commsPlanDates || !commsFlowPurpose) ? `<div class="notice" style="color:var(--bad);margin:0 0 10px;">Campaign features need the latest Supabase update (assignee, ready-by, campaign dates, templates). Some options are hidden until it's run.</div>` : ''}
+    ${v!=='campaigns' ? commsFiltersHTML() : ''}
+    <div class="${v==='weeks'?'cal-wrap':''}">${v==='weeks' ? commsWeeksHTML() : v==='campaigns' ? campaignsViewHTML() : commsCalendarGridHTML()}</div>
+    ${campaignSheetHTML()}
+    ${newCampaignSheetHTML()}
     ${commsSheetHTML()}
   `;
 }
@@ -1888,7 +2358,7 @@ function commsForOptions(weekIso){
     if(seen.has(key)) return; seen.add(key);
     const plan = commsPlanFor(o);
     if(plan && plan.needsComms===false) return;
-    opts.push({value: plan ? 'plan:'+plan.id : 'item:'+key, label:`${o.ev.name||o.ev.title} · ${fmtDate(isoDate(o.date))}`, key, type:commsItemType(o.ev), title:o.ev.name||o.ev.title});
+    opts.push({value: plan ? 'plan:'+plan.id : 'item:'+key, label:`${commsItemName(o)} · ${fmtDate(isoDate(o.date))}`, key, type:commsItemType(o.ev), title:commsItemName(o)});
   });
   state.commsPlans.filter(isStandalonePlan).sort((a,b)=>(a.itemTitle||'').localeCompare(b.itemTitle||'')).forEach(p=>{
     opts.push({value:'plan:'+p.id, label:`${p.itemTitle||'Standalone'} (standalone)`});
@@ -1910,7 +2380,7 @@ function commsSheetHTML(){
   const onChip = !d.otherDate && days.includes(d.postDate);
   const plats = (d.platform||'').split(',').filter(Boolean);
   return `
-  <div class="sheet-overlay" id="cm-sheet-overlay">
+  <div class="sheet-overlay" id="cm-sheet-overlay" style="z-index:62;">
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cm-sheet-title">
       <div class="sheet-grip"></div>
       <h3 id="cm-sheet-title">${cs.isNew?'Add post':'Edit post'}</h3>
@@ -1953,6 +2423,17 @@ function commsSheetHTML(){
         <span class="sheet-label">Status</span>
         <div class="sheet-chips">${COMMS_STATUS_ORDER.map(k=>`<button type="button" class="sheet-chip cm-status-chip ${d.status===k?'on':''}" data-status="${k}"><span class="sw" style="background:${COMMS_STATUS_STYLE[k].bar};"></span>${COMMS_STATUSES[k].label}</button>`).join('')}</div>
       </div>
+      ${commsPostExtras ? `<div class="sheet-rows" style="margin-top:14px;">
+        <label class="sheet-row"><span>Who's doing it</span>
+          <select id="cm-assignee">
+            <option value="" ${!d.assignee?'selected':''}>Nobody yet</option>
+            ${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${d.assignee===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}
+            ${(d.assignee && !state.owners.some(o=>o.name===d.assignee)) ? `<option value="${escHTML(d.assignee)}" selected>${escHTML(d.assignee)}</option>` : ''}
+          </select>
+        </label>
+        <label class="sheet-row"><span>Ready by</span><input type="date" id="cm-ready" value="${d.readyBy||''}" class="sheet-row-date"></label>
+      </div>
+      <div class="sheet-hint">Leave "Ready by" blank to use ${READY_DAYS_BEFORE} days before the post date.</div>` : ''}
       <div class="sheet-field">
         <span class="sheet-label">Runs until <span class="sheet-label-soft">· optional, e.g. for banners</span></span>
         <input type="date" id="cm-end" value="${d.endDate||''}">
@@ -1972,6 +2453,8 @@ function syncCommsSheetFromDOM(){
   if(v('cm-date')) d.postDate = v('cm-date').value;
   if(v('cm-note')) d.note = v('cm-note').value;
   if(v('cm-end')) d.endDate = v('cm-end').value;
+  if(v('cm-assignee')) d.assignee = v('cm-assignee').value;
+  if(v('cm-ready')) d.readyBy = v('cm-ready').value;
 }
 function openCommsSheet({postId, weekIso, planId, date}){
   state.commsSheetError = '';
@@ -1982,7 +2465,7 @@ function openCommsSheet({postId, weekIso, planId, date}){
     const today = isoDate(new Date());
     const end = addDaysISO(weekIso, 6);
     const def = date || (today>=weekIso && today<=end ? today : weekIso);
-    state.commsSheet = {isNew:true, weekIso, draft:{planId:planId||'', channel:'social', platform:'facebook,instagram', format:'post', postDate:def, endDate:'', note:'', status:'planned'}};
+    state.commsSheet = {isNew:true, weekIso, draft:{planId:planId||'', channel:'social', platform:'facebook,instagram', format:'post', postDate:def, endDate:'', note:'', status:'planned', assignee:'', readyBy:''}};
   }
   render();
 }
@@ -2012,6 +2495,7 @@ async function getOrCreateItemPlan(key, itemType, title, needsComms){
   return plan;
 }
 
+function commsPostFields(){ return COMMS_POST_FIELDS.concat(commsPostExtras ? [['assignee','assignee'],['readyBy','ready_by']] : []); }
 const COMMS_POST_FIELDS = [['channel','channel'],['platform','platform'],['format','format'],['postDate','post_date'],['endDate','end_date'],['note','note'],['status','status'],['commsPlanId','comms_plan_id']];
 async function saveCommsSheet(){
   const cs = state.commsSheet, d = cs.draft;
@@ -2041,7 +2525,7 @@ async function saveCommsSheet(){
 
   const mine = {...d, commsPlanId:planId, endDate:d.endDate||null};
   if(cs.isNew){
-    const post = {id:uid(), commsPlanId:planId, channel:mine.channel, platform:mine.platform, format:mine.format, postDate:mine.postDate, endDate:mine.endDate, note:mine.note||'', status:mine.status||'planned'};
+    const post = {id:uid(), commsPlanId:planId, channel:mine.channel, platform:mine.platform, format:mine.format, postDate:mine.postDate, endDate:mine.endDate, note:mine.note||'', status:mine.status||'planned', assignee:mine.assignee||'', readyBy:mine.readyBy||addDaysISO(mine.postDate, -READY_DAYS_BEFORE)};
     state.commsPosts.push(post);
     await saveCommsPost(post);
     return true;
@@ -2052,17 +2536,17 @@ async function saveCommsSheet(){
   if(!srv){ alert('This post was deleted by someone else, so your changes weren\'t saved.'); return true; }
   const o = cs.original, patch = {}, conflicts = [];
   const norm = v => v==null ? '' : String(v);
-  COMMS_POST_FIELDS.forEach(([k,col])=>{
+  commsPostFields().forEach(([k,col])=>{
     const mv = norm(mine[k]), ov = norm(o[k]), sv = norm(srv[col]);
     if(mv===ov) return;
     if(sv!==ov && sv!==mv){ conflicts.push(k); return; }
-    patch[col] = mine[k]===''&&(col==='end_date'||col==='platform'||col==='format') ? null : mine[k];
+    patch[col] = mine[k]===''&&['end_date','platform','format','assignee','ready_by'].includes(col) ? null : mine[k];
   });
   if(Object.keys(patch).length){
     const { error: upErr } = await sb.from('comms_posts').update(patch).eq('id', cs.postId);
     if(upErr){ alert('Could not save this post: '+upErr.message); return false; }
     const local = state.commsPosts.find(p=>p.id===cs.postId);
-    if(local) COMMS_POST_FIELDS.forEach(([k,col])=>{ if(col in patch) local[k] = patch[col]; });
+    if(local) commsPostFields().forEach(([k,col])=>{ if(col in patch) local[k] = patch[col]==null ? '' : patch[col]; });
   }
   if(conflicts.length) alert('Someone else changed this post while you were editing, so their '+conflicts.join(', ').replace('postDate','date').replace('commsPlanId','"for"')+' was kept.');
   return true;
@@ -2072,6 +2556,7 @@ function attachCommsHandlers(){
   const byId = id=>document.getElementById(id);
   document.querySelectorAll('.comms-subtab').forEach(el=>{ el.onclick = ()=>{ state.commsView = el.dataset.commsview; render(); }; });
   document.querySelectorAll('.cm-filter').forEach(el=>{ el.onclick = ()=>{ state.commsStatusFilter = el.dataset.status; render(); }; });
+  attachCampaignHandlers();
   if(byId('cm-channel')) byId('cm-channel').onchange = ()=>{ state.commsChannelFilter = byId('cm-channel').value; render(); };
   if(byId('cm-clear')) byId('cm-clear').onclick = ()=>{ state.commsStatusFilter='all'; state.commsChannelFilter=''; render(); };
   document.querySelectorAll('.cm-open').forEach(el=>{
@@ -2221,10 +2706,12 @@ function toCSV(rows){
 }
 
 // ---------- Rendering ----------
+// Typed-but-unsaved sheet values are captured before any re-render that isn't
+// triggered by the sheet itself (live refresh, version banner). Sheet handlers sync
+// first and then change the draft, so render() itself must NOT re-read the DOM.
+function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncNewCampaignFromDOM(); }
 function render(){
-  syncSheetFromDOM();
-  syncCommsSheetFromDOM();
-  document.body.style.overflow = (state.sheet || state.commsSheet) ? 'hidden' : '';
+  document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign) ? 'hidden' : '';
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
   if(!state.currentUser){ app.className='app'; app.innerHTML = loginHTML(); attachLoginHandlers(); return; }
@@ -3210,6 +3697,7 @@ function settingsHTML(){
         </div>
         <div class="notice" style="margin-top:6px;">Owners are offered on every after-service and midweek activity, and listed in the Owners tab.</div>
       </div>
+      ${templatesSettingsHTML()}
       <div class="settings-section">
         <h4>Recurring rhythms</h4>
         ${state.recurringRhythms.length ? state.recurringRhythms.map(r=>{
@@ -3417,6 +3905,7 @@ function attachMainHandlers(){
         render();
       };
     });
+    attachTemplateSettingsHandlers();
     document.querySelectorAll('.audience-color').forEach(el=>{
       el.onchange = async ()=>{
         const a = audienceObj(el.dataset.audience);
@@ -3708,7 +4197,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-02b';
+const APP_VERSION = '2026-10-02d';
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
@@ -3716,9 +4205,9 @@ async function checkForNewVersion(){
     const html = await res.text();
     const mm = html.match(/<meta name="app-version" content="([^"]+)"/);
     if(!mm || mm[1] === APP_VERSION) return;
-    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.showModal || state.showSettings;
+    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.showModal || state.showSettings;
     if(!busy){ location.reload(); return; }
-    if(!state.updateAvailable){ state.updateAvailable = true; render(); }
+    if(!state.updateAvailable){ state.updateAvailable = true; syncAllDrafts(); render(); }
   }catch(e){ /* offline etc. — try again later */ }
 }
 
@@ -4104,6 +4593,7 @@ function attachDashboardHandlers(){
   document.addEventListener('keydown', e=>{
     if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
     else if(e.key==='Escape' && state.commsSheet){ state.commsSheet = null; render(); }
+    else if(e.key==='Escape' && (state.newCampaign || state.campaignSheet)){ state.newCampaign = null; state.campaignSheet = null; render(); }
   });
 })();
 </script>

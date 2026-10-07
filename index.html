@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-06b">
+<meta name="app-version" content="2026-10-07a">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -947,6 +947,14 @@
   .wz-rv{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--paper);font-size:13.5px;}
   .wz-rv small{display:block;color:var(--ink-soft);font-size:12px;}
   .cm-paid{font-size:11px;font-weight:700;background:var(--gold-soft);color:#7A5A16;border-radius:20px;padding:2px 8px;white-space:nowrap;flex-shrink:0;}
+
+  /* ---------- Dashboard = Look Ahead design ---------- */
+  .app.wide .dash-toolbar,.app.wide .jump-now,.app.wide .show-earlier,.app.wide .cal-filters{max-width:820px;}
+  .weeks-timeline.cal-wrap{gap:0;}
+  .weeks-timeline .la-month-head{margin-top:14px;}
+  .weeks-timeline .la-month-head h3 .dash-month-count{font-size:13px;font-weight:400;color:var(--ink-soft);}
+  .weeks-timeline .week-card.editing{margin-bottom:10px;}
+  .la-week:focus-visible,.la-whead:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -3390,6 +3398,7 @@ function toCSV(rows){
 // first and then change the draft, so render() itself must NOT re-read the DOM.
 function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncNewCampaignFromDOM(); syncChoiceFromDOM(); syncAddItemFromDOM(); syncWizardFromDOM(); }
 function render(){
+  if(state.view==='list') state.view = 'dashboard';  // Look Ahead merged into Dashboard
   document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard) ? 'hidden' : '';
   const app = document.getElementById('app');
   if(!state.loaded){ app.innerHTML = '<div class="empty">Loading your planner…</div>'; return; }
@@ -4068,37 +4077,34 @@ function weekCardHTML(wk, idx){
     </div>`;
   }
 
-  // Compact, tap-anywhere card. Pills are coloured by status (green confirmed,
-  // amber needs approval, red/struck cancelled) — audience colour stays in the
-  // week editor, Calendar and Look Ahead. Owner is deliberately not shown here.
+  // Look Ahead-style week card: heading (date block, series, occasion, a summary
+  // of what needs chasing) and one clean row per item. Tap anything to edit.
   const isNow = isCurrentWeek(wk);
-  const pills = items => items.map(m=>{
-    const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
-    if(!tags.length) return '';
-    const s = m.status || 'confirmed';
-    const label = tags.map(t=>t.name).join(' + ');
-    const anchor = m._anchor;
-    const showDate = m.date && m.date !== anchor;
-    const timeLabel = m.allDay===false && m.startTime ? ' · '+m.startTime : '';
-    return `<span class="st-pill ${s}" title="${escHTML(label)} · ${STATUSES[s].label}">${escHTML(label)}${cleanNote(m.note,label)?': '+escHTML(cleanNote(m.note,label)):''}${m.recurringId?' ↻':''}${showDate?' ('+fmtDate(m.date)+')':''}${timeLabel}</span>`;
-  }).join('');
-  const psList = postServiceItems.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.sundayDate}));
-  const mwList = midweek.filter(m=>(m.tagIds||[]).some(tagById)).map(m=>({...m, _anchor:wk.weekCommencing}));
   const sd = wk.sundayDate ? parseISO(wk.sundayDate) : null;
+  const items = sd ? eventsForRange(sd, new Date(sd.getFullYear(), sd.getMonth(), sd.getDate()+13))
+    .filter(o=> o.ev.weekId===wk.id && !o.ev.id.startsWith('wk-sun-')) : [];
+  const shownItems = items.filter(calPasses);
+  const pending = items.filter(o=>o.ev.status==='pending').length;
+  const cancelled = items.filter(o=>o.ev.status==='declined').length;
+  const summary = [`${items.length} item${items.length===1?'':'s'}`,
+    pending ? `<b class="la-amber">${pending} need${pending===1?'s':''} approval</b>` : '',
+    cancelled ? `<b class="la-red">${cancelled} cancelled</b>` : ''].filter(Boolean).join(' · ');
+  const rows = shownItems.map(o=>{
+    const isPs = o.ev.kind==='ps' && isoDate(o.date)===wk.sundayDate;
+    const lbl = isPs ? 'After service' : `${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()}`;
+    return `<div class="la-row${isoDate(o.date)===isoDate(new Date())?' today':''}"><span class="la-date">${lbl}</span>${calItemHTML(o)}</div>`;
+  }).join('');
   return `
-    <div class="wk2 edit-week ${isNow?'now':''}" id="wk-${wk.id}" style="--term-color:${termVar};" data-id="${wk.id}" role="button" tabindex="0" aria-label="Edit week of ${fmtDate(wk.sundayDate)}">
-      <div class="wk2-date">
-        <div class="wk2-dow">Sun</div>
-        <div class="wk2-num">${sd ? sd.getDate() : '?'}</div>
-        ${isNow ? '<div class="wk2-now">This week</div>' : ''}
+    <div class="la-week${isNow?' now':''}" id="wk-${wk.id}" tabindex="-1" style="--term-color:${termVar};">
+      <div class="la-whead" data-week="${wk.id}" role="button" tabindex="0" aria-label="Edit week of ${fmtDate(wk.sundayDate)}">
+        <div class="la-wdate"><span>Sun</span><b>${sd ? sd.getDate() : '?'}</b></div>
+        <div class="la-whead-main">
+          <div class="la-wtitle${wk.sundaySeries?'':' untitled'}">${escHTML(wk.sundaySeries || 'Untitled Sunday')}${wk.occasion ? ` <span class="wk2-occ">${escHTML(wk.occasion)}</span>` : ''}</div>
+          <div class="la-wsum">${isNow?'<b class="la-now">This week</b> · ':''}${summary}</div>
+        </div>
+        <span class="wk2-chev" aria-hidden="true">›</span>
       </div>
-      <div class="wk2-main">
-        <div class="wk2-title ${wk.sundaySeries?'':'untitled'}">${escHTML(wk.sundaySeries || 'Untitled Sunday')}${wk.occasion?`<span class="wk2-occ">${escHTML(wk.occasion)}</span>`:''}</div>
-        ${psList.length ? `<div class="wk2-line"><span class="wk2-label">After service</span>${pills(psList)}</div>` : ''}
-        ${mwList.length ? `<div class="wk2-line"><span class="wk2-label">Wk of ${wk.weekCommencing ? fmtDate(wk.weekCommencing) : 'Monday'}</span>${pills(mwList)}</div>` : ''}
-        ${!psList.length && !mwList.length ? '<div class="wk2-nothing">Nothing planned yet</div>' : ''}
-      </div>
-      <span class="wk2-chev" aria-hidden="true">›</span>
+      ${rows ? `<div class="la-items">${rows}</div>` : `<div class="la-empty">${calFiltering() ? 'Nothing matches the filter' : 'Nothing planned yet'}</div>`}
     </div>`;
 }
 
@@ -4129,14 +4135,21 @@ function dashboardHTML(){
   const shown = (past.length && !state.showPastWeeks) ? ws.filter(w=> !past.includes(w)) : ws;
   const nowWeek = ws.find(isCurrentWeek);
 
+  // with a status/audience filter on, weeks with nothing matching drop out
+  const weekMatches = w=>{
+    if(!calFiltering() || w.id===state.editingWeekId) return true;
+    const sd = parseISO(w.sundayDate);
+    return eventsForRange(sd, new Date(sd.getFullYear(), sd.getMonth(), sd.getDate()+13)).some(o=> o.ev.weekId===w.id && !o.ev.id.startsWith('wk-sun-') && calPasses(o));
+  };
+  const listed = shown.filter(weekMatches);
   let cards = '', lastMonth = '';
-  shown.forEach(w=>{
+  listed.forEach(w=>{
     const i = ws.indexOf(w);
     const d = parseISO(w.sundayDate);
     const mKey = `${d.getFullYear()}-${d.getMonth()}`;
     if(mKey !== lastMonth){
-      const count = shown.filter(x=>{ const xd = parseISO(x.sundayDate); return xd.getFullYear()===d.getFullYear() && xd.getMonth()===d.getMonth(); }).length;
-      cards += `<div class="dash-month"><span class="dash-month-name">${MONTHS[d.getMonth()]} ${d.getFullYear()}</span><span class="dash-month-count">${count} Sunday${count===1?'':'s'}</span></div>`;
+      const count = listed.filter(x=>{ const xd = parseISO(x.sundayDate); return xd.getFullYear()===d.getFullYear() && xd.getMonth()===d.getMonth(); }).length;
+      cards += `<div class="la-month-head"><h3>${MONTHS[d.getMonth()]} ${d.getFullYear()} <span class="dash-month-count">· ${count} Sunday${count===1?'':'s'}</span></h3><button class="export-pdf-month" type="button" data-year="${d.getFullYear()}" data-month="${d.getMonth()}">Export PDF</button></div>`;
       lastMonth = mKey;
     }
     cards += weekCardHTML(w, i);
@@ -4154,10 +4167,10 @@ function dashboardHTML(){
         <button class="add-btn" id="add-week">+ Add week</button>
       </div>
     </div>
-    <div class="status-legend"><span><i style="background:var(--tl-green)"></i>Confirmed</span><span><i style="background:var(--tl-amber)"></i>Needs approval</span><span><i style="background:var(--tl-red)"></i>Cancelled</span></div>
     ${nowWeek && !state.editingWeekId ? `<button type="button" class="jump-now" id="jump-now" data-id="${nowWeek.id}">↓ Jump to this week</button>` : ''}
     ${past.length ? `<button type="button" class="show-earlier" id="toggle-past">${state.showPastWeeks ? 'Hide earlier weeks' : `Show ${past.length} earlier week${past.length===1?'':'s'}`}</button>` : ''}
-    <div class="weeks-timeline">
+    <div class="weeks-timeline cal-wrap">
+      ${(ws.length && !listed.length && calFiltering()) ? `<div class="empty">Nothing matches this filter.</div>` : ''}
       ${ws.length ? cards : (state.editingWeekId!=='new' ? `<div class="empty">No weeks on the rhythm yet.<br>Use ⋯ → "Fill term's Sundays" to auto-create them, or "+ Add week" for just one.</div>` : '')}
       ${newDraft}
     </div>
@@ -4222,7 +4235,7 @@ function ownersTabHTML(){
 
 function mainHTML(){
   const filtersActive = false;
-  const showFilters = state.view==='calendar' || state.view==='list';
+  const showFilters = state.view==='calendar' || state.view==='dashboard';
   return `
     ${state.updateAvailable ? `<div class="update-banner">A newer version of the planner is available. <button type="button" id="reload-app">Reload</button><span style="font-size:12px;">(save what you're doing first)</span></div>` : ''}
     <div class="masthead">
@@ -4235,7 +4248,6 @@ function mainHTML(){
       <div class="view-toggle">
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
-        <button data-view="list" class="${state.view==='list'?'active':''}">Look Ahead</button>
         <button data-view="owners" class="${state.view==='owners'?'active':''}">Owners</button>
         <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
       </div>
@@ -4876,7 +4888,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-06b';
+const APP_VERSION = '2026-10-07a';
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});

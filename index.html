@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-07a">
+<meta name="app-version" content="2026-10-07b">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -955,6 +955,24 @@
   .weeks-timeline .la-month-head h3 .dash-month-count{font-size:13px;font-weight:400;color:var(--ink-soft);}
   .weeks-timeline .week-card.editing{margin-bottom:10px;}
   .la-week:focus-visible,.la-whead:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
+
+  /* ---------- One activity, every date ---------- */
+  .act-list{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .act-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .act-title{font-size:18px;font-weight:700;}
+  .act-sum{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .act-body{padding:0 14px 8px;}
+  .act-month{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin:14px 0 2px;}
+  .act-row{display:flex;gap:12px;align-items:flex-start;border-top:1px solid var(--paper);}
+  .act-month + .act-row{border-top:none;}
+  .act-row .cal-item{flex:1;min-width:0;}
+  .act-date{width:86px;flex-shrink:0;font-size:13px;font-weight:700;padding-top:7px;}
+  .act-where{font-size:12px;color:var(--ink-soft);padding-top:8px;flex-shrink:0;max-width:34%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .act-row.past{opacity:.5;}
+  .act-btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--ink-soft);font-family:inherit;font-weight:600;}
+  .act-btn:hover{background:var(--paper);color:var(--ink);}
+  .cal-filters select{max-width:200px;}
+  @media (max-width:640px){ .act-where{display:none;} .act-date{width:70px;font-size:12px;} }
 </style>
 </head>
 <body>
@@ -1236,6 +1254,7 @@ let state = {
   sheetDraft: null,
   sheetError: '',
   statusFilter: 'all',
+  tagFilter: '',
   calSelected: null,
   calExpanded: null,
   audFilter: '',
@@ -1737,7 +1756,7 @@ function eventsForRange(rangeStart, rangeEnd){
           tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
           audience: aud, recurrence:'none',
           synthetic:true, weekId:wk.id, status: m.status || 'confirmed',
-          kind:'mid', name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
+          kind:'mid', tagIds:(m.tagIds||[]), name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
           owner: effectiveOwner(m, tags),
           time: (m.allDay===false && m.startTime) ? m.startTime+(m.endTime?'–'+m.endTime:'') : ''
         }, date:itemDate});
@@ -1759,7 +1778,7 @@ function eventsForRange(rangeStart, rangeEnd){
           tags: tags.map(t=>({name:t.name, color:audienceColor(aud), dominant:isDominantAudience(aud)})),
           audience: aud, recurrence:'none',
           synthetic:true, weekId:wk.id, status: m.status || 'confirmed',
-          kind:'ps', name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
+          kind:'ps', tagIds:(m.tagIds||[]), name: tags.map(t=>t.name).join(' + '), note: m.note||'', recurring: !!m.recurringId,
           owner: effectiveOwner(m, tags),
           time: (m.allDay===false && m.startTime) ? m.startTime+(m.endTime?'–'+m.endTime:'') : ''
         }, date:itemDate});
@@ -3554,9 +3573,10 @@ function calPasses(o){
   if(o.ev.id && o.ev.id.startsWith('wk-sun-')) return true;
   if(state.statusFilter && state.statusFilter!=='all' && o.ev.status !== state.statusFilter) return false;
   if(state.audFilter && o.ev.audience !== state.audFilter) return false;
+  if(state.tagFilter && !(o.ev.tagIds||[]).includes(state.tagFilter)) return false;
   return true;
 }
-function calFiltering(){ return (state.statusFilter && state.statusFilter!=='all') || !!state.audFilter; }
+function calFiltering(){ return (state.statusFilter && state.statusFilter!=='all') || !!state.audFilter || !!state.tagFilter; }
 
 function calItemHTML(o, opts){
   const ev = o.ev;
@@ -3757,8 +3777,62 @@ function calFiltersHTML(){
       <option value="">All audiences</option>
       ${auds.map(a=>`<option value="${escHTML(a)}" ${state.audFilter===a?'selected':''}>${escHTML(a)}</option>`).join('')}
     </select>
+    <select id="cal-tag" aria-label="Show one activity">
+      <option value="">All activities</option>
+      ${state.tags.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${t.id}" ${state.tagFilter===t.id?'selected':''}>${escHTML(t.name)}</option>`).join('')}
+    </select>
     ${calFiltering() ? `<button type="button" class="cal-clear" id="cal-clear">Clear</button>` : ''}
   </div>`;
+}
+
+// ---------- One activity, every date ----------
+// With an activity picked on the Dashboard, the week cards give way to a single
+// list of every date it happens in the chosen year/term (status/audience filters
+// still apply). Tap a row to edit that week; Export PDF prints the list.
+function activityDates(){
+  const rows = [];
+  visibleWeeks().forEach(wk=>{
+    if(!wk.sundayDate) return;
+    const sd = parseISO(wk.sundayDate);
+    eventsForRange(sd, new Date(sd.getFullYear(), sd.getMonth(), sd.getDate()+13))
+      .filter(o=> o.ev.weekId===wk.id && !o.ev.id.startsWith('wk-sun-') && calPasses(o))
+      .forEach(o=> rows.push({o, wk}));
+  });
+  return rows.sort((a,b)=> a.o.date - b.o.date);
+}
+function activityListHTML(){
+  const tag = tagById(state.tagFilter);
+  const rows = activityDates();
+  const today = isoDate(new Date());
+  const upcoming = rows.filter(r=> isoDate(r.o.date) >= today).length;
+  const pending = rows.filter(r=> r.o.ev.status==='pending').length;
+  const scope = `${state.termFilter ? state.termFilter[0].toUpperCase()+state.termFilter.slice(1)+' ' : ''}${churchYearLabel(state.churchYear)}`;
+  let last = '', body = '';
+  rows.forEach(({o, wk})=>{
+    const mKey = `${o.date.getFullYear()}-${o.date.getMonth()}`;
+    if(mKey!==last){ body += `<div class="act-month">${MONTHS[o.date.getMonth()]} ${o.date.getFullYear()}</div>`; last = mKey; }
+    const past = isoDate(o.date) < today;
+    const where = o.ev.kind==='ps' ? 'After service · '+escHTML(wk.sundaySeries||'Sunday') : 'Midweek';
+    body += `<div class="act-row${past?' past':''}"><span class="act-date">${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)}</span>${calItemHTML(o)}<span class="act-where">${where}</span></div>`;
+  });
+  return `<div class="cal-wrap act-list">
+    <div class="act-head">
+      <div><div class="act-title">${escHTML(tag ? tag.name : 'Activity')}</div>
+      <div class="act-sum">${rows.length} date${rows.length===1?'':'s'} in ${scope} · ${upcoming} still to come${pending?` · <b class="la-amber">${pending} need${pending===1?'s':''} approval</b>`:''}</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0;"><button type="button" class="act-btn" id="act-print">Export PDF</button><button type="button" class="act-btn" id="act-close">Show all weeks</button></div>
+    </div>
+    ${rows.length ? `<div class="act-body">${body}</div>` : `<div class="empty">No ${escHTML(tag ? tag.name : 'dates')} in ${scope}${calFiltering() && (state.statusFilter!=='all' || state.audFilter) ? ' that match the other filters' : ''}.</div>`}
+  </div>`;
+}
+function printActivityList(){
+  const tag = tagById(state.tagFilter);
+  const rows = activityDates();
+  const trs = rows.map(({o, wk})=>`<tr><td>${DOW[(o.date.getDay()+6)%7]} ${o.date.getDate()} ${MONTHS[o.date.getMonth()].slice(0,3)} ${o.date.getFullYear()}</td><td>${escHTML(o.ev.name||o.ev.title)}${o.ev.note?' — '+escHTML(cleanNote(o.ev.note, o.ev.name)):''}${o.ev.time?' · '+o.ev.time:''}</td><td>${o.ev.kind==='ps'?'After service':'Midweek'}</td><td>${escHTML(o.ev.audience||'')}${o.ev.owner?' · '+escHTML(o.ev.owner):''}</td><td><span class="print-status ${o.ev.status}">${STATUSES[o.ev.status||'confirmed'].label}</span></td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `
+    <div class="print-header"><h1>${escHTML(tag ? tag.name : 'Activity')} — all dates</h1><h2>${state.termFilter ? state.termFilter[0].toUpperCase()+state.termFilter.slice(1)+' ' : ''}${churchYearLabel(state.churchYear)} · ${rows.length} dates</h2></div>
+    <table class="print-table"><thead><tr><th>Date</th><th>What</th><th>When</th><th>For</th><th>Status</th></tr></thead><tbody>${trs || '<tr><td colspan="5">No dates.</td></tr>'}</tbody></table>
+    <div class="print-footer">Exported ${isoDate(new Date())}</div>`;
+  window.print();
 }
 
 const RHYTHM_SUGGESTIONS = ['Small Group','Prayer','Margin Week','Team Development','Meetings Week','Alpha'];
@@ -4167,13 +4241,13 @@ function dashboardHTML(){
         <button class="add-btn" id="add-week">+ Add week</button>
       </div>
     </div>
-    ${nowWeek && !state.editingWeekId ? `<button type="button" class="jump-now" id="jump-now" data-id="${nowWeek.id}">↓ Jump to this week</button>` : ''}
-    ${past.length ? `<button type="button" class="show-earlier" id="toggle-past">${state.showPastWeeks ? 'Hide earlier weeks' : `Show ${past.length} earlier week${past.length===1?'':'s'}`}</button>` : ''}
-    <div class="weeks-timeline cal-wrap">
+    ${nowWeek && !state.editingWeekId && !state.tagFilter ? `<button type="button" class="jump-now" id="jump-now" data-id="${nowWeek.id}">↓ Jump to this week</button>` : ''}
+    ${(past.length && !state.tagFilter) ? `<button type="button" class="show-earlier" id="toggle-past">${state.showPastWeeks ? 'Hide earlier weeks' : `Show ${past.length} earlier week${past.length===1?'':'s'}`}</button>` : ''}
+    ${(state.tagFilter && !state.editingWeekId) ? activityListHTML() : `<div class="weeks-timeline cal-wrap">
       ${(ws.length && !listed.length && calFiltering()) ? `<div class="empty">Nothing matches this filter.</div>` : ''}
       ${ws.length ? cards : (state.editingWeekId!=='new' ? `<div class="empty">No weeks on the rhythm yet.<br>Use ⋯ → "Fill term's Sundays" to auto-create them, or "+ Add week" for just one.</div>` : '')}
       ${newDraft}
-    </div>
+    </div>`}
   `;
 }
 
@@ -4483,6 +4557,12 @@ function attachMainHandlers(){
   });
   const calAud = document.getElementById('cal-aud');
   if(calAud) calAud.onchange = ()=>{ state.audFilter = calAud.value; render(); };
+  const calTag = document.getElementById('cal-tag');
+  if(calTag) calTag.onchange = ()=>{ state.tagFilter = calTag.value; render(); };
+  const actClose = document.getElementById('act-close');
+  if(actClose) actClose.onclick = ()=>{ state.tagFilter = ''; render(); };
+  const actPrint = document.getElementById('act-print');
+  if(actPrint) actPrint.onclick = printActivityList;
   document.querySelectorAll('.mg-more').forEach(el=>{
     el.onclick = ()=>{ state.calExpanded = el.dataset.day || null; render(); };
   });
@@ -4504,7 +4584,7 @@ function attachMainHandlers(){
     render();
   };
   const calClear = document.getElementById('cal-clear');
-  if(calClear) calClear.onclick = ()=>{ state.statusFilter = 'all'; state.audFilter = ''; render(); };
+  if(calClear) calClear.onclick = ()=>{ state.statusFilter = 'all'; state.audFilter = ''; state.tagFilter = ''; render(); };
   const openAdd = document.getElementById('open-add');
   if(openAdd) openAdd.onclick = ()=>{
     state.editingEvent = null; state.showModal = true; render();
@@ -4888,7 +4968,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-07a';
+const APP_VERSION = '2026-10-07b';
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});

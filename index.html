@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-10-07b">
+<meta name="app-version" content="2026-11-02d">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -361,8 +361,12 @@
   .rr-line .rr-label{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
   .rr-line .rr-name{flex:1;font-size:12.5px;font-weight:600;min-width:100px;}
   .settings-btn{background:rgba(255,255,255,.08)!important;}
-  .settings-section{margin-bottom:18px;}
-  .settings-section h4{font-family:'Calibri','Carlito',sans-serif;font-size:15px;margin:0 0 10px;}
+  .settings-section{border-bottom:1px solid var(--line);}
+  .settings-section > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700;padding:13px 2px;}
+  .settings-section > summary::-webkit-details-marker{display:none;}
+  .settings-section > summary::after{content:'▾';color:var(--ink-soft);font-size:14px;}
+  .settings-section[open] > summary::after{content:'▴';}
+  .settings-section[open]{padding-bottom:14px;}
   .tag-row{display:flex;gap:6px;align-items:center;margin-bottom:7px;}
   .tag-row input[type="text"]{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
   .tag-row select{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
@@ -624,6 +628,16 @@
   .st-pill.declined{background:var(--tl-red-soft);border-color:var(--tl-red);color:#A12C26;text-decoration:line-through;}
   .wk2-nothing{font-size:12.5px;color:var(--ink-soft);font-style:italic;margin-top:6px;}
   .wk2-chev{align-self:center;color:var(--ink-soft);font-size:22px;flex-shrink:0;}
+
+  /* ---------- How to use ---------- */
+  .help{max-width:720px;}
+  .help-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .help-nav a{font-size:13px;font-weight:600;color:var(--navy);background:var(--paper-raised);border:1px solid var(--line);border-radius:20px;padding:6px 12px;text-decoration:none;}
+  .help-nav a:hover{background:#fff;border-color:var(--ink-soft);}
+  .help section{background:var(--paper-raised);border:1px solid var(--line);border-radius:10px;padding:4px 18px 8px;margin-top:12px;scroll-margin-top:12px;}
+  .help h3{font-size:18px;margin:14px 0 6px;}
+  .help p{font-size:15px;line-height:1.55;margin:0 0 10px;}
+  .help-back{margin-top:16px;padding:12px 18px;font-size:15px;}
 
   /* ---------- Owners tab ---------- */
   .own-scope{font-size:12.5px;color:var(--ink-soft);margin:0 2px 10px;}
@@ -1248,6 +1262,7 @@ let state = {
   editingPostServiceRows: null,
   editingOriginalPostServiceRecurringIds: null,
   showSettings: false,
+  settingsOpen: {},
   editingWeekDraft: null,
   weekMenuOpen: false,
   sheet: null,
@@ -1297,9 +1312,24 @@ function loadWeeksQuery(withOwner){
 }
 let ownerColumnsExist = true;
 let tagOwnerColumnExists = true;
+// Column checks only need to pass once per session; until they all pass they
+// are re-run on every load, so running the Supabase SQL later still self-heals.
+let schemaProbed = false;
+function schemaProbes(){
+  return Promise.all([
+    sb.from('tags').select('default_owner').limit(1),
+    sb.from('comms_posts').select('assignee, ready_by').limit(1),
+    sb.from('comms_plans').select('start_date, end_date').limit(1),
+    sb.from('comms_flows').select('purpose').limit(1),
+    sb.from('comms_plans').select('campaign_id, is_campaign').limit(1),
+    sb.from('comms_posts').select('paid, budget, target, boost_of, approved_by, ad_link').limit(1),
+    sb.from('comms_plans').select('lead').limit(1)
+  ]);
+}
 
 async function loadData(){
-  let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes] = await Promise.all([
+  // Everything is fetched in one parallel batch rather than several rounds.
+  let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes, ownersRes, flowsRes, stepsRes, plansRes, postsRes, probes] = await Promise.all([
     sb.from('users').select('*'),
     sb.from('audiences').select('*'),
     sb.from('tags').select('*'),
@@ -1308,8 +1338,20 @@ async function loadData(){
       id, note, start_date, end_date, freq, interval, end_type, occurrence_count, day_offset, slot,
       recurring_rhythm_tags ( tag_id )
     `),
-    sb.from('events').select('*')
+    sb.from('events').select('*'),
+    sb.from('owners').select('*'),
+    sb.from('comms_flows').select('*'),
+    sb.from('comms_flow_steps').select('*'),
+    sb.from('comms_plans').select('*'),
+    sb.from('comms_posts').select('*'),
+    schemaProbed ? Promise.resolve(null) : schemaProbes()
   ]);
+  if(probes){
+    const [tagOwnerCheck, postX, planX, flowX, campX, paidX, leadX] = probes;
+    tagOwnerColumnExists = !tagOwnerCheck.error;
+    commsPostExtras = !postX.error; commsPlanDates = !planX.error; commsFlowPurpose = !flowX.error; commsPlanCampaign = !campX.error; commsPaidCols = !paidX.error; commsPlanLead = !leadX.error;
+    schemaProbed = probes.every(r=>!r.error);
+  }
 
   if(weeksRes.error && /owner/i.test(weeksRes.error.message||'')){
     console.warn('owner column missing — loading weeks without owners until the SQL is run');
@@ -1337,7 +1379,6 @@ async function loadData(){
     }
   });
 
-  const ownersRes = await sb.from('owners').select('*');
   if(ownersRes.error){
     console.error('Supabase load error (owners):', ownersRes.error);
     state.ownersTableMissing = true;
@@ -1352,8 +1393,6 @@ async function loadData(){
   }
 
   state.tags = (tagsRes.data||[]).map(t=>({id:t.id, name:t.name, audience:t.audience, defaultOwner:t.default_owner||''}));
-  const tagOwnerCheck = await sb.from('tags').select('default_owner').limit(1);
-  tagOwnerColumnExists = !tagOwnerCheck.error;
   if(!state.tags.length){
     state.tags = DEFAULT_TAGS.map(t=>({...t, id: uid()}));
     await saveTags(state.tags);
@@ -1394,12 +1433,6 @@ async function loadData(){
   }));
 
   // ---------- Comms Plan ----------
-  const [flowsRes, stepsRes, plansRes, postsRes] = await Promise.all([
-    sb.from('comms_flows').select('*'),
-    sb.from('comms_flow_steps').select('*'),
-    sb.from('comms_plans').select('*'),
-    sb.from('comms_posts').select('*')
-  ]);
   const commsLoadErrors = [];
   [['comms_flows',flowsRes],['comms_flow_steps',stepsRes],['comms_plans',plansRes],['comms_posts',postsRes]].forEach(([name,r])=>{
     if(r.error){ console.error('Supabase load error ('+name+'):', r.error); commsLoadErrors.push(name+': '+r.error.message); }
@@ -1408,15 +1441,6 @@ async function loadData(){
     alert('Could not load comms data:\n' + commsLoadErrors.join('\n') + '\n\nComms tab may appear empty until this is fixed.');
   }
 
-  const [postX, planX, flowX, campX, paidX, leadX] = await Promise.all([
-    sb.from('comms_posts').select('assignee, ready_by').limit(1),
-    sb.from('comms_plans').select('start_date, end_date').limit(1),
-    sb.from('comms_flows').select('purpose').limit(1),
-    sb.from('comms_plans').select('campaign_id, is_campaign').limit(1),
-    sb.from('comms_posts').select('paid, budget, target, boost_of, approved_by, ad_link').limit(1),
-    sb.from('comms_plans').select('lead').limit(1)
-  ]);
-  commsPostExtras = !postX.error; commsPlanDates = !planX.error; commsFlowPurpose = !flowX.error; commsPlanCampaign = !campX.error; commsPaidCols = !paidX.error; commsPlanLead = !leadX.error;
   state.commsFlows = (flowsRes.data||[]).map(f=>({id:f.id, name:f.name, description:f.description||'', purpose:f.purpose||null}));
   state.commsFlowSteps = (stepsRes.data||[]).map(s=>({
     id:s.id, flowId:s.flow_id, dayOffset:s.day_offset, channel:s.channel,
@@ -1632,7 +1656,7 @@ async function saveWeeks(weekOrWeeks){
     (w.midweek||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> tagRows.push({midweek_item_id:m.id, tag_id:tid})));
     if(tagRows.length){
       const { error: tagErr } = await sb.from('week_midweek_item_tags').insert(tagRows);
-      if(tagErr){ console.error('save midweek item tags failed', tagErr); alert('Could not save midweek activity tags: '+tagErr.message); }
+      if(tagErr){ console.error('save midweek item tags failed', tagErr); alert('Could not save midweek activity details: '+tagErr.message); }
     }
     // same scoped resync for post-service items
     const { data: existingPsItems } = await sb.from('week_post_service_items').select('id').eq('week_id', w.id);
@@ -1651,7 +1675,7 @@ async function saveWeeks(weekOrWeeks){
     (w.postService||[]).forEach(m=> (m.tagIds||[]).forEach(tid=> psTagRows.push({post_service_item_id:m.id, tag_id:tid})));
     if(psTagRows.length){
       const { error: psTagErr } = await sb.from('week_post_service_item_tags').insert(psTagRows);
-      if(psTagErr){ console.error('save post-service tags failed', psTagErr); alert('Could not save post-service activity tags: '+psTagErr.message); }
+      if(psTagErr){ console.error('save post-service tags failed', psTagErr); alert('Could not save after-service activity details: '+psTagErr.message); }
     }
     await sb.from('week_excluded_recurring').delete().eq('week_id', w.id);
     const exclRows = (w.excludedRecurring||[]).map(rid=>({week_id:w.id, recurring_rhythm_id:rid}));
@@ -1669,10 +1693,17 @@ async function deleteWeekRemote(id){
 
 // ---------- Realtime: any change from any browser tab triggers a fresh reload ----------
 let refreshTimer = null;
+// While this tab is saving, its own writes echo back as realtime events. Those are
+// held until the save finishes, then one refresh runs — instead of reloading
+// part-way through a save, which made items flicker and stalled the page.
+let saveInFlight = 0;
+function beginSave(){ saveInFlight++; clearTimeout(refreshTimer); }
+function endSave(){ saveInFlight = Math.max(0, saveInFlight-1); if(!saveInFlight) scheduleRefresh(); }
 function scheduleRefresh(){
   // debounce — a single edit often touches 2-3 tables at once (e.g. a week plus its
   // midweek items and tags), so wait a moment for the burst to settle before refetching.
   clearTimeout(refreshTimer);
+  if(saveInFlight > 0) return;   // endSave() schedules the refresh
   refreshTimer = setTimeout(async ()=>{
     syncAllDrafts();
     await loadData();
@@ -1725,7 +1756,6 @@ function eventsForRange(rangeStart, rangeEnd){
   state.events.forEach(ev=>{
     const occ = occurrencesInRange(ev, rangeStart, rangeEnd);
     occ.forEach(d=>{
-      if(state.termFilter && termOf(d) !== state.termFilter) return;
       if(state.catFilters.size && !state.catFilters.has(ev.category)) return;
       items.push({ev, date:d});
     });
@@ -1733,7 +1763,7 @@ function eventsForRange(rangeStart, rangeEnd){
   state.weeks.forEach(wk=>{
     if(wk.sundayDate){
       const d = parseISO(wk.sundayDate);
-      if(d >= rangeStart && d <= rangeEnd && (!state.termFilter || termOf(d)===state.termFilter)){
+      if(d >= rangeStart && d <= rangeEnd){
         const cat = 'service';
         if(!state.catFilters.size || state.catFilters.has(cat)){
           items.push({ev:{id:'wk-sun-'+wk.id, title:(wk.occasion||wk.sundaySeries||'Sunday'), category:cat, recurrence:'none', synthetic:true, weekId:wk.id, series:wk.sundaySeries||'', occasion:wk.occasion||''}, date:d});
@@ -1745,7 +1775,6 @@ function eventsForRange(rangeStart, rangeEnd){
       mw.forEach(m=>{
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.weekCommencing);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
-        if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
         if(!tags.length) return;
         const aud = itemAudience(m, tags);
@@ -1767,7 +1796,6 @@ function eventsForRange(rangeStart, rangeEnd){
       ps.forEach(m=>{
         const itemDate = m.date ? parseISO(m.date) : parseISO(wk.sundayDate);
         if(itemDate < rangeStart || itemDate > rangeEnd) return;
-        if(state.termFilter && termOf(itemDate) !== state.termFilter) return;
         const tags = (m.tagIds||[]).map(tagById).filter(Boolean);
         if(!tags.length) return;
         const aud = itemAudience(m, tags);
@@ -1976,14 +2004,6 @@ function commsWeeksHTML(){
   while(S <= monthEnd){
     const sIso = isoDate(S), eIso = addDaysISO(sIso, 6);
     const wk = state.weeks.find(w=>w.sundayDate===sIso);
-    const items = commsItemsForRange(S, parseISO(eIso)).filter(o=> commsItemType(o.ev)!=='sunday');
-    const decisions = [], waiting = [], noComms = [];
-    items.forEach(o=>{
-      const plan = commsPlanFor(o);
-      if(!plan || plan.needsComms==null) decisions.push(o);
-      else if(plan.needsComms===false) noComms.push({o, plan});
-      else if(!posts.some(p=>p.commsPlanId===plan.id)) waiting.push({o, plan});
-    });
     const weekPosts = posts.filter(p=> p.postDate>=sIso && p.postDate<=eIso).sort((a,b)=> a.postDate<b.postDate?-1:a.postDate>b.postDate?1:0);
     const shown = weekPosts.filter(commsPostPasses);
     if(filtering && !shown.length){ S = new Date(S.getFullYear(), S.getMonth(), S.getDate()+7); continue; }
@@ -1991,7 +2011,6 @@ function commsWeeksHTML(){
     const overdueN = weekPosts.filter(isOverdue).length;
     const inProg = weekPosts.filter(p=>p.status==='in_progress').length;
     const isNow = today>=sIso && today<=eIso;
-    const showNo = state.commsShowNoComms === sIso;
     html += `<div class="la-week cm-week${isNow?' now':''}">
       <div class="cm-whead">
         <div class="la-wdate"><span>Sun</span><b>${S.getDate()}</b></div>
@@ -2215,99 +2234,11 @@ function campaignSheetHTML(){
   </div>`;
 }
 
-function newCampaignSheetHTML(){
-  const nc = state.newCampaign; if(!nc) return '';
-  const today = new Date();
-  const items = commsItemsForRange(today, new Date(today.getFullYear(), today.getMonth(), today.getDate()+16*7))
-    .filter(o=> commsItemType(o.ev)!=='sunday');
-  const seen = new Set(), opts = [];
-  items.forEach(o=>{ const k = commsItemKey(o); if(seen.has(k)) return; seen.add(k); opts.push({value:'item:'+k, label:`${commsItemName(o)} · ${fmtDate(isoDate(o.date))}`, key:k, type:commsItemType(o.ev), title:commsItemName(o), date:isoDate(o.date)}); });
-  state.commsPlans.filter(isStandalonePlan).forEach(p=> opts.push({value:'plan:'+p.id, label:planTitle(p)+' (added)', planId:p.id}));
-  if(nc.forValue && nc.forValue.startsWith('plan:') && !opts.some(o=>o.value===nc.forValue)){ const pl = state.commsPlans.find(p=>'plan:'+p.id===nc.forValue); if(pl) opts.unshift({value:nc.forValue, label:planTitle(pl)+(planItemDate(pl)?' · '+fmtDate(planItemDate(pl)):''), planId:pl.id}); }
-  nc.options = opts;
-  const tpls = campaignTemplates();
-  const preview = (nc.templateId && nc.endDate) ? generateFromTemplate(nc.templateId, nc.endDate) : [];
-  const todayIso = isoDate(new Date());
-  const future = preview.filter(p=>p.postDate>=todayIso);
-  const start = nc.startDate || (future.length ? future[0].postDate : nc.endDate);
-  return `
-  <div class="sheet-overlay" id="nc-sheet-overlay">
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="nc-title">
-      <div class="sheet-grip"></div>
-      <h3 id="nc-title">New campaign</h3>
-      <div class="sheet-field">
-        <span class="sheet-label">What's being promoted</span>
-        <select id="nc-for">
-          <option value="" ${!nc.forValue?'selected':''}>Choose…</option>
-          ${opts.map(o=>`<option value="${escHTML(o.value)}" ${nc.forValue===o.value?'selected':''}>${escHTML(o.label)}</option>`).join('')}
-          <option value="__new__" ${nc.forValue==='__new__'?'selected':''}>+ Something else…</option>
-        </select>
-        ${nc.forValue==='__new__' ? `<input type="text" id="nc-title-input" placeholder="e.g. Toys Under The Tree" value="${escHTML(nc.newTitle||'')}" style="margin-top:8px;">` : ''}
-      </div>
-      <div class="sheet-2col" style="margin-top:14px;">
-        <div><span class="sheet-label">Runs from</span><input type="date" id="nc-start" value="${start||''}"></div>
-        <div><span class="sheet-label">Until / event</span><input type="date" id="nc-end" value="${nc.endDate||''}"></div>
-      </div>
-      <div class="sheet-field">
-        <span class="sheet-label">Template</span>
-        <div class="sheet-chips">
-          ${tpls.map(t=>`<button type="button" class="sheet-chip nc-tpl ${nc.templateId===t.id?'on':''}" data-tpl="${t.id}">${escHTML(t.name)}</button>`).join('')}
-          <button type="button" class="sheet-chip nc-tpl ${nc.templateId===''?'on':''}" data-tpl="">Blank</button>
-        </div>
-      </div>
-      ${preview.length ? `<div class="sheet-field"><span class="sheet-label">This will create</span>
-        <div class="nc-preview">${preview.map(p=>`<div class="nc-row${p.postDate<todayIso?' past':''}"><span>${fmtDate(p.postDate)}</span><span><b>${escHTML(p.note)}</b><small>${escHTML(commsChanLabel(p))}${p.postDate<todayIso?' · already passed, will be skipped':''}</small></span></div>`).join('')}</div>
-        <div class="sheet-hint">Nobody is assigned yet. Every post can be changed, removed or added to afterwards.</div></div>` : (nc.templateId && !nc.endDate ? `<div class="sheet-hint" style="margin-top:12px;">Set the end/event date to see the posts this will create.</div>` : '')}
-      ${state.newCampaignError ? `<div class="sheet-error">${escHTML(state.newCampaignError)}</div>` : ''}
-      <div class="sheet-actions">
-        <button type="button" class="btn" id="nc-cancel">Cancel</button>
-        <button type="button" class="btn primary" id="nc-create">${future.length ? 'Create with '+future.length+' post'+(future.length===1?'':'s') : 'Create campaign'}</button>
-      </div>
-    </div>
-  </div>`;
-}
-function syncNewCampaignFromDOM(){
-  const nc = state.newCampaign; if(!nc) return;
-  const v = id=>document.getElementById(id);
-  if(v('nc-title-input')) nc.newTitle = v('nc-title-input').value;
-  if(v('nc-start')) nc.startDate = v('nc-start').value;
-  if(v('nc-end')) nc.endDate = v('nc-end').value;
-}
 async function updatePlanFields(planId, patch){
   const { error } = await sb.from('comms_plans').update({...patch, updated_at:new Date().toISOString()}).eq('id', planId);
   if(error){ console.error(error); alert('Could not save that: '+error.message); return false; }
   return true;
 }
-async function createCampaign(){
-  const nc = state.newCampaign;
-  let plan = null;
-  if(nc.forValue==='__new__'){
-    const title = (nc.newTitle||'').trim();
-    if(!title){ state.newCampaignError = 'Give the campaign a name.'; render(); return false; }
-    plan = state.commsPlans.find(p=>isStandalonePlan(p) && (p.itemTitle||'').toLowerCase()===title.toLowerCase());
-    if(plan){ if(plan.needsComms!==true) await getOrCreateItemPlan(plan.itemRefId, plan.itemType, plan.itemTitle, true); }
-    else { plan = {id:uid(), itemType:'event', itemRefId:'standalone::'+uid(), needsComms:true, autoFlowId:null, itemTitle:title, notes:''}; state.commsPlans.push(plan); await saveCommsPlan(plan); }
-  } else if(nc.forValue && nc.forValue.startsWith('item:')){
-    const o = (nc.options||[]).find(x=>x.value===nc.forValue);
-    if(o) plan = await getOrCreateItemPlan(o.key, o.type, o.title, true);
-  } else if(nc.forValue && nc.forValue.startsWith('plan:')){
-    plan = state.commsPlans.find(p=>p.id===nc.forValue.slice(5));
-    if(plan && plan.needsComms!==true) await getOrCreateItemPlan(plan.itemRefId, plan.itemType, plan.itemTitle, true);
-  }
-  if(!plan){ state.newCampaignError = 'Choose what is being promoted.'; render(); return false; }
-  if(!nc.endDate){ state.newCampaignError = 'Set the end/event date.'; render(); return false; }
-  const todayIso = isoDate(new Date());
-  const preview = (nc.templateId ? generateFromTemplate(nc.templateId, nc.endDate) : []).filter(p=>p.postDate>=todayIso);
-  const start = nc.startDate || (preview.length ? preview[0].postDate : nc.endDate);
-  plan.startDate = start; plan.endDate = nc.endDate; plan.isCampaign = true; plan.campaignId = null;
-  if(commsPlanDates) await updatePlanFields(plan.id, {start_date:start, end_date:nc.endDate, ...(commsPlanCampaign?{is_campaign:true, campaign_id:null}:{})});
-  const posts = preview.map(p=>({id:uid(), commsPlanId:plan.id, channel:p.channel, platform:p.platform, format:p.format, postDate:p.postDate, endDate:null, note:p.note, status:'planned', assignee:'', readyBy:addDaysISO(p.postDate, -READY_DAYS_BEFORE)}));
-  if(posts.length){ state.commsPosts.push(...posts); await saveCommsPost(posts); }
-  state.newCampaign = null;
-  state.campaignSheet = {planId: plan.id};
-  return true;
-}
-
 function attachCampaignHandlers(){
   const byId = id=>document.getElementById(id);
   if(byId('cp-new')) byId('cp-new').onclick = ()=>{ state.wizard = newWizard({}); state.wizardError=''; render(); };
@@ -2341,7 +2272,7 @@ function attachCampaignHandlers(){
       k.campaignId = planId; render();
       await updatePlanFields(k.id, {campaign_id:planId});
     };
-    byId('cp-plan').onclick = ()=>{ state.wizard = newWizard({planId}); state.wizard.step = 1; state.wizardError=''; state.campaignSheet = null; render(); };
+    byId('cp-plan').onclick = ()=>{ state.wizard = newWizard({planId}); state.wizardError=''; state.campaignSheet = null; render(); };
     byId('cp-add-post').onclick = ()=>{
       const info = campaignInfo(plan);
       const anchor = info.next ? info.next.postDate : (info.end || isoDate(new Date()));
@@ -2364,37 +2295,15 @@ function attachCampaignHandlers(){
       state.campaignSheet = null; render();
     };
   }
-  // new campaign sheet
-  const nov = byId('nc-sheet-overlay');
-  if(nov && state.newCampaign){
-    const nc = state.newCampaign;
-    nov.onclick = (e)=>{ if(e.target===nov){ state.newCampaign=null; render(); } };
-    byId('nc-cancel').onclick = ()=>{ state.newCampaign=null; render(); };
-    byId('nc-for').onchange = ()=>{
-      syncNewCampaignFromDOM();
-      nc.forValue = byId('nc-for').value; state.newCampaignError='';
-      const o = (nc.options||[]).find(x=>x.value===nc.forValue);
-      if(o && o.date){ nc.endDate = o.date; nc.startDate = ''; }
-      render();
-      if(nc.forValue==='__new__' && byId('nc-title-input')) byId('nc-title-input').focus();
-    };
-    byId('nc-end').onchange = ()=>{ syncNewCampaignFromDOM(); nc.startDate = ''; render(); };
-    document.querySelectorAll('.nc-tpl').forEach(el=>{ el.onclick = ()=>{ syncNewCampaignFromDOM(); nc.templateId = el.dataset.tpl; nc.startDate=''; render(); }; });
-    byId('nc-create').onclick = async ()=>{
-      syncNewCampaignFromDOM();
-      const btn = byId('nc-create'); btn.disabled = true; btn.textContent = 'Creating…';
-      const ok = await createCampaign();
-      if(ok) render(); else if(byId('nc-create')){ byId('nc-create').disabled=false; }
-    };
-  }
+
 }
 
 // ---------- Settings: campaign templates ----------
 function templatesSettingsHTML(){
-  if(!commsFlowPurpose) return `<div class="settings-section"><h4>Comms campaign templates</h4><div class="notice">Run the Supabase update for campaigns to enable templates.</div></div>`;
+  if(!commsFlowPurpose) return `<details class="settings-section" data-sec="templates" ${state.settingsOpen.templates?'open':''}><summary>Comms campaign templates</summary><div class="notice">Run the Supabase update for campaigns to enable templates.</div></details>`;
   const tpls = campaignTemplates();
-  return `<div class="settings-section">
-    <h4>Comms campaign templates</h4>
+  return `<details class="settings-section" data-sec="templates" ${state.settingsOpen.templates?'open':''}>
+    <summary>Comms campaign templates</summary>
     <div class="notice" style="margin:-4px 0 10px;">Posts are worked back from a campaign's end/event date. Sunday notices land on the Sunday on or before.</div>
     ${tpls.map(t=>{
       const steps = state.commsFlowSteps.filter(s=>s.flowId===t.id).sort((a,b)=>a.dayOffset-b.dayOffset);
@@ -2412,7 +2321,7 @@ function templatesSettingsHTML(){
       </div>`;
     }).join('')}
     <button class="mw-add" id="tpl-add" type="button">+ Add template</button>
-  </div>`;
+  </details>`;
 }
 function attachTemplateSettingsHandlers(){
   const upd = async (table, id, patch)=>{ const { error } = await sb.from(table).update(patch).eq('id', id); if(error) alert('Could not save: '+error.message); };
@@ -2726,6 +2635,9 @@ function newWizard(opts){
     paidOn: false, boosts: []
   };
 }
+// Steps shown for this campaign: weekly posts and paid promotion only appear when
+// they were answered Yes on the first step.
+function wzActiveSteps(wz){ return [0, ...(wz.weeklyOn?[1]:[]), 2, ...(wz.paidOn?[3]:[]), 4]; }
 function wzSeries(){ return {days:[3], channel:'social', platform:'facebook,instagram', format:'story', note:''}; }
 function wzBoost(wz){
   const today = isoDate(new Date());
@@ -2801,12 +2713,14 @@ function wizardHTML(){
         <div><span class="sheet-label">Runs from</span><input type="date" id="wz-start" value="${wz.startDate||''}"></div>
         <div><span class="sheet-label">Event / until</span><input type="date" id="wz-end" value="${wz.endDate||''}"></div>
       </div>
-      ${commsPlanLead ? `<div class="sheet-rows" style="margin-top:14px;"><label class="sheet-row"><span>Campaign lead</span><select id="wz-lead"><option value="">Nobody yet</option>${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${wz.lead===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}</select></label></div>` : ''}`;
+      ${commsPlanLead ? `<div class="sheet-rows" style="margin-top:14px;"><label class="sheet-row"><span>Campaign lead</span><select id="wz-lead"><option value="">Nobody yet</option>${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${wz.lead===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}</select></label></div>` : ''}
+      <div class="sheet-field"><span class="sheet-label">Post every week while it runs?</span>
+        <div class="sheet-chips"><button type="button" class="sheet-chip wz-weekly ${wz.weeklyOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-weekly ${!wz.weeklyOn?'on':''}" data-v="0">No</button></div></div>
+      <div class="sheet-field"><span class="sheet-label">Any paid (boosted) posts?</span>
+        <div class="sheet-chips"><button type="button" class="sheet-chip wz-paid ${wz.paidOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-paid ${!wz.paidOn?'on':''}" data-v="0">No</button></div></div>`;
   } else if(wz.step===1){
     const n = posts.filter(p=>p.kind==='weekly').length;
     body = `
-      <div class="sheet-field"><span class="sheet-label">Post every week while it runs?</span>
-        <div class="sheet-chips"><button type="button" class="sheet-chip wz-weekly ${wz.weeklyOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-weekly ${!wz.weeklyOn?'on':''}" data-v="0">No</button></div></div>
       ${wz.weeklyOn ? wz.series.map((s,i)=>`
         <div class="wz-card">
           <div class="wz-card-head"><b>Weekly post ${wz.series.length>1?i+1:''}</b>${wz.series.length>1?`<button type="button" class="wz-del wz-series-del" data-i="${i}">Remove</button>`:''}</div>
@@ -2840,8 +2754,6 @@ function wizardHTML(){
     const total = wz.boosts.reduce((t,b)=>t+(parseFloat(b.budget)||0),0);
     body = `
       ${!commsPaidCols ? `<div class="notice" style="color:var(--bad);">Paid boosts need the latest Supabase update before they can be saved.</div>` : ''}
-      <div class="sheet-field"><span class="sheet-label">Do we want paid (boosted) posts?</span>
-        <div class="sheet-chips"><button type="button" class="sheet-chip wz-paid ${wz.paidOn?'on':''}" data-v="1">Yes</button><button type="button" class="sheet-chip wz-paid ${!wz.paidOn?'on':''}" data-v="0">No</button></div></div>
       ${wz.paidOn ? wz.boosts.map((b,i)=>{ const plats=(b.platform||'').split(',').filter(Boolean); return `
         <div class="wz-card">
           <div class="wz-card-head"><b>Boost ${wz.boosts.length>1?i+1:''}</b>${wz.boosts.length>1?`<button type="button" class="wz-del wz-b-del" data-i="${i}">Remove</button>`:''}</div>
@@ -2884,7 +2796,7 @@ function wizardHTML(){
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wz-title-h">
       <div class="sheet-grip"></div>
       <h3 id="wz-title-h">Plan campaign · ${WZ_STEPS[wz.step]}</h3>
-      <div class="wz-steps">${WZ_STEPS.map((s,i)=>`<button type="button" class="wz-stepdot ${i<=wz.step?'on':''}" data-step="${i}" aria-label="${s}"></button>`).join('')}</div>
+      <div class="wz-steps">${wzActiveSteps(wz).map(i=>`<button type="button" class="wz-stepdot ${i<=wz.step?'on':''}" data-step="${i}" aria-label="${WZ_STEPS[i]}"></button>`).join('')}</div>
       ${body}
       ${state.wizardError ? `<div class="sheet-error">${escHTML(state.wizardError)}</div>` : ''}
       <div class="sheet-actions">
@@ -2990,12 +2902,12 @@ function attachWizardHandlers(){
   on('.wz-b-more', el=>{ const b = wz.boosts[+el.dataset.i]; b.more = !b.more; });
   on('.wz-b-del', el=>{ wz.boosts.splice(+el.dataset.i, 1); });
   if(byId('wz-add-boost')) byId('wz-add-boost').onclick = ()=>{ syncWizardFromDOM(); wz.boosts.push(wzBoost(wz)); re(); };
-  byId('wz-back').onclick = ()=>{ syncWizardFromDOM(); if(wz.step===0){ state.wizard = null; render(); return; } wz.step--; re(); };
+  byId('wz-back').onclick = ()=>{ syncWizardFromDOM(); if(wz.step===0){ state.wizard = null; render(); return; } const st = wzActiveSteps(wz); wz.step = st[Math.max(0, st.indexOf(wz.step)-1)]; re(); };
   byId('wz-next').onclick = async ()=>{
     syncWizardFromDOM();
     const err = wzValidate(wz);
     if(err){ state.wizardError = err; render(); return; }
-    if(wz.step < 4){ wz.step++; re(); const sh = document.querySelector('#wz-overlay .sheet'); if(sh) sh.scrollTop = 0; return; }
+    if(wz.step < 4){ const st = wzActiveSteps(wz); wz.step = st[st.indexOf(wz.step)+1]; re(); const sh = document.querySelector('#wz-overlay .sheet'); if(sh) sh.scrollTop = 0; return; }
     const btn = byId('wz-next'); btn.disabled = true; btn.textContent = 'Creating…';
     const ok = await wizardCreate();
     if(ok) render(); else if(byId('wz-next')) byId('wz-next').disabled = false;
@@ -3022,7 +2934,6 @@ function commsTabHTML(){
     ${campaignSheetHTML()}
     ${addItemSheetHTML()}
     ${choiceSheetHTML()}
-    ${newCampaignSheetHTML()}
     ${wizardHTML()}
     ${commsSheetHTML()}
   `;
@@ -3281,26 +3192,6 @@ function attachCommsHandlers(){
     };
   });
   document.querySelectorAll('.cm-add').forEach(el=>{ el.onclick = ()=> openCommsSheet({weekIso: el.dataset.week, planId: el.dataset.plan, date: el.dataset.date}); });
-  document.querySelectorAll('.cm-yes').forEach(el=>{
-    el.onclick = async ()=>{
-      const plan = await getOrCreateItemPlan(el.dataset.key, el.dataset.itemtype, el.dataset.title, true);
-      openCommsSheet({weekIso: el.dataset.week, planId: plan.id});
-    };
-  });
-  document.querySelectorAll('.cm-no').forEach(el=>{
-    el.onclick = async ()=>{ await getOrCreateItemPlan(el.dataset.key, el.dataset.itemtype, el.dataset.title, false); render(); };
-  });
-  document.querySelectorAll('.cm-toggle-no').forEach(el=>{
-    el.onclick = ()=>{ state.commsShowNoComms = state.commsShowNoComms===el.dataset.week ? null : el.dataset.week; render(); };
-  });
-  document.querySelectorAll('.cm-undo-no').forEach(el=>{
-    el.onclick = async ()=>{
-      const plan = state.commsPlans.find(p=>p.id===el.dataset.plan); if(!plan) return;
-      plan.needsComms = null; render();
-      const { error } = await sb.from('comms_plans').update({needs_comms:null, updated_at:new Date().toISOString()}).eq('id', plan.id);
-      if(error) alert('Could not undo: '+error.message);
-    };
-  });
   document.querySelectorAll('.cm-more').forEach(el=>{ el.onclick = ()=>{ state.calExpanded = el.dataset.day; render(); }; });
   document.querySelectorAll('.cm-mcell').forEach(el=>{ el.onclick = ()=>{ state.commsCalSelected = el.dataset.date; render(); }; });
   if(byId('cm-today')) byId('cm-today').onclick = ()=>{ const t=new Date(); state.cursor=new Date(t.getFullYear(),t.getMonth(),1); state.commsCalSelected=isoDate(t); render(); };
@@ -3415,7 +3306,7 @@ function toCSV(rows){
 // Typed-but-unsaved sheet values are captured before any re-render that isn't
 // triggered by the sheet itself (live refresh, version banner). Sheet handlers sync
 // first and then change the draft, so render() itself must NOT re-read the DOM.
-function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncNewCampaignFromDOM(); syncChoiceFromDOM(); syncAddItemFromDOM(); syncWizardFromDOM(); }
+function syncAllDrafts(){ syncSheetFromDOM(); syncCommsSheetFromDOM(); syncChoiceFromDOM(); syncAddItemFromDOM(); syncWizardFromDOM(); }
 function render(){
   if(state.view==='list') state.view = 'dashboard';  // Look Ahead merged into Dashboard
   document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard) ? 'hidden' : '';
@@ -3427,114 +3318,77 @@ function render(){
   attachMainHandlers();
 }
 
+// ---------- Team PIN ----------
+// One shared PIN for the CityLife team. It only stays unlocked for the current
+// browser tab session (closing the tab or pressing Lock asks again), and five
+// wrong tries in a row pause the keypad for 30 seconds. It keeps casual visitors
+// out of the planner; it is not account-level security.
+const TEAM_PIN = '1010';
+const TEAM_USER = {id:'team', name:'CityLife'};
+const UNLOCK_KEY = 'church-planner-unlocked';
+let pinFails = 0, pinLockedUntil = 0;
+function rememberUnlock(on){
+  try{ on ? sessionStorage.setItem(UNLOCK_KEY, '1') : sessionStorage.removeItem(UNLOCK_KEY); }catch(e){}
+}
+function wasUnlocked(){
+  try{ return sessionStorage.getItem(UNLOCK_KEY) === '1'; }catch(e){ return false; }
+}
+function lockPlanner(){
+  rememberUnlock(false);
+  state.currentUser = null; state.pinBuffer = ''; state.pinError = '';
+  clearWeekEditing(); state.showSettings = false;
+  render();
+}
+
 function loginHTML(){
-  if(state.users.length === 0 || state.loginStep === 'add'){
-    return `
-    <div class="masthead">
-      <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
-    </div>
-    <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
-      <div class="modal" style="max-width:380px;">
-        <h2>${state.users.length===0 ? "Set up your church" : "Add a team member"}</h2>
-        <div class="field"><label>Name</label><input id="new-name" placeholder="Your name"></div>
-        <div class="field"><label>4-digit PIN</label><input id="new-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
-        <div id="add-error" class="error-text"></div>
-        <div class="modal-actions">
-          ${state.users.length? '<button class="btn" id="cancel-add">Back</button>':'<span></span>'}
-          <button class="btn primary" id="save-user">Add me</button>
-        </div>
-        <div class="notice">Anyone with this planner can see the team list and events — the PIN just tags who added what, it isn't a security lock.</div>
-      </div>
-    </div>`;
-  }
-  if(state.loginStep === 'pin' && state.pendingUser){
-    const dots = [0,1,2,3].map(i=>`<span class="${i<state.pinBuffer.length?'filled':''}"></span>`).join('');
-    return `
-    <div class="masthead">
-      <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
-    </div>
-    <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
-      <div class="modal" style="max-width:340px;text-align:center;">
-        <h2>Hi ${state.pendingUser.name}</h2>
-        <div class="pin-dots">${dots}</div>
-        ${state.pinError?`<div class="error-text">${state.pinError}</div>`:''}
-        <div class="keypad">
-          ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" data-n="${n}">${n}</button>`).join('')}
-          <button id="pin-back">⌫</button>
-          <button class="pin-key" data-n="0">0</button>
-          <span></span>
-        </div>
-        <div class="modal-actions"><button class="btn" id="not-you">Not ${state.pendingUser.name}?</button></div>
-      </div>
-    </div>`;
-  }
+  const dots = [0,1,2,3].map(i=>`<span class="${i<state.pinBuffer.length?'filled':''}"></span>`).join('');
   return `
   <div class="masthead">
     <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
   </div>
   <div class="overlay" style="position:static;background:none;padding:0;margin-top:30px;">
-    <div class="modal" style="max-width:400px;">
-      <h2>Who's planning today?</h2>
-      <div class="user-list">
-        ${state.users.map(u=>`<div class="user-chip" data-id="${u.id}">${u.name}</div>`).join('')}
+    <div class="modal" style="max-width:340px;text-align:center;">
+      <h2 style="margin-bottom:4px;">CityLife planner</h2>
+      <div class="notice" style="margin-top:0;">Enter the team PIN</div>
+      <div class="pin-dots">${dots}</div>
+      ${state.pinError?`<div class="error-text" role="alert">${state.pinError}</div>`:''}
+      <div class="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pin-key" data-n="${n}">${n}</button>`).join('')}
+        <button id="pin-back" aria-label="Delete">⌫</button>
+        <button class="pin-key" data-n="0">0</button>
+        <span></span>
       </div>
-      <button class="btn" id="add-new-user">+ Add someone new</button>
     </div>
   </div>`;
 }
 
-function attachLoginHandlers(){
-  const saveBtn = document.getElementById('save-user');
-  if(saveBtn){
-    saveBtn.onclick = async ()=>{
-      const name = document.getElementById('new-name').value.trim();
-      const pin = document.getElementById('new-pin').value.trim();
-      const err = document.getElementById('add-error');
-      if(!name){ err.textContent='Enter a name.'; return; }
-      if(!/^\d{4}$/.test(pin)){ err.textContent='PIN must be 4 digits.'; return; }
-      const user = {id:uid(), name, pin};
-      state.users.push(user);
-      await saveUsers(user);
-      state.currentUser = user;
-      state.loginStep = 'pick';
-      render();
-    };
+function pinPress(n){
+  if(Date.now() < pinLockedUntil){
+    state.pinError = 'Too many tries. Wait a moment and try again.'; render(); return;
   }
-  const cancelAdd = document.getElementById('cancel-add');
-  if(cancelAdd) cancelAdd.onclick = ()=>{ state.loginStep='pick'; render(); };
+  if(state.pinBuffer.length>=4) return;
+  state.pinBuffer += n;
+  if(state.pinBuffer.length===4){
+    if(state.pinBuffer === TEAM_PIN){
+      pinFails = 0;
+      state.currentUser = TEAM_USER;
+      state.pinBuffer = ''; state.pinError = '';
+      rememberUnlock(true);
+    } else {
+      pinFails++;
+      state.pinBuffer = '';
+      if(pinFails >= 5){ pinLockedUntil = Date.now() + 30000; pinFails = 0; state.pinError = 'Too many tries. Wait 30 seconds and try again.'; }
+      else state.pinError = 'Wrong PIN, try again.';
+    }
+  }
+  render();
+}
+function pinBackspace(){ state.pinBuffer = state.pinBuffer.slice(0,-1); render(); }
 
-  const addNew = document.getElementById('add-new-user');
-  if(addNew) addNew.onclick = ()=>{ state.loginStep='add'; render(); };
-
-  document.querySelectorAll('.user-chip').forEach(el=>{
-    el.onclick = ()=>{
-      state.pendingUser = state.users.find(u=>u.id===el.dataset.id);
-      state.loginStep = 'pin'; state.pinBuffer=''; state.pinError='';
-      render();
-    };
-  });
-
-  document.querySelectorAll('.pin-key').forEach(el=>{
-    el.onclick = ()=>{
-      if(state.pinBuffer.length>=4) return;
-      state.pinBuffer += el.dataset.n;
-      if(state.pinBuffer.length===4){
-        if(state.pinBuffer === state.pendingUser.pin){
-          state.currentUser = state.pendingUser;
-          state.pendingUser=null; state.loginStep='pick'; state.pinBuffer='';
-          render();
-        } else {
-          state.pinError = 'Wrong PIN, try again.';
-          state.pinBuffer='';
-          render();
-        }
-      } else render();
-    };
-  });
+function attachLoginHandlers(){
+  document.querySelectorAll('.pin-key').forEach(el=>{ el.onclick = ()=> pinPress(el.dataset.n); });
   const back = document.getElementById('pin-back');
-  if(back) back.onclick = ()=>{ state.pinBuffer = state.pinBuffer.slice(0,-1); render(); };
-  const notYou = document.getElementById('not-you');
-  if(notYou) notYou.onclick = ()=>{ state.pendingUser=null; state.loginStep='pick'; state.pinError=''; render(); };
+  if(back) back.onclick = pinBackspace;
 }
 
 function yearSwitcherHTML(){
@@ -3900,7 +3754,6 @@ function editorRowsHTML(rows, section){
     const meta = [
       when + time, aud, owner,
       s!=='confirmed' ? `<span style="color:${STATUS_COLOR[s]};font-weight:700;">${STATUSES[s].label}</span>` : '',
-      r.needsComms===true ? 'Needs comms' : '',
       r.repeatFreq ? 'Will repeat' : ''
     ].filter(Boolean).map(x=> x.startsWith('<span') ? x : escHTML(x)).join(' · ');
     return `<div class="we-row${r.recurringId?' recurring':''}" data-mwid="${r.id}" data-section="${section}" role="button" tabindex="0" aria-label="${escHTML(name)}, ${STATUSES[s].label}">
@@ -3954,7 +3807,7 @@ function sheetHTML(){
   const current = d.date || defaultDate;
   const onChip = !d.otherDate && chipDates.includes(current);
   const tagDefaultOwner = selTag && selTag.defaultOwner;
-  const moreSummary = [d.needsComms===true?'Comms: yes':d.needsComms===false?'Comms: no':'', d.repeatFreq?'Repeats':''].filter(Boolean).join(' · ') || 'Comms · Repeat';
+  const moreSummary = d.repeatFreq ? 'Repeats' : 'Repeat';
   return `
   <div class="sheet-overlay" id="sheet-overlay">
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -4022,12 +3875,7 @@ function sheetHTML(){
         <button type="button" class="sheet-row sheet-more-toggle" id="sh-more" aria-expanded="${state.sheetMore?'true':'false'}"><span>More options</span><span class="sheet-more-sum">${escHTML(moreSummary)} ${state.sheetMore?'▴':'▾'}</span></button>
         ${state.sheetMore ? `
         <div class="sheet-more">
-          <span class="sheet-label">Comms needed?</span>
-          <div class="sheet-chips">
-            <button type="button" class="sheet-chip sh-comms ${d.needsComms===true?'on':''}" data-choice="yes">Yes</button>
-            <button type="button" class="sheet-chip sh-comms ${d.needsComms===false?'on':''}" data-choice="no">No</button>
-          </div>
-          <span class="sheet-label" style="margin-top:14px;">Repeats</span>
+          <span class="sheet-label">Repeats</span>
           <select id="sh-repeat">
             <option value="" ${!d.repeatFreq?'selected':''}>Doesn't repeat</option>
             <option value="weekly:1" ${d.repeatFreq==='weekly:1'?'selected':''}>Weekly</option>
@@ -4192,15 +4040,32 @@ function isPastWeek(wk){
   return !!wk.sundayDate && addDaysISO(wk.sundayDate, 6) < isoDate(new Date());
 }
 
+function newWeekStub(){
+  const today = new Date();
+  let draftDate;
+  if(churchYearOf(today)===state.churchYear && (!state.termFilter || termOf(today)===state.termFilter)) draftDate = isoDate(today);
+  else draftDate = isoDate(termDateRangeForYear(state.termFilter || 'autumn', state.churchYear)[0]);
+  return {id:'new',occasion:'',sundayDate:draftDate,sundaySeries:'',weekCommencing:'',happening:'',midweek:[],postService:[],excludedRecurring:[]};
+}
+
+// Redraws only the week being edited, its activity sheet and the undo toast.
+// Tapping + Add, Done, Remove, Undo or a chip in the sheet used to rebuild the
+// entire page; this touches just the editor. Falls back to a full render if the
+// editor isn't on screen.
+function renderEditor(){
+  const card = document.querySelector('.week-card.editing');
+  const wk = state.editingWeekId==='new' ? newWeekStub() : state.weeks.find(w=>w.id===state.editingWeekId);
+  if(state.view!=='dashboard' || !state.currentUser || !card || !wk || card.dataset.id!==wk.id){ render(); return; }
+  document.body.style.overflow = (state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard) ? 'hidden' : '';
+  card.outerHTML = weekCardHTML(wk);
+  ['sheet-overlay','undo-toast'].forEach(id=>{ const el = document.getElementById(id); if(el) el.remove(); });
+  document.getElementById('app').insertAdjacentHTML('beforeend', sheetHTML() + undoToastHTML());
+  attachDashboardHandlers();
+}
+
 function dashboardHTML(){
   const ws = visibleWeeks();
-  const draftDate = (()=>{
-    const today = new Date();
-    if(churchYearOf(today)===state.churchYear && (!state.termFilter || termOf(today)===state.termFilter)) return isoDate(today);
-    const [start] = termDateRangeForYear(state.termFilter || 'autumn', state.churchYear);
-    return isoDate(start);
-  })();
-  const newDraft = state.editingWeekId==='new' ? weekCardHTML({id:'new',occasion:'',sundayDate:draftDate,sundaySeries:'',weekCommencing:'',happening:'',midweek:[],postService:[],excludedRecurring:[]}, ws.length) : '';
+  const newDraft = state.editingWeekId==='new' ? weekCardHTML(newWeekStub(), ws.length) : '';
 
   // Past weeks fold away in the current church year only (a past year would fold
   // everything). The week being edited always stays visible.
@@ -4249,6 +4114,78 @@ function dashboardHTML(){
       ${newDraft}
     </div>`}
   `;
+}
+
+// ---------- How to use ----------
+function helpHTML(){
+  const dot = c=>`<span class="cal-dot" style="background:${STATUS_COLOR[c]};margin:0 4px 0 0;vertical-align:0;"></span>`;
+  return `<div class="help">
+    <nav class="help-nav" aria-label="Sections">
+      <a href="#h-dashboard">Dashboard</a><a href="#h-week">Planning a week</a><a href="#h-repeat">Repeating activities</a><a href="#h-calendar">Calendar</a><a href="#h-owners">Owners</a><a href="#h-comms">Comms</a><a href="#h-export">Exports</a><a href="#h-settings">Settings</a><a href="#h-together">Working together</a>
+    </nav>
+
+    <section id="h-dashboard">
+      <h3>Dashboard</h3>
+      <p>Each card is one Sunday: its series, any occasion, and everything planned after the service and during the following week. Tap a card to open that week.</p>
+      <p>Use the year arrows and the Autumn, Spring and Summer tabs to choose which weeks you see. Tap the selected tab again to show the whole year. The church year runs September to August, so May to August sits under the year that started the previous September.</p>
+      <p>Past weeks are folded away; "Show … earlier weeks" brings them back. "Jump to this week" scrolls to the current Sunday.</p>
+      <p>The filters narrow things down: show only items that need approval or are cancelled, one audience, or one activity. Picking an activity lists every date it happens this year, with its own PDF export.</p>
+    </section>
+
+    <section id="h-week">
+      <h3>Planning a week</h3>
+      <p>Open a week, then use "+ Add" under <b>After the service</b> or <b>Week of…</b>. Choose the activity (or "+ New activity"), the day, a time if it has one, and its status. Note, who it's for and owner are optional.</p>
+      <p>Status colours: ${dot('confirmed')}Confirmed, ${dot('pending')}Needs approval, ${dot('declined')}Cancelled.</p>
+      <p>Tap any activity in the week to change it, or to remove it. "Undo" appears for a few seconds after a removal.</p>
+      <p>"Edit details" changes the Sunday's date, occasion and series, or deletes the week.</p>
+      <p><b>Nothing is saved until you press "Save week".</b> Cancel throws away the changes.</p>
+      <p>New weeks: "+ Add week" for one, or pick a term tab and use ⋯ → "Fill … Sundays" to create every Sunday in that term.</p>
+    </section>
+
+    <section id="h-repeat">
+      <h3>Repeating activities</h3>
+      <p>When adding an activity, open "More options" and choose how often it repeats. It becomes a repeating activity when you save the week, and shows in every matching week with ↻.</p>
+      <p>Tapping a repeating activity lets you skip it for that week only. To change its pattern, its days or stop it altogether, use ⚙ Settings → Recurring rhythms.</p>
+    </section>
+
+    <section id="h-calendar">
+      <h3>Calendar</h3>
+      <p>A month at a time, with the arrows to move between months and "Today" to come back. Tap anything to open its week. On a phone, tap a day to list what's on it underneath.</p>
+    </section>
+
+    <section id="h-owners">
+      <h3>Owners</h3>
+      <p>Who is looking after what, for the year and term selected. An item's owner is the person picked on it, or otherwise its activity's default owner from Settings. Items with no owner aren't listed. Tap an item to open its week.</p>
+    </section>
+
+    <section id="h-comms">
+      <h3>Comms</h3>
+      <p><b>Needs comms?</b> is where everything starts. Every upcoming activity appears here; mark it Yes or No. Only items marked Yes show in the other comms views. Choosing Yes asks how it's promoted: its own posts, part of an existing campaign, or a new campaign. "+ Add item" covers things that aren't in the planner, such as Alpha.</p>
+      <p><b>Weeks</b> lists posts by the week they go out. Tap a post to edit it, or tap its status to move it on: Planned → In progress → Scheduled → Posted. The weekly Sunday posts are created automatically.</p>
+      <p><b>Campaigns</b> shows what's being promoted when, as bars across the weeks. "+ New campaign" opens the planner: the basics first, then posts worked back from the event date, with optional weekly and paid posts.</p>
+      <p><b>Calendar</b> shows every post by day.</p>
+    </section>
+
+    <section id="h-export">
+      <h3>Exports</h3>
+      <p>"Export PDF" next to each month on the Dashboard prints that month.</p>
+      <p>⋯ → "Export ChurchSuite CSV" downloads the selected year and term for ChurchSuite (Calendar → Events → Import events). Each audience name must already exist as a category in ChurchSuite, or be matched up on ChurchSuite's import preview.</p>
+    </section>
+
+    <section id="h-settings">
+      <h3>Settings</h3>
+      <p>Tap a section to open it.</p>
+      <p><b>Activities</b>: each activity's usual audience and default owner. <b>Audiences and colours</b>: the colour used for each audience. <b>Owners</b>: the people offered as owners. <b>Comms campaign templates</b>: the posts a campaign starts with. <b>Recurring rhythms</b>: change or delete repeating activities.</p>
+    </section>
+
+    <section id="h-together">
+      <h3>Working together</h3>
+      <p>Several people can use the planner at once and changes appear for everyone straight away. If someone else changed the same item while you were editing, their version is kept and you'll be told when you save.</p>
+      <p>The planner stays unlocked until the tab is closed. Use "Lock" on a shared device.</p>
+    </section>
+
+    <button type="button" class="btn primary help-back">Back to the planner</button>
+  </div>`;
 }
 
 // ---------- Owners ----------
@@ -4314,10 +4251,9 @@ function mainHTML(){
     ${state.updateAvailable ? `<div class="update-banner">A newer version of the planner is available. <button type="button" id="reload-app">Reload</button><span style="font-size:12px;">(save what you're doing first)</span></div>` : ''}
     <div class="masthead">
       <div><h1>The Church Planner</h1><div class="sub">Rhythm, terms &amp; midweek</div></div>
-      <div class="who">Planning as <strong>${state.currentUser.name}</strong> <button id="open-settings" class="settings-btn">⚙ Settings</button> <button id="switch-user">Switch</button></div>
+      <div class="who"><button id="open-help">How to use</button> <button id="open-settings" class="settings-btn">⚙ Settings</button> <button id="switch-user" title="Lock the planner on this device">Lock</button></div>
     </div>
-    ${yearSwitcherHTML()}
-    ${ribbonHTML()}
+    ${(state.view==='dashboard' || state.view==='owners') ? yearSwitcherHTML() + ribbonHTML() : ''}
     <div class="toolbar">
       <div class="view-toggle">
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
@@ -4341,10 +4277,9 @@ function mainHTML(){
         <div class="month-label">${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}</div>
         <button id="next-month">›</button>
       </div>`:''}
-      ${state.view!=='dashboard' && state.view!=='comms' && state.view!=='owners'?`<button class="add-btn" id="open-add">+ Add to planner</button>`:''}
     </div>
     ${showFilters ? calFiltersHTML() : ''}
-    ${state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
+    ${state.view==='help' ? helpHTML() : state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
     ${state.view==='dashboard' ? sheetHTML() : ''}
@@ -4413,8 +4348,7 @@ function settingsHTML(){
   <div class="overlay" id="settings-overlay">
     <div class="modal" style="max-width:480px;">
       <h2>Settings</h2>
-      <div class="settings-section">
-        <h4>Activities</h4>
+      <details class="settings-section" data-sec="activities" ${state.settingsOpen["activities"]?'open':''}><summary>Activities</summary>
         <div class="notice" style="margin:-4px 0 10px;">Each activity's usual audience and default owner. The owner applies wherever it appears, including recurring weeks, unless a week picks someone else.</div>
         ${state.tags.map(t=>`
           <div class="tag-row act-row" data-id="${t.id}">
@@ -4428,12 +4362,11 @@ function settingsHTML(){
               ${state.owners.map(o=>`<option value="${escHTML(o.name)}" ${t.defaultOwner===o.name?'selected':''}>${escHTML(o.name)}</option>`).join('')}
               ${(t.defaultOwner && !state.owners.some(o=>o.name===t.defaultOwner)) ? `<option selected>${escHTML(t.defaultOwner)}</option>` : ''}
             </select>
-            <button class="tag-remove" data-id="${t.id}" title="Remove tag">✕</button>
+            <button class="tag-remove" data-id="${t.id}" title="Remove activity">✕</button>
           </div>`).join('')}
         <button class="mw-add" id="add-tag" type="button">+ Add activity</button>
-      </div>
-      <div class="settings-section">
-        <h4>Audiences &amp; colours</h4>
+      </details>
+      <details class="settings-section" data-sec="audiences-and-colours" ${state.settingsOpen["audiences-and-colours"]?'open':''}><summary>Audiences &amp; colours</summary>
         ${state.audiences.map(a=>`
           <div class="tag-row" data-audience="${a.name.replace(/"/g,'&quot;')}">
             <input type="color" class="audience-color" data-audience="${a.name.replace(/"/g,'&quot;')}" value="${a.color||audienceColor(a.name)}" title="Pick a colour" style="width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px;flex:0 0 auto;">
@@ -4445,10 +4378,9 @@ function settingsHTML(){
           <input type="text" id="new-audience-name" placeholder="New audience name" style="flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
           <button class="mw-add" id="add-audience" type="button">+ Add</button>
         </div>
-        <div class="notice" style="margin-top:6px;">"Whole Church" keeps the church's own brand colour so it always reads as the dominant tag. Every other audience gets its own colour — tap the swatch to pick a different one.</div>
-      </div>
-      <div class="settings-section">
-        <h4>Owners</h4>
+        <div class="notice" style="margin-top:6px;">"Whole Church" keeps the church's own brand colour so it always reads as the main audience. Every other audience gets its own colour — tap the swatch to pick a different one.</div>
+      </details>
+      <details class="settings-section" data-sec="owners" ${state.settingsOpen["owners"]?'open':''}><summary>Owners</summary>
         ${state.ownersTableMissing ? `<div class="notice" style="color:var(--bad);margin:0 0 8px;">The owners table isn't set up in Supabase yet, so changes here won't save.</div>` : ''}
         ${state.owners.map(o=>`
           <div class="tag-row">
@@ -4461,10 +4393,9 @@ function settingsHTML(){
           <button class="mw-add" id="add-owner" type="button">+ Add</button>
         </div>
         <div class="notice" style="margin-top:6px;">Owners are offered on every after-service and midweek activity, and listed in the Owners tab.</div>
-      </div>
+      </details>
       ${templatesSettingsHTML()}
-      <div class="settings-section">
-        <h4>Recurring rhythms</h4>
+      <details class="settings-section" data-sec="recurring-rhythms" ${state.settingsOpen["recurring-rhythms"]?'open':''}><summary>Recurring rhythms</summary>
         ${state.recurringRhythms.length ? state.recurringRhythms.map(r=>{
           const tagIds = r.tagIds || (r.tagId ? [r.tagId] : []);
           const freq = r.freq || 'weekly';
@@ -4512,7 +4443,7 @@ function settingsHTML(){
             </div>
           </div>`;
         }).join('') : `<div style="font-size:12.5px;color:var(--ink-soft);">None yet — set a repeat pattern on a midweek activity in any week card to create one.</div>`}
-      </div>
+      </details>
       <div class="modal-actions">
         <div></div>
         <button class="btn primary" id="close-settings">Done</button>
@@ -4525,7 +4456,7 @@ function settingsHTML(){
 function attachMainHandlers(){
   const reloadApp = document.getElementById('reload-app');
   if(reloadApp) reloadApp.onclick = ()=> location.reload();
-  document.getElementById('switch-user').onclick = ()=>{ state.currentUser=null; render(); };
+  document.getElementById('switch-user').onclick = lockPlanner;
   document.querySelectorAll('.tab').forEach(el=>{
     el.onclick = ()=>{
       const t = el.dataset.term;
@@ -4631,11 +4562,17 @@ function attachMainHandlers(){
       window.print();
     };
   });
+  const openHelp = document.getElementById('open-help');
+  if(openHelp) openHelp.onclick = ()=>{ state.view = 'help'; render(); window.scrollTo(0,0); };
+  document.querySelectorAll('.help-back').forEach(el=>{ el.onclick = ()=>{ state.view = 'dashboard'; render(); window.scrollTo(0,0); }; });
   const openSettings = document.getElementById('open-settings');
   if(openSettings) openSettings.onclick = ()=>{ state.showSettings = true; render(); };
   const settingsOverlay = document.getElementById('settings-overlay');
   if(settingsOverlay){
     document.getElementById('close-settings').onclick = ()=>{ state.showSettings=false; render(); };
+    document.querySelectorAll('details.settings-section').forEach(el=>{
+      el.addEventListener('toggle', ()=>{ state.settingsOpen[el.dataset.sec] = el.open; });
+    });
     document.querySelectorAll('.tag-name').forEach(el=>{
       el.onchange = async ()=>{
         const tag = tagById(el.dataset.id);
@@ -4663,14 +4600,14 @@ function attachMainHandlers(){
     });
     const addTagBtn = document.getElementById('add-tag');
     if(addTagBtn) addTagBtn.onclick = async ()=>{
-      const newTag = {id:uid(), name:'New tag', audience: (state.audiences[0] && state.audiences[0].name) || 'Whole Church'};
+      const newTag = {id:uid(), name:'New activity', audience: (state.audiences[0] && state.audiences[0].name) || 'Whole Church'};
       state.tags.push(newTag);
       await saveTags(newTag); render();
     };
     document.querySelectorAll('.audience-remove').forEach(el=>{
       el.onclick = async ()=>{
         const inUse = state.tags.some(t=>t.audience===el.dataset.audience);
-        if(inUse){ alert('This audience is used by at least one tag — reassign that tag first.'); return; }
+        if(inUse){ alert('This audience is used by at least one activity — give that activity a different audience first.'); return; }
         await deleteAudienceRemote(el.dataset.audience);
         state.audiences = state.audiences.filter(a=>a.name!==el.dataset.audience);
         render();
@@ -4901,13 +4838,15 @@ async function saveWeekSafely(w, isNew){
     {key:'postService', table:'week_post_service_items', tagTable:'week_post_service_item_tags', fk:'post_service_item_id', anchor:w.sundayDate, origAnchor: orig ? orig.psAnchor : null}
   ];
   const ownerCol = ownerColumnsExist ? ', owner' : '';
-  for(const sec of sections){
+  // Both sections, and every item within them, are checked and written side by
+  // side rather than one after another. The per-item conflict checks are unchanged.
+  const saveSection = async (sec)=>{
     const mine = w[sec.key] || [];
     const origMap = orig ? orig[sec.key] : {};
     let srvMap = {};
     if(orig){
       const { data, error } = await sb.from(sec.table).select(`id, note, item_date, status, start_time, end_time, all_day, audience${ownerCol}, ${sec.tagTable} ( tag_id )`).eq('week_id', w.id);
-      if(error){ fail('Could not check activities before saving', error); continue; }
+      if(error){ fail('Could not check activities before saving', error); return; }
       (data||[]).forEach(r=> srvMap[r.id] = normItem(rowToItem(r, sec.tagTable), sec.origAnchor));
     }
     const writeItem = async (m)=>{
@@ -4923,37 +4862,45 @@ async function saveWeekSafely(w, isNew){
         if(tErr) fail(`Could not save the activity for "${nameOf(m)}"`, tErr);
       }
     };
-    const mineIds = new Set();
+    const removeItem = async (id)=>{
+      await sb.from(sec.tagTable).delete().eq(sec.fk, id);
+      const { error } = await sb.from(sec.table).delete().eq('id', id);
+      if(error) fail('Could not remove an activity', error);
+    };
+    const mineIds = new Set(mine.map(m=>m.id));
+    const jobs = [];
     for(const m of mine){
-      mineIds.add(m.id);
       const was = origMap[m.id];
-      if(!was){ await writeItem(m); continue; }                        // newly added
+      if(!was){ jobs.push(writeItem(m)); continue; }                    // newly added
       const mineN = normItem(m, sec.origAnchor);
       if(mineN === was) continue;                                       // untouched
       const now = srvMap[m.id];
       if(!now){ conflicts.push(`"${nameOf(m)}" was removed by someone else — not re-added.`); continue; }
       if(now !== was){ conflicts.push(`"${nameOf(m)}" was changed by someone else — kept their version.`); continue; }
-      await writeItem(m);
+      jobs.push(writeItem(m));
     }
     for(const id of Object.keys(origMap)){
       if(mineIds.has(id)) continue;
       const now = srvMap[id];
       if(!now) continue;                                                // already gone
       if(now !== origMap[id]){ conflicts.push('An activity you removed had just been changed by someone else — kept it.'); continue; }
-      await sb.from(sec.tagTable).delete().eq(sec.fk, id);
-      const { error } = await sb.from(sec.table).delete().eq('id', id);
-      if(error) fail('Could not remove an activity', error);
+      jobs.push(removeItem(id));
     }
-  }
+    await Promise.all(jobs);
+  };
 
   // "Skip this week" exclusions are only ever added, never wiped.
-  const { data: exNow } = await sb.from('week_excluded_recurring').select('recurring_rhythm_id').eq('week_id', w.id);
-  const have = new Set((exNow||[]).map(r=>r.recurring_rhythm_id));
-  const add = (w.excludedRecurring||[]).filter(id=>!have.has(id)).map(id=>({week_id:w.id, recurring_rhythm_id:id}));
-  if(add.length){
-    const { error } = await sb.from('week_excluded_recurring').insert(add);
-    if(error) fail('Could not save a skipped recurring activity', error);
-  }
+  const saveExclusions = async ()=>{
+    const { data: exNow } = await sb.from('week_excluded_recurring').select('recurring_rhythm_id').eq('week_id', w.id);
+    const have = new Set((exNow||[]).map(r=>r.recurring_rhythm_id));
+    const add = (w.excludedRecurring||[]).filter(id=>!have.has(id)).map(id=>({week_id:w.id, recurring_rhythm_id:id}));
+    if(add.length){
+      const { error } = await sb.from('week_excluded_recurring').insert(add);
+      if(error) fail('Could not save a skipped recurring activity', error);
+    }
+  };
+
+  await Promise.all([...sections.map(saveSection), saveExclusions()]);
   return conflicts;
 }
 
@@ -4968,7 +4915,26 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-10-07b';
+const APP_VERSION = '2026-11-02d';
+// True while something is open that would lose typing if the page reloaded.
+function hasUnsavedWork(){
+  return !!(state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard || state.showModal || state.showSettings);
+}
+
+// ---------- Refresh after 10 minutes idle ----------
+// After 10 minutes with no taps, typing or scrolling, the page reloads so it shows
+// the latest data and version (it stays unlocked). It never reloads over unsaved
+// work: if a week, sheet or form is open, it waits until that's closed. A tab that
+// was in the background for 10+ minutes reloads as soon as it's looked at again.
+const IDLE_RELOAD_MS = 10*60*1000;
+let lastActivity = Date.now();
+function noteActivity(){ lastActivity = Date.now(); }
+function reloadIfIdle(){
+  if(Date.now() - lastActivity < IDLE_RELOAD_MS) return false;
+  if(hasUnsavedWork()) return false;
+  location.reload();
+  return true;
+}
 async function checkForNewVersion(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), {cache:'no-store'});
@@ -4976,8 +4942,7 @@ async function checkForNewVersion(){
     const html = await res.text();
     const mm = html.match(/<meta name="app-version" content="([^"]+)"/);
     if(!mm || mm[1] === APP_VERSION) return;
-    const busy = state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.choiceSheet || state.addItem || state.wizard || state.showModal || state.showSettings;
-    if(!busy){ location.reload(); return; }
+    if(!hasUnsavedWork()){ location.reload(); return; }
     if(!state.updateAvailable){ state.updateAvailable = true; syncAllDrafts(); render(); }
   }catch(e){ /* offline etc. — try again later */ }
 }
@@ -5044,19 +5009,19 @@ function attachDashboardHandlers(){
       state.sheet = {rowId:entry.id, section, isNew:false};
       state.sheetDraft = JSON.parse(JSON.stringify(entry));
       state.sheetError = ''; state.lastRemoved = null;
-      render();
+      renderEditor();
     };
     el.onclick = open;
     el.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
   });
   const detailsToggle = document.getElementById('we-details-toggle');
-  if(detailsToggle) detailsToggle.onclick = ()=>{ state.detailsOpen = !state.detailsOpen; render(); };
+  if(detailsToggle) detailsToggle.onclick = ()=>{ state.detailsOpen = !state.detailsOpen; renderEditor(); };
   const undoBtn = document.getElementById('undo-remove');
   if(undoBtn) undoBtn.onclick = ()=>{
     const lr = state.lastRemoved;
     if(lr && state[lr.arrName]) state[lr.arrName].splice(lr.idx, 0, lr.entry);
     state.lastRemoved = null; clearTimeout(window.__undoTimer);
-    render();
+    renderEditor();
   };
   document.querySelectorAll('.we-add').forEach(el=>{
     el.onclick = ()=>{
@@ -5064,58 +5029,50 @@ function attachDashboardHandlers(){
       state.sheet = {rowId:blank.id, section:el.dataset.section, isNew:true};
       state.sheetDraft = blank;
       state.sheetError = ''; state.lastRemoved = null;
-      render();
+      renderEditor();
     };
   });
   const menuBtn = document.getElementById('we-menu-btn');
-  if(menuBtn) menuBtn.onclick = (e)=>{ e.stopPropagation(); state.weekMenuOpen = !state.weekMenuOpen; render(); };
+  if(menuBtn) menuBtn.onclick = (e)=>{ e.stopPropagation(); state.weekMenuOpen = !state.weekMenuOpen; renderEditor(); };
 
   // ----- Bottom sheet -----
   const overlay = document.getElementById('sheet-overlay');
   if(overlay && state.sheetDraft){
     const d = state.sheetDraft;
-    overlay.onclick = (e)=>{ if(e.target===overlay){ closeSheet(); render(); } };
+    overlay.onclick = (e)=>{ if(e.target===overlay){ closeSheet(); renderEditor(); } };
     const byId = id => document.getElementById(id);
-    if(byId('sh-cancel')) byId('sh-cancel').onclick = ()=>{ closeSheet(); render(); };
-    if(byId('sh-remove')) byId('sh-remove').onclick = ()=>{ const id = state.sheet.rowId; closeSheet(); removeEditorRow(id); render(); };
+    if(byId('sh-cancel')) byId('sh-cancel').onclick = ()=>{ closeSheet(); renderEditor(); };
+    if(byId('sh-remove')) byId('sh-remove').onclick = ()=>{ const id = state.sheet.rowId; closeSheet(); removeEditorRow(id); renderEditor(); };
     if(byId('sh-item')) byId('sh-item').onchange = ()=>{
       syncSheetFromDOM();
       const val = byId('sh-item').value;
       if(val==='__new__'){ d.creatingTag = true; d.tagIds = []; }
       else d.tagIds = val ? [val] : [];
       state.sheetError = '';
-      render();
+      renderEditor();
       if(d.creatingTag && byId('sh-newtag-name')) byId('sh-newtag-name').focus();
     };
-    if(byId('sh-back-to-list')) byId('sh-back-to-list').onclick = ()=>{ syncSheetFromDOM(); d.creatingTag = false; d.newTagName = ''; render(); };
+    if(byId('sh-back-to-list')) byId('sh-back-to-list').onclick = ()=>{ syncSheetFromDOM(); d.creatingTag = false; d.newTagName = ''; renderEditor(); };
     document.querySelectorAll('.sh-day').forEach(el=>{
       el.onclick = ()=>{
         syncSheetFromDOM();
         d.otherDate = false;
         d.date = el.dataset.date === editorDefaultDate(state.sheet.section) ? '' : el.dataset.date;
-        render();
+        renderEditor();
       };
     });
     if(byId('sh-other-day')) byId('sh-other-day').onclick = ()=>{
       syncSheetFromDOM();
       d.otherDate = true;
       if(!d.date) d.date = editorDefaultDate(state.sheet.section);
-      render();
+      renderEditor();
       const inp = byId('sh-date');
       if(inp){ inp.focus(); try{ inp.showPicker && inp.showPicker(); }catch(e){} }
     };
     document.querySelectorAll('.sh-status').forEach(el=>{
-      el.onclick = ()=>{ syncSheetFromDOM(); d.status = el.dataset.status; render(); };
+      el.onclick = ()=>{ syncSheetFromDOM(); d.status = el.dataset.status; renderEditor(); };
     });
-    document.querySelectorAll('.sh-comms').forEach(el=>{
-      el.onclick = ()=>{
-        syncSheetFromDOM();
-        const val = el.dataset.choice==='yes';
-        d.needsComms = d.needsComms===val ? null : val;
-        render();
-      };
-    });
-    if(byId('sh-more')) byId('sh-more').onclick = (e)=>{ e.preventDefault(); syncSheetFromDOM(); state.sheetMore = !state.sheetMore; render(); };
+    if(byId('sh-more')) byId('sh-more').onclick = (e)=>{ e.preventDefault(); syncSheetFromDOM(); state.sheetMore = !state.sheetMore; renderEditor(); };
     if(byId('sh-delete-tag')) byId('sh-delete-tag').onclick = async ()=>{
       const id = byId('sh-delete-tag').dataset.tagid;
       const t = tagById(id);
@@ -5132,7 +5089,7 @@ function attachDashboardHandlers(){
       syncSheetFromDOM();
       if(d.creatingTag){
         const name = (d.newTagName||'').trim();
-        if(!name){ state.sheetError = 'Give the new activity a name first.'; render(); return; }
+        if(!name){ state.sheetError = 'Give the new activity a name first.'; renderEditor(); return; }
         const existing = state.tags.find(t=>t.name.toLowerCase()===name.toLowerCase());
         if(existing){ d.tagIds = [existing.id]; }
         else {
@@ -5144,7 +5101,7 @@ function attachDashboardHandlers(){
         }
         d.creatingTag = false; d.newTagName = '';
       }
-      if(!(d.tagIds||[]).length){ state.sheetError = 'Choose an activity first.'; render(); return; }
+      if(!(d.tagIds||[]).length){ state.sheetError = 'Choose an activity first.'; renderEditor(); return; }
       d.allDay = !d.startTime;
       if(d.allDay){ d.startTime = ''; d.endTime = ''; }
       delete d.otherDate;
@@ -5155,7 +5112,7 @@ function attachDashboardHandlers(){
         if(idx>-1) state[arrName][idx] = d;
       }
       closeSheet();
-      render();
+      renderEditor();
     };
   }
 
@@ -5199,12 +5156,14 @@ function attachDashboardHandlers(){
         happening: existingWeek ? (existingWeek.happening||'') : ''
       };
       if(!data.sundayDate){
-        state.detailsOpen = true; render();
+        state.detailsOpen = true; renderEditor();
         const inp = document.querySelector('.week-card.editing [data-field="sundayDate"]');
         if(inp){ inp.style.boxShadow = '0 0 0 2px var(--bad)'; inp.scrollIntoView({behavior:'smooth', block:'center'}); }
         return;
       }
       el.disabled = true; el.textContent = 'Saving…';
+      beginSave();
+      try {
 
       // Processes one section's rows (midweek or post-service) straight from the
       // editing arrays — the sheet writes every field into the entry on "Done", so
@@ -5239,10 +5198,6 @@ function attachDashboardHandlers(){
             });
           } else {
             items.push({id:mwid, tagIds, note, date: date || null, status, allDay, startTime, endTime, audience, owner: entry.owner || ''});
-            if(entry.needsComms===true || entry.needsComms===false){
-              const itemTitle = tagIds.map(tid=>tagById(tid)).filter(Boolean).map(t=>t.name).join(' + ') || 'Untitled activity';
-              commsDecisions.push({mwid, date: date || null, needsComms: entry.needsComms, itemTitle});
-            }
           }
         });
         return {items, commsDecisions, stillPresentRecurring, newRecurringTemplates, newTags};
@@ -5311,9 +5266,11 @@ function attachDashboardHandlers(){
       }
 
       clearWeekEditing();
-      await loadData();
       render();
       if(conflicts.length) alert('Saved — with a few notes:\n\n• ' + conflicts.join('\n• '));
+      } finally {
+        endSave();   // one fresh load from Supabase straight after, to pick up anyone else's changes
+      }
     };
   });
   const addWeekBtn = document.getElementById('add-week');
@@ -5356,13 +5313,20 @@ function attachDashboardHandlers(){
 }
 
 (async ()=>{
+  if(wasUnlocked()) state.currentUser = TEAM_USER;
   await loadData();
   render();
   subscribeRealtime();
-  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkForNewVersion(); });
+  ['pointerdown','keydown','input','scroll','touchstart','wheel'].forEach(ev=> document.addEventListener(ev, noteActivity, {capture:true, passive:true}));
+  setInterval(reloadIfIdle, 30*1000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !reloadIfIdle()) checkForNewVersion(); });
   setInterval(checkForNewVersion, 5*60*1000);
   document.addEventListener('keydown', e=>{
-    if(e.key==='Escape' && state.sheet){ closeSheet(); render(); }
+    if(!state.currentUser && state.loaded){
+      if(/^[0-9]$/.test(e.key)){ pinPress(e.key); return; }
+      if(e.key==='Backspace'){ pinBackspace(); return; }
+    }
+    if(e.key==='Escape' && state.sheet){ closeSheet(); renderEditor(); }
     else if(e.key==='Escape' && state.commsSheet){ state.commsSheet = null; render(); }
     else if(e.key==='Escape' && state.wizard){ if(confirm('Close the campaign planner? Nothing has been saved yet.')){ state.wizard = null; render(); } }
     else if(e.key==='Escape' && (state.choiceSheet || state.addItem)){ state.choiceSheet = null; state.addItem = null; render(); }

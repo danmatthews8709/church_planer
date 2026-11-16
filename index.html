@@ -640,6 +640,13 @@
   .help-back{margin-top:16px;padding:12px 18px;font-size:15px;}
 
   /* ---------- Owners tab ---------- */
+  .sp-head{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 14px;border:none;background:var(--paper-raised);cursor:pointer;font-family:inherit;color:var(--ink);}
+  .sp-head:hover{background:var(--paper);}
+  .sp-chev{font-size:13px;color:var(--ink-soft);width:12px;flex:0 0 auto;}
+  .sp-headtext{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);}
+  .sp-sum{margin-left:auto;font-size:12.5px;color:var(--ink-soft);text-align:right;}
+  .sp-week.past .sp-head .sp-headtext{color:var(--ink-soft);}
+  .sp-pasthead{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:18px 2px 8px;}
   .sp-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px;}
   .sp-chip{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;}
   .sp-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;}
@@ -1353,10 +1360,15 @@ let state = {
   sundayMC: {},          // weekId -> MC name
   sundayFocus: [],       // confirmed / dismissed MC focus items per Sunday
   sundayTablesMissing: false,
+  sundayInternal: {},        // audience name -> true/false (only once someone has toggled it)
+  sundayInternalMissing: false,
   spWeeks: 8,
   spDraft: {},
   spShowRepeating: false,
   spDismissedOpen: {},
+  spOpen: {},            // weekId -> open/closed (next Sunday starts open)
+  spShowPast: false,
+  spPastWeeks: 4,
   lastRemoved: null,
   loaded: false
 };
@@ -1408,7 +1420,7 @@ function schemaProbes(){
 
 async function loadData(){
   // Everything is fetched in one parallel batch rather than several rounds.
-  let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes, ownersRes, flowsRes, stepsRes, plansRes, postsRes, mcRes, focusRes, probes] = await Promise.all([
+  let [usersRes, audRes, tagsRes, weeksRes, rrRes, evRes, ownersRes, flowsRes, stepsRes, plansRes, postsRes, mcRes, focusRes, intRes, probes] = await Promise.all([
     sb.from('users').select('*'),
     sb.from('audiences').select('*'),
     sb.from('tags').select('*'),
@@ -1425,6 +1437,7 @@ async function loadData(){
     sb.from('comms_posts').select('*'),
     sb.from('sunday_mc').select('*'),
     sb.from('sunday_focus').select('*'),
+    sb.from('sunday_internal_audiences').select('*'),
     schemaProbed ? Promise.resolve(null) : schemaProbes()
   ]);
   if(probes){
@@ -1472,6 +1485,14 @@ async function loadData(){
       id:r.id, weekId:r.week_id, sourceKey:r.source_key||'', title:r.title||'', meta:r.meta||'',
       kind:r.kind||'mc', state:r.state||'confirmed', note:r.note||'', sortOrder:r.sort_order||0
     }));
+  }
+
+  if(intRes.error){
+    state.sundayInternalMissing = true;
+  } else {
+    state.sundayInternalMissing = false;
+    state.sundayInternal = {};
+    (intRes.data||[]).forEach(r=>{ state.sundayInternal[r.name] = !!r.internal; });
   }
 
   if(ownersRes.error){
@@ -1809,7 +1830,7 @@ function subscribeRealtime(){
   const tables = [
     'users','audiences','tags','weeks','week_midweek_items','week_midweek_item_tags','week_post_service_items','week_post_service_item_tags',
     'recurring_rhythms','recurring_rhythm_tags','week_excluded_recurring','events',
-    'comms_flows','comms_flow_steps','comms_plans','comms_posts','owners','sunday_mc','sunday_focus'
+    'comms_flows','comms_flow_steps','comms_plans','comms_posts','owners','sunday_mc','sunday_focus','sunday_internal_audiences'
   ];
   const channel = sb.channel('planner-changes');
   tables.forEach(t=>{
@@ -4348,30 +4369,57 @@ function spNames(){
 function spFocusFor(weekId, st){
   return state.sundayFocus.filter(f=>f.weekId===weekId && f.state===st).sort((a,b)=>a.sortOrder-b.sortOrder);
 }
+// Audiences that are for the team rather than the congregation. Until someone ticks or
+// unticks an audience in Settings, these names are treated as internal.
+const SP_DEFAULT_INTERNAL = /^(chapter|leadership|core team|service team|creative)$/i;
+function isInternalAudience(name){
+  if(!name) return false;
+  if(Object.prototype.hasOwnProperty.call(state.sundayInternal, name)) return !!state.sundayInternal[name];
+  return SP_DEFAULT_INTERNAL.test(name.trim());
+}
+async function spSaveInternal(name, on){
+  if(state.sundayInternalMissing) return;
+  beginSave();
+  try{
+    const { error } = await sb.from('sunday_internal_audiences').upsert({name, internal:on});
+    if(error) console.error('Sunday planning: save internal audience failed', error);
+  } finally { endSave(); }
+}
+// One suggestion per thing, however many dates it has in the window (Alpha running
+// weekly is one row saying "4 dates", not four rows). Internal audiences never appear.
 function spSuggestions(wk){
   const start = wk.sundayDate, end = addDaysISO(start, SP_WINDOW_DAYS-1);
   const done = new Set(state.sundayFocus.filter(f=>f.weekId===wk.id && f.sourceKey).map(f=>f.sourceKey));
-  const seen = new Set(), out = [];
+  const groups = new Map();
   commsItemsForRange(parseISO(start), parseISO(end)).forEach(o=>{
     const type = commsItemType(o.ev), ev = o.ev, iso = isoDate(o.date);
     if(ev.status === 'declined') return;
-    if(type === 'sunday'){
-      if(!ev.occasion || iso === start) return;   // only named Sundays (e.g. Baptism Sunday) are worth a mention
-    }
+    if(type === 'sunday' && (!ev.occasion || iso === start)) return;
+    if(isInternalAudience(ev.audience)) return;
     const repeating = !!ev.recurring || (type==='event' && ev.recurrence && ev.recurrence !== 'none');
     if(repeating && !state.spShowRepeating) return;
-    const key = commsItemKey(o);
+    let name, note = '';
+    if(type === 'sunday') name = ev.occasion;
+    else if(type === 'event') name = ev.title;
+    else { name = commsItemName(o); note = cleanNote(ev.note, name) || ''; }
+    name = String(name||'').trim(); if(!name) return;
+    const key = 'grp::' + name.toLowerCase();
     if(done.has(key)) return;
-    const baseId = ev.id;
-    if(repeating){ if(seen.has(baseId)) return; seen.add(baseId); }
-    let title;
-    if(type === 'sunday') title = ev.occasion;
-    else if(type === 'event') title = ev.title;
-    else { const nm = commsItemName(o); const n = cleanNote(ev.note, nm); title = nm + (n ? ' — '+n : ''); }
-    const meta = [fmtDate(iso) + (ev.time ? ' · '+ev.time : ''), COMMS_TYPE_LABELS[type], ev.audience||'', repeating ? 'repeats' : ''].filter(Boolean).join(' · ');
-    out.push({key, title, meta, date:iso});
+    let g = groups.get(key);
+    if(!g){ g = {key, name, notes:[], types:new Set(), aud:ev.audience||'', dates:[], time:ev.time||''}; groups.set(key, g); }
+    if(!g.dates.includes(iso)){ g.dates.push(iso); if(note) g.notes.push(note); }
+    g.types.add(COMMS_TYPE_LABELS[type]);
   });
-  return out.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
+  return Array.from(groups.values()).map(g=>{
+    g.dates.sort();
+    const n = g.dates.length, types = Array.from(g.types).join(' / ');
+    if(n === 1){
+      return {key:g.key, date:g.dates[0], title: g.name + (g.notes[0] ? ' — '+g.notes[0] : ''),
+        meta:[fmtDate(g.dates[0]) + (g.time ? ' · '+g.time : ''), types, g.aud].filter(Boolean).join(' · ')};
+    }
+    return {key:g.key, date:g.dates[0], title:g.name,
+      meta:[fmtDate(g.dates[0]) + ' to ' + fmtDate(g.dates[n-1]), n+' dates', types, g.aud].filter(Boolean).join(' · ')};
+  }).sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
 }
 
 function spRemoteErr(error, what){
@@ -4422,14 +4470,37 @@ function spRowHTML(f){
     <div class="sp-acts"><button type="button" class="sp-b quiet sp-remove">Remove</button></div>
   </div>`;
 }
-function spWeekHTML(wk){
-  const sug = spSuggestions(wk), conf = spFocusFor(wk.id, 'confirmed'), dis = spFocusFor(wk.id, 'dismissed');
-  const heading = `${fmtDate(wk.sundayDate)}${wk.sundaySeries ? ' · '+escHTML(wk.sundaySeries) : ''}${wk.occasion ? ' · '+escHTML(wk.occasion) : ''}`;
+function spPastRowHTML(f){
+  return `<div class="sp-row conf">
+    <div style="display:flex;gap:8px;align-items:flex-start;justify-content:space-between;">
+      <div style="min-width:0;"><div class="sp-title">${escHTML(f.title)}</div>${f.meta?`<div class="sp-meta">${escHTML(f.meta)}</div>`:''}</div>
+      <span class="sp-kind" style="cursor:default;">${SP_KINDS[f.kind]||SP_KINDS.mc}</span>
+    </div>
+    ${f.note?`<div class="sp-meta" style="margin-top:5px;">${escHTML(f.note)}</div>`:''}
+  </div>`;
+}
+function spWeekHTML(wk, past, firstUpcoming){
+  const conf = spFocusFor(wk.id, 'confirmed');
+  const open = Object.prototype.hasOwnProperty.call(state.spOpen, wk.id) ? !!state.spOpen[wk.id] : !!firstUpcoming;
+  const heading = `${fmtDate(wk.sundayDate)}${wk.sundayDate ? ' '+parseISO(wk.sundayDate).getFullYear() : ''}${wk.sundaySeries ? ' · '+escHTML(wk.sundaySeries) : ''}${wk.occasion ? ' · '+escHTML(wk.occasion) : ''}`;
+  const sug = past ? [] : spSuggestions(wk);
+  const mcName = state.sundayMC[wk.id] || '';
+  const summary = [mcName ? 'MC: '+escHTML(mcName) : 'No MC yet', conf.length ? conf.length+' focus item'+(conf.length===1?'':'s') : 'nothing confirmed', (!past && sug.length) ? sug.length+' suggested' : ''].filter(Boolean).join(' · ');
+  const head = `<button type="button" class="sp-head" aria-expanded="${open}"><span class="sp-chev">${open?'▾':'▸'}</span><span class="sp-headtext">${heading}</span><span class="sp-sum">${summary}</span></button>`;
+  if(!open) return `<div class="la-week sp-week${past?' past':''}" data-wk="${wk.id}">${head}</div>`;
+
+  const mcrow = `<div class="sp-mcrow"><label for="mc-${wk.id}">MC</label>
+      <input id="mc-${wk.id}" class="sp-mc" list="sp-mc-names" value="${escHTML(mcName)}" placeholder="Who's MC?" autocomplete="off"></div>`;
+  if(past){
+    return `<div class="la-week sp-week past" data-wk="${wk.id}">${head}${mcrow}
+      <div class="sp-col" style="padding-top:10px;">
+        <div class="sp-colh">MC focus that Sunday</div>
+        ${conf.length ? conf.map(spPastRowHTML).join('') : `<div class="sp-empty">Nothing was confirmed for this Sunday.</div>`}
+      </div></div>`;
+  }
+  const dis = spFocusFor(wk.id, 'dismissed');
   const draft = state.spDraft[wk.id] || {title:'', kind:'mc'};
-  return `<div class="la-week sp-week" data-wk="${wk.id}">
-    <div class="nd-whead">${heading}</div>
-    <div class="sp-mcrow"><label for="mc-${wk.id}">MC</label>
-      <input id="mc-${wk.id}" class="sp-mc" list="sp-mc-names" value="${escHTML(state.sundayMC[wk.id]||'')}" placeholder="Who's MC?" autocomplete="off"></div>
+  return `<div class="la-week sp-week" data-wk="${wk.id}">${head}${mcrow}
     <div class="sp-cols">
       <div class="sp-col">
         <div class="sp-colh">Suggested from the calendar · next 4 weeks</div>
@@ -4458,25 +4529,46 @@ function spWeekHTML(wk){
 }
 function sundayPlanningHTML(){
   const start = isoDate(sundayOnOrBefore(new Date()));
-  const all = state.weeks.filter(w=>w.sundayDate && w.sundayDate>=start).sort((a,b)=>a.sundayDate<b.sundayDate?-1:1);
+  const dated = state.weeks.filter(w=>w.sundayDate);
+  const all = dated.filter(w=>w.sundayDate>=start).sort((a,b)=>a.sundayDate<b.sundayDate?-1:1);
   const list = all.slice(0, state.spWeeks);
+  const pastAll = dated.filter(w=>w.sundayDate<start).sort((a,b)=>a.sundayDate<b.sundayDate?1:-1);
+  const pastList = pastAll.slice(0, state.spPastWeeks);
   return `
     ${state.sundayTablesMissing ? `<div class="notice" style="color:var(--bad);margin:0 0 8px;">Sunday planning isn't set up in Supabase yet, so nothing here will save. Run the Sunday planning SQL first.</div>` : ''}
     <div class="sp-bar">
       <button type="button" class="sp-chip ${state.spShowRepeating?'on':''}" id="sp-repeating">Include repeating items</button>
+      <button type="button" class="sp-chip" id="sp-expand">Open all</button>
+      <button type="button" class="sp-chip" id="sp-collapse">Close all</button>
     </div>
-    <div class="cp-hint" style="margin:0 2px 10px;">For each Sunday, the calendar suggests what's coming in the following 4 weeks. Add what the MC should focus on, as a moment to say, something for the screens, or both.</div>
+    <div class="cp-hint" style="margin:0 2px 10px;">Suggestions come from the calendar: midweek, after-service and event items in the 4 weeks from that Sunday, listed once however many dates they have. Anything for an internal audience is never shown (mark audiences as internal in Settings). Add what the MC should focus on as a moment to say, something for the screens, or both. Tap a Sunday to open or close it.</div>
     <datalist id="sp-mc-names">${spNames().map(n=>`<option value="${escHTML(n)}"></option>`).join('')}</datalist>
-    <div class="cal-wrap">${list.length ? list.map(spWeekHTML).join('') : '<div class="empty">No upcoming Sundays in the planner yet.</div>'}
+    <div class="cal-wrap">${list.length ? list.map((w,i)=>spWeekHTML(w, false, i===0)).join('') : '<div class="empty">No upcoming Sundays in the planner yet.</div>'}
       ${all.length > list.length ? `<div style="text-align:center;margin:12px 0;"><button type="button" class="btn" id="sp-more">Show 4 more Sundays</button></div>` : ''}
+      ${pastAll.length ? `<div class="sp-pasthead">Previous Sundays</div>
+        ${state.spShowPast ? pastList.map(w=>spWeekHTML(w, true, false)).join('') : ''}
+        <div style="text-align:center;margin:10px 0;">
+          <button type="button" class="btn" id="sp-pasttoggle">${state.spShowPast ? 'Hide previous Sundays' : 'Show previous Sundays'}</button>
+          ${state.spShowPast && pastAll.length > pastList.length ? `<button type="button" class="btn" id="sp-pastmore">Show 4 more</button>` : ''}
+        </div>` : ''}
     </div>`;
 }
 function attachSundayPlanningHandlers(){
   const byId = id=>document.getElementById(id);
   if(byId('sp-repeating')) byId('sp-repeating').onclick = ()=>{ state.spShowRepeating = !state.spShowRepeating; render(); };
   if(byId('sp-more')) byId('sp-more').onclick = ()=>{ state.spWeeks += 4; render(); };
+  if(byId('sp-pastmore')) byId('sp-pastmore').onclick = ()=>{ state.spPastWeeks += 4; render(); };
+  if(byId('sp-pasttoggle')) byId('sp-pasttoggle').onclick = ()=>{ state.spShowPast = !state.spShowPast; render(); };
+  const setAll = on=>{ document.querySelectorAll('.sp-week').forEach(c=>{ state.spOpen[c.dataset.wk] = on; }); render(); };
+  if(byId('sp-expand')) byId('sp-expand').onclick = ()=> setAll(true);
+  if(byId('sp-collapse')) byId('sp-collapse').onclick = ()=> setAll(false);
   document.querySelectorAll('.sp-week').forEach(card=>{
     const wid = card.dataset.wk;
+    const head = card.querySelector('.sp-head');
+    if(head) head.onclick = ()=>{
+      const wasOpen = head.getAttribute('aria-expanded') === 'true';
+      state.spOpen[wid] = !wasOpen; render();
+    };
     const mc = card.querySelector('.sp-mc');
     if(mc) mc.onchange = ()=>{
       const name = mc.value.trim();
@@ -4504,7 +4596,7 @@ function attachSundayPlanningHandlers(){
       state.sundayFocus = state.sundayFocus.filter(f=>f.id!==id);
       render(); spDeleteFocus(id);
     }; });
-    card.querySelectorAll('.sp-kind').forEach(b=>{ b.onclick = ()=>{
+    card.querySelectorAll('button.sp-kind').forEach(b=>{ b.onclick = ()=>{
       const f = state.sundayFocus.find(x=>x.id===b.closest('.sp-row').dataset.id); if(!f) return;
       const keys = Object.keys(SP_KINDS);
       f.kind = keys[(keys.indexOf(f.kind)+1) % keys.length];
@@ -4517,17 +4609,19 @@ function attachSundayPlanningHandlers(){
     const tog = card.querySelector('.sp-dis-toggle');
     if(tog) tog.onclick = ()=>{ state.spDismissedOpen[wid] = !state.spDismissedOpen[wid]; render(); };
     const ni = card.querySelector('.sp-new'), nk = card.querySelector('.sp-newkind');
-    const draft = ()=>{ state.spDraft[wid] = {title:ni.value, kind:nk.value}; };
-    ni.oninput = draft; nk.onchange = draft;
-    const add = ()=>{
-      const title = ni.value.trim();
-      if(!title){ ni.style.boxShadow = '0 0 0 2px var(--bad)'; ni.focus(); return; }
-      const row = spPut(wid, '', {id:uid(), title, meta:'Added by hand', kind:nk.value, state:'confirmed', sortOrder:Date.now()});
-      state.spDraft[wid] = {title:'', kind:nk.value};
-      render(); spSaveFocus(row);
-    };
-    card.querySelector('.sp-addbtn').onclick = add;
-    ni.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } };
+    if(ni && nk){
+      const draft = ()=>{ state.spDraft[wid] = {title:ni.value, kind:nk.value}; };
+      ni.oninput = draft; nk.onchange = draft;
+      const add = ()=>{
+        const title = ni.value.trim();
+        if(!title){ ni.style.boxShadow = '0 0 0 2px var(--bad)'; ni.focus(); return; }
+        const row = spPut(wid, '', {id:uid(), title, meta:'Added by hand', kind:nk.value, state:'confirmed', sortOrder:Date.now()});
+        state.spDraft[wid] = {title:'', kind:nk.value};
+        render(); spSaveFocus(row);
+      };
+      card.querySelector('.sp-addbtn').onclick = add;
+      ni.onkeydown = (e)=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } };
+    }
   });
 }
 
@@ -4709,13 +4803,14 @@ function settingsHTML(){
             <input type="color" class="audience-color" data-audience="${a.name.replace(/"/g,'&quot;')}" value="${a.color||audienceColor(a.name)}" title="Pick a colour" style="width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px;flex:0 0 auto;">
             <input type="text" class="audience-name" value="${a.name.replace(/"/g,'&quot;')}" readonly style="background:var(--paper);">
             ${a.name==='Whole Church'?`<span class="busy-flag" style="background:var(--gold-soft);color:var(--gold);">Dominant</span>`:''}
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);white-space:nowrap;cursor:pointer;" title="Internal audiences are never suggested in Sunday planning"><input type="checkbox" class="audience-internal" data-audience="${a.name.replace(/"/g,'&quot;')}" ${isInternalAudience(a.name)?'checked':''} style="width:auto;">Internal</label>
             <button class="audience-remove" data-audience="${a.name.replace(/"/g,'&quot;')}" title="Remove audience">✕</button>
           </div>`).join('')}
         <div style="display:flex;gap:6px;">
           <input type="text" id="new-audience-name" placeholder="New audience name" style="flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;">
           <button class="mw-add" id="add-audience" type="button">+ Add</button>
         </div>
-        <div class="notice" style="margin-top:6px;">"Whole Church" keeps the church's own brand colour so it always reads as the main audience. Every other audience gets its own colour — tap the swatch to pick a different one.</div>
+        <div class="notice" style="margin-top:6px;">"Whole Church" keeps the church's own brand colour so it always reads as the main audience. Every other audience gets its own colour — tap the swatch to pick a different one. Tick Internal for audiences that are just for the team, so Sunday planning never suggests their items.</div>
       </details>
       <details class="settings-section" data-sec="owners" ${state.settingsOpen["owners"]?'open':''}><summary>Owners</summary>
         ${state.ownersTableMissing ? `<div class="notice" style="color:var(--bad);margin:0 0 8px;">The owners table isn't set up in Supabase yet, so changes here won't save.</div>` : ''}
@@ -4943,6 +5038,9 @@ function attachMainHandlers(){
       state.tags.push(newTag);
       await saveTags(newTag); render();
     };
+    document.querySelectorAll('.audience-internal').forEach(el=>{
+      el.onchange = ()=>{ state.sundayInternal[el.dataset.audience] = el.checked; spSaveInternal(el.dataset.audience, el.checked); };
+    });
     document.querySelectorAll('.audience-remove').forEach(el=>{
       el.onclick = async ()=>{
         const inUse = state.tags.some(t=>t.audience===el.dataset.audience);

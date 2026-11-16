@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="app-version" content="2026-11-10a">
+<meta name="app-version" content="2026-11-16a">
 <title>The Church Planner</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap');
@@ -872,6 +872,22 @@
   .cm-quick .btn{padding:8px 12px;flex-shrink:0;}
   .cm-quick .sheet-link{padding:0;font-size:13px;font-weight:600;}
   .cm-quick-err{flex-basis:100%;color:var(--bad);font-size:13px;}
+  .view-toggle .nd-badge{display:inline-block;background:var(--tl-red);color:#fff;font-size:10.5px;font-weight:700;border-radius:20px;padding:1px 7px;margin-left:6px;vertical-align:1px;}
+  .pl-row{padding:10px 14px;border-top:1px solid var(--paper);}
+  .la-week .pl-row:nth-child(2){border-top:none;}
+  .pl-head{display:flex;gap:12px;align-items:center;}
+  .pl-dates{margin-top:10px;background:var(--paper);border-radius:10px;padding:10px 12px;}
+  .pl-label{font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:6px;}
+  .pl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .pl-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 6px 4px 11px;}
+  .pl-chip small{font-weight:400;color:var(--ink-soft);font-size:12px;}
+  .pl-chip button{border:none;background:none;cursor:pointer;font-size:15px;line-height:1;color:var(--ink-soft);padding:2px 5px;font-family:inherit;}
+  .pl-addrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .pl-addrow input[type=date]{font-family:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);}
+  .pl-addrow .btn{padding:7px 10px;}
+  .pl-foot{font-size:12.5px;color:var(--ink-soft);margin-top:8px;}
+  .pl-foot .sheet-link{padding:0;font-size:12.5px;}
+  .pl-err{color:var(--bad);font-size:13px;margin-top:6px;}
   .cm-day-grid .day-chip small{font-size:11px;}
   @media (max-width:640px){
     .cm-whead{gap:10px;padding:12px;}
@@ -1255,6 +1271,11 @@ let state = {
   commsPlans: [],
   commsPosts: [],
   commsView: 'weeks', // weeks | calendar
+  planFilter: 'todo',   // Comms planning: todo | yes | no | all
+  planWeeks: 12,
+  planSticky: {},
+  planDraft: {},
+  planError: '',
   commsForFilter: '',   // "what it's for" chip
   commsInline: null,    // id of the post being edited in place
   commsInlineNote: null,
@@ -2710,6 +2731,145 @@ function attachWizardHandlers(){
   };
 }
 
+// ---------- Comms planning ----------
+// The front door for comms. Every midweek and after-service item in the planner
+// lands here. Say Yes or No; on Yes, add the dates posts are needed. Each date is
+// a post, and only then does the item show in the Comms tab. Weekly Sunday posts
+// are automatic and never listed here.
+function planWindow(weeks){
+  const s = isoDate(sundayOnOrBefore(new Date()));
+  return {start:s, end:addDaysISO(s, weeks*7-1)};
+}
+function planEntries(weeks){
+  const w = planWindow(weeks), seen = new Set(), out = [];
+  commsItemsForRange(parseISO(w.start), parseISO(w.end)).forEach(o=>{
+    const type = commsItemType(o.ev);
+    if(type==='sunday') return;
+    const key = commsItemKey(o);
+    if(seen.has(key)) return; seen.add(key);
+    const plan = commsPlanFor(o);
+    out.push({o, key, type, name:commsItemName(o), date:isoDate(o.date), plan,
+      dec: !plan || plan.needsComms==null ? 'todo' : plan.needsComms ? 'yes' : 'no'});
+  });
+  return out.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
+}
+function planBadgeCount(){
+  const today = isoDate(new Date());
+  return planEntries(12).filter(e=> e.dec==='todo' && e.date>=today).length;
+}
+function planPosts(plan){ return plan ? state.commsPosts.filter(p=>p.commsPlanId===plan.id && p.postDate).sort((a,b)=>a.postDate<b.postDate?-1:1) : []; }
+function commsPlanningHTML(){
+  const f = state.planFilter || 'todo';
+  const all = planEntries(state.planWeeks);
+  const counts = {todo:0, yes:0, no:0}; all.forEach(e=>counts[e.dec]++);
+  const win = planWindow(state.planWeeks);
+  const row = e=>{
+    const ev = e.o.ev;
+    const meta = [fmtDate(e.date) + (ev.time ? ' · '+ev.time : ''), ev.kind==='ps' ? 'after service' : '', ev.audience||''].filter(Boolean).join(' · ');
+    const posts = e.dec==='yes' ? planPosts(e.plan) : [];
+    return `<div class="pl-row" data-key="${escHTML(e.key)}" data-type="${e.type}" data-title="${escHTML(e.name)}" data-date="${e.date}">
+      <div class="pl-head">
+        <div class="nd-main" style="cursor:default;">
+          <div class="nd-name">${escHTML(e.name)}${ev.recurring ? ' <span class="we-rec">↻</span>' : ''}</div>
+          <div class="nd-meta">${escHTML(meta)}</div>
+        </div>
+        <div class="nd-yn" role="group" aria-label="Needs comms?">
+          <button type="button" class="nd-yes ${e.dec==='yes'?'on':''}">Yes</button>
+          <button type="button" class="nd-no ${e.dec==='no'?'on':''}">No</button>
+        </div>
+      </div>
+      ${e.dec==='yes' ? `<div class="pl-dates">
+        <div class="pl-label">Posts go out on</div>
+        ${posts.length ? `<div class="pl-chips">${posts.map(p=>`<span class="pl-chip">${fmtDate(p.postDate)}${(p.status||'planned')!=='planned' ? ` <small>${COMMS_STATUSES[p.status].label}</small>` : ''}<button type="button" class="pl-rm" data-post="${p.id}" aria-label="Remove ${fmtDate(p.postDate)}">✕</button></span>`).join('')}</div>` : ''}
+        <div class="pl-addrow">
+          <input type="date" class="pl-in" value="${state.planDraft[e.key]||''}" aria-label="Post date">
+          <button type="button" class="btn primary pl-add">+ Add date</button>
+          <button type="button" class="btn pl-q" data-n="-14">2 weeks before</button>
+          <button type="button" class="btn pl-q" data-n="-7">1 week before</button>
+          <button type="button" class="btn pl-q" data-n="-1">Day before</button>
+        </div>
+        ${state.planError===e.key ? `<div class="pl-err">Pick a date first.</div>` : ''}
+        <div class="pl-foot">${posts.length ? `${posts.length} post${posts.length===1?'':'s'} in Comms · <button type="button" class="sheet-link pl-open">Open in Comms</button>` : 'No dates yet, so nothing shows in Comms.'}</div>
+      </div>` : ''}
+    </div>`;
+  };
+  const list = all.filter(e=> f==='all' || e.dec===f || state.planSticky[e.key]);
+  let html = '';
+  for(let s = win.start; s <= win.end; s = addDaysISO(s, 7)){
+    const eIso = addDaysISO(s, 6);
+    const rows = list.filter(e=> e.date>=s && e.date<=eIso);
+    if(!rows.length) continue;
+    const wk = state.weeks.find(w=>w.sundayDate===s);
+    html += `<div class="la-week"><div class="nd-whead">Week of ${fmtDate(s)}${wk && wk.sundaySeries ? ' · '+escHTML(wk.sundaySeries) : ''}</div>${rows.map(row).join('')}</div>`;
+  }
+  return `
+    <div class="nd-top">
+      <div class="cal-filters" style="margin:0;">
+        ${[['todo','To decide'],['yes','Yes'],['no','No'],['all','All']].map(([k,l])=>`<button type="button" class="cal-chip pl-filter ${f===k?'on':''}" data-f="${k}">${l}${k!=='all'?' · '+counts[k]:''}</button>`).join('')}
+      </div>
+    </div>
+    <div class="cp-hint" style="margin:8px 2px 10px;">Everything added to the planner lands here. Say Yes and add the dates posts are needed, and it shows in Comms. Weekly Sunday posts are automatic. Showing ${fmtDate(win.start)} – ${fmtDate(win.end)}.</div>
+    <div class="cal-wrap">${html || `<div class="empty">${f==='todo' ? 'Nothing left to decide.' : 'Nothing here.'}</div>`}
+      <div style="text-align:center;margin:12px 0;"><button type="button" class="btn" id="pl-more">Show 12 more weeks</button></div>
+    </div>`;
+}
+function attachCommsPlanningHandlers(){
+  const byId = id=>document.getElementById(id);
+  document.querySelectorAll('.pl-filter').forEach(el=>{ el.onclick = ()=>{ state.planFilter = el.dataset.f; state.planSticky = {}; state.planError = ''; render(); }; });
+  if(byId('pl-more')) byId('pl-more').onclick = ()=>{ state.planWeeks += 12; render(); };
+  document.querySelectorAll('.pl-row').forEach(row=>{
+    const key = row.dataset.key, type = row.dataset.type, title = row.dataset.title, evDate = row.dataset.date;
+    const plan = ()=> state.commsPlans.find(p=>p.itemRefId===key);
+    const q = sel=> row.querySelector(sel);
+    q('.nd-yes').onclick = async ()=>{
+      const p = plan(); if(p && p.needsComms===true) return;
+      state.planSticky[key] = true;   // keep it on screen so dates can be added
+      await getOrCreateItemPlan(key, type, title, true);
+      render();
+    };
+    q('.nd-no').onclick = async ()=>{
+      const p = plan(); if(p && p.needsComms===false) return;
+      const n = planPosts(p).length;
+      if(n && !confirm(`Mark "${title}" as no comms? Its ${n} post${n===1?'':'s'} will be hidden from Comms (switch back to Yes to bring them back).`)) return;
+      state.planSticky[key] = true;
+      await getOrCreateItemPlan(key, type, title, false);
+      render();
+    };
+    const addDate = async (d)=>{
+      const p = plan(); if(!p) return;
+      state.planError = ''; delete state.planDraft[key];
+      if(planPosts(p).some(x=>x.postDate===d)){ render(); return; }   // already has a post that day
+      const post = {id:uid(), commsPlanId:p.id, channel:'social', platform:'facebook,instagram', format:'post', postDate:d, endDate:null, note:title, status:'planned',
+        assignee:'', readyBy:addDaysISO(d, -READY_DAYS_BEFORE), paid:false, budget:'', target:'', approvedBy:'', adLink:''};
+      state.commsPosts.push(post);
+      render();
+      await saveCommsPost(post);
+    };
+    if(q('.pl-in')){
+      const inp = q('.pl-in');
+      inp.onchange = ()=>{ state.planDraft[key] = inp.value; };
+      q('.pl-add').onclick = ()=>{ if(!inp.value){ state.planError = key; render(); return; } addDate(inp.value); };
+      row.querySelectorAll('.pl-q').forEach(b=>{ b.onclick = ()=> addDate(addDaysISO(evDate, +b.dataset.n)); });
+      row.querySelectorAll('.pl-rm').forEach(b=>{ b.onclick = async ()=>{
+        const post = state.commsPosts.find(x=>x.id===b.dataset.post); if(!post) return;
+        const st = post.status||'planned';
+        if(st!=='planned' && !confirm(`This post is already ${COMMS_STATUSES[st].label.toLowerCase()}. Delete it anyway?`)) return;
+        state.commsPosts = state.commsPosts.filter(x=>x.id!==post.id);
+        render();
+        await deleteCommsPostRemote(post.id);
+      }; });
+      if(q('.pl-open')) q('.pl-open').onclick = ()=>{
+        const p = plan(), posts = planPosts(p); if(!posts.length) return;
+        const d = parseISO(posts[0].postDate);
+        state.view = 'comms'; state.commsView = 'weeks'; state.commsForFilter = commsGroup(p).key;
+        state.commsStatusFilter = 'all'; state.commsChannelFilter = '';
+        state.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+        render();
+      };
+    }
+  });
+}
+
 function commsTabHTML(){
   const y = state.cursor.getFullYear(), m = state.cursor.getMonth();
   // provision the weekly Sunday flow for every Sunday whose posts could land in
@@ -2746,8 +2906,9 @@ function commsForOptions(weekIso){
     const key = commsItemKey(o);
     if(seen.has(key)) return; seen.add(key);
     const plan = commsPlanFor(o), type = commsItemType(o.ev), name = commsItemName(o);
-    // picking an item that has no plan yet (or was once marked "no comms") creates / switches on its plan
+    // planner items appear here only once they're a Yes in Comms planning; Sundays always do
     const live = plan && plan.needsComms===true;
+    if(!live && type!=='sunday') return;
     opts.push({value: live ? 'plan:'+plan.id : 'item:'+key, label:`${name} · ${fmtDate(isoDate(o.date))}`, key, type, title:name, date:isoDate(o.date),
       gkey: live ? commsGroup(plan).key : (type==='sunday' ? 'sunday' : 't:'+String(name||'').toLowerCase())});
   });
@@ -4084,6 +4245,7 @@ function helpHTML(){
 
     <section id="h-comms">
       <h3>Comms</h3>
+      <p><b>Comms planning</b> is where it starts. Every midweek and after-service item added to the planner lands here, and the number on the tab is how many are waiting. Say Yes or No. On Yes, add the dates posts are needed: pick a date, or use "2 weeks before", "1 week before" and "Day before". Each date becomes a post in Comms. Nothing shows in Comms until it has a date. The weekly Sunday posts are automatic and aren't listed.</p>
       <p><b>Weeks</b> is the whole of Comms on one screen: every post, in the week it goes out. To add one, type it in the line at the bottom of a week, pick the day and what it's for, and press Add. The weekly Sunday posts are created automatically.</p>
       <p><b>Editing and moving.</b> Tap a post to open it where it sits. Change the wording, the date, what it's for or who's doing it and it saves straight away; changing the date moves it to the right week. Day earlier, Day later and Next week move it in one tap. Tap a post's status to move it on: Planned → In progress → Scheduled → Posted. "More options" has the channel, paid boosts and ready-by date.</p>
       <p><b>The chips along the top</b> show one thing at a time, for example only Alpha's posts. Pick a campaign's chip and "Dates and details" appears for its dates and linked items.</p>
@@ -4184,6 +4346,7 @@ function mainHTML(){
         <button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">Dashboard</button>
         <button data-view="calendar" class="${state.view==='calendar'?'active':''}">Calendar</button>
         <button data-view="owners" class="${state.view==='owners'?'active':''}">Owners</button>
+        <button data-view="commsplan" class="${state.view==='commsplan'?'active':''}">Comms planning${(b=>b?`<span class="nd-badge" title="${b} to decide">${b}</span>`:'')(planBadgeCount())}</button>
         <button data-view="comms" class="${state.view==='comms'?'active':''}">Comms</button>
       </div>
       ${state.view==='calendar'?`
@@ -4204,7 +4367,7 @@ function mainHTML(){
       </div>`:''}
     </div>
     ${showFilters ? calFiltersHTML() : ''}
-    ${state.view==='help' ? helpHTML() : state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
+    ${state.view==='help' ? helpHTML() : state.view==='calendar' ? calendarHTML() : state.view==='list' ? listHTML() : state.view==='comms' ? commsTabHTML() : state.view==='commsplan' ? commsPlanningHTML() : state.view==='owners' ? ownersTabHTML() : dashboardHTML()}
     ${state.editingEvent!==undefined && state.showModal ? modalHTML() : ''}
     ${state.showSettings ? settingsHTML() : ''}
     ${state.view==='dashboard' ? sheetHTML() : ''}
@@ -4394,7 +4557,7 @@ function attachMainHandlers(){
   const nextYearBtn = document.getElementById('next-church-year');
   if(nextYearBtn) nextYearBtn.onclick = ()=>{ state.churchYear++; render(); };
   document.querySelectorAll('.view-toggle button').forEach(el=>{
-    el.onclick = ()=>{ state.view = el.dataset.view; render(); };
+    el.onclick = ()=>{ state.view = el.dataset.view; state.planSticky = {}; state.planError = ''; render(); };
   });
   const prevBtn = document.getElementById('prev-month');
   const nextBtn = document.getElementById('next-month');
@@ -4458,6 +4621,7 @@ function attachMainHandlers(){
   });
   if(state.view==='dashboard') attachDashboardHandlers();
   if(state.view==='comms') attachCommsHandlers();
+  if(state.view==='commsplan') attachCommsPlanningHandlers();
   if(state.view==='owners'){
     document.querySelectorAll('.own-item').forEach(el=>{
       const go = ()=>{ state.view = 'dashboard'; openWeekEditor(el.dataset.weekId); };
@@ -4840,7 +5004,7 @@ async function updateTagField(id, patch){
 // A tab left open across a deploy keeps running the old code. Check for a newer
 // version when the tab comes back into view (and every few minutes); reload
 // straight away if nothing is mid-edit, otherwise show a banner.
-const APP_VERSION = '2026-11-10a';
+const APP_VERSION = '2026-11-16a';
 // True while something is open that would lose typing if the page reloaded.
 function hasUnsavedWork(){
   return !!(state.editingWeekId || state.sheet || state.commsSheet || state.campaignSheet || state.newCampaign || state.wizard || state.showModal || state.showSettings
